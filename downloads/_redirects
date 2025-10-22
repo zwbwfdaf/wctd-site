@@ -1,9 +1,0 @@
-# Serve site from root because没有 wye 目录
-
-# Root → 根首页
-/ /index.html 200
-
-# 下载直链保持稳定（指向根的 downloads/）
-/downloads/* /downloads/:splat 200
-
-

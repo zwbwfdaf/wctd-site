@@ -1,0 +1,1978 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#667eea">
+    <title>我的关键词 - KK搜索任务平台</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- 🔧 添加Supabase SDK，实现数据库数据同步 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Keyword Sync Manager -->
+    <script src="keyword-sync-manager.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        /* 顶部导航栏 */
+        .navbar {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .navbar .back-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .navbar .back-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+        
+        .navbar .title {
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .navbar .title i {
+            margin-right: 8px;
+        }
+        
+        .navbar .actions {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .navbar .action-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .navbar .action-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        /* 统计卡片区域 */
+        .stats-container {
+            padding: 16px 16px 12px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 12px;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 16px 12px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .stat-card.active {
+            background: rgba(255, 255, 255, 0.25);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+        
+        .stat-number {
+            font-size: 24px;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 4px;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 500;
+        }
+        
+        /* 搜索栏 */
+        .search-container {
+            padding: 0 20px 20px;
+        }
+        
+        .search-box {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 16px;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .search-box i {
+            color: #9ca3af;
+            font-size: 16px;
+        }
+        
+        .search-box input {
+            flex: 1;
+            border: none;
+            outline: none;
+            background: transparent;
+            font-size: 16px;
+            color: #374151;
+        }
+        
+        .search-box input::placeholder {
+            color: #9ca3af;
+        }
+        
+        /* 主要内容区域 */
+        .main-content {
+            background: white;
+            border-radius: 24px 24px 0 0;
+            min-height: calc(100vh - 200px);
+            padding: 18px 16px 84px;
+            margin-top: 12px;
+            position: relative;
+        }
+        
+        /* 关键词卡片 */
+        .keyword-card { background:white; border-radius:16px; padding:12px; margin-bottom:10px; box-shadow:0 2px 14px rgba(0,0,0,.06); border:1px solid rgba(0,0,0,.05); transition:all .3s ease; position:relative; overflow:hidden; }
+        /* 弹窗基础样式 */
+        .modal{ position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; z-index:9999; }
+        .modal-content{ background:#fff; border-radius:12px; width:90%; max-width:520px; box-shadow:0 12px 40px rgba(0,0,0,.25); overflow:hidden; position:relative; }
+        .modal-content.fullscreen{ width:100%; max-width:none; height:100%; border-radius:0; display:flex; flex-direction:column; }
+        .modal-header{ display:flex; align-items:center; justify-content:space-between; padding:16px 18px; border-bottom:1px solid #eee; }
+        .modal-header.gradient{ background:linear-gradient(135deg,#667eea,#764ba2); color:#fff; border-bottom:none; }
+        .modal-title{ display:flex; align-items:center; gap:10px; font-size:18px; font-weight:700; }
+        .modal-sub{ font-size:12px; opacity:.9; margin-left:28px; margin-top:4px; }
+        .modal-body{ padding:16px 18px; max-height:70vh; overflow:auto; }
+        .modal-body.fill{ flex:1; background:linear-gradient(180deg,#f7f8fc 0%, #fbfcff 40%, #f7f8fc 100%); max-height:none; }
+        .modal-footer{ display:flex; gap:10px; justify-content:flex-end; padding:12px 16px; border-top:1px solid #eee; }
+        .action-bar{ position:sticky; bottom:0; background:#fff; border-top:1px solid #e5e7eb; padding:12px 16px; display:flex; gap:10px; justify-content:flex-end; }
+        .close-btn{ background:none; border:none; font-size:20px; cursor:pointer; }
+
+        /* 高级表单 */
+        .form-grid{ display:grid; grid-template-columns:1fr; gap:12px; }
+        .form-group .form-input{ border:1px solid #e5e7eb; background:#fff; border-radius:12px; padding:14px 16px; font-size:15px; box-shadow:0 2px 6px rgba(0,0,0,.04); transition:all .2s ease; color:#0f172a; }
+        .form-group .form-input:focus{ outline:none; border-color:#7c8cf8; box-shadow:0 0 0 4px rgba(124,140,248,.15); }
+        .form-group .form-input::placeholder{ color:#9aa4bd; }
+        .form-label{ font-weight:600; color:#334155; margin-bottom:6px; display:block; }
+        .hint{ font-size:12px; color:#718096; margin-top:6px; }
+        .btn-primary{ background:linear-gradient(135deg,#667eea,#764ba2); color:#fff; box-shadow:0 8px 20px rgba(102,126,234,.35); }
+        .btn-primary:hover{ filter:brightness(1.07); transform:translateY(-1px); }
+        .btn{ border-radius:10px; padding:10px 16px; }
+
+        /* 容器美化 */
+        .form-shell{ max-width:980px; margin:0 auto; }
+        .form-card{ background:#fff; border-radius:16px; padding:18px; box-shadow:0 10px 24px rgba(0,0,0,.08); border:1px solid #eef2f7; }
+        .tips-card, .preview-card{ background:#fff; border-radius:16px; padding:16px; box-shadow:0 8px 20px rgba(0,0,0,.06); border:1px solid #eef2f7; }
+        .tips-card h4, .preview-card h4{ margin:0 0 10px 0; font-size:14px; color:#334155; font-weight:700; }
+        .tip-list{ list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:8px; }
+        .tip-list li{ display:flex; align-items:flex-start; gap:8px; color:#475569; font-size:13px; }
+        .tip-list li i{ color:#22c55e; margin-top:2px; }
+        .preview-item{ display:flex; justify-content:space-between; gap:12px; padding:8px 10px; border-radius:10px; background:#f8fafc; border:1px dashed #e2e8f0; font-size:13px; color:#0f172a; }
+        .preview-item .key{ color:#64748b; }
+
+        /* 内容两列布局（大屏） */
+        .content-grid{ display:grid; grid-template-columns:1fr; gap:16px; }
+        @media (min-width: 1100px){ .content-grid{ grid-template-columns: 2.2fr 1fr; } }
+
+        /* 图标输入框 */
+        .input-with-icon{ position:relative; }
+        .input-with-icon .input-icon{ position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#9aa4bd; font-size:14px; }
+        .input-with-icon .form-input{ padding-left:36px; }
+        /* 右侧下拉指示器：外置但可点击（透明按钮覆盖触发展开） */
+        .select-field{ position:relative; border:1px solid #c9d1ff; border-radius:12px; box-shadow:0 2px 8px rgba(102,126,234,.12); background:#fff; }
+        .select-field .dropdown-proxy{ position:absolute; right:8px; top:50%; transform:translateY(-50%); width:26px; height:26px; border-radius:6px; background:#eef2ff; border:1px solid #d7ddff; box-shadow:0 2px 6px rgba(102,126,234,.18); display:flex; align-items:center; justify-content:center; cursor:pointer; z-index:3; }
+        .select-field .dropdown-proxy svg{ width:18px; height:18px; fill:#667eea; transition:transform .18s ease; }
+        .select-field.cs-open .dropdown-proxy svg{ transform:rotate(180deg); }
+        .select-field .dropdown-hotspot{ display:none; }
+
+        /* Select 美化 */
+        /* 紫蓝主题下拉（外置指示器） */
+        select.form-input{ appearance:none; -webkit-appearance:none; -moz-appearance:none; padding-right:16px; background-color:#fff; border:1px solid #c9d1ff; box-shadow:0 2px 8px rgba(102,126,234,.12); }
+        /* 下拉在外置包裹内时，去掉自身边框和阴影，保证边框一体化 */
+        .select-field select.form-input{ display:none; }
+
+        /* 自定义选择框（带下滑面板动画） */
+        .cs-display{ height:44px; line-height:44px; padding:0 54px 0 36px; border-radius:12px; color:#0f172a; }
+        .cs-options{ position:absolute; left:-1px; right:-1px; top:calc(100% + 6px); background:#fff; border:1px solid #c9d1ff; border-radius:12px; box-shadow:0 12px 28px rgba(102,126,234,.18); overflow:hidden; max-height:0; opacity:0; transform:translateY(-8px); transition:max-height .22s ease, opacity .18s ease, transform .18s ease; z-index:5; }
+        .cs-options ul{ list-style:none; padding:6px 0; margin:0; }
+        .cs-options li{ padding:10px 14px; cursor:pointer; color:#334155; }
+        .cs-options li:hover{ background:#eef2ff; color:#0f172a; }
+        .select-field.cs-open .cs-options{ max-height:240px; opacity:1; transform:translateY(0); }
+        select.form-input:hover{ border-color:#aebaff; box-shadow:0 4px 12px rgba(102,126,234,.18); }
+        select.form-input:focus{ border-color:#7c8cf8; box-shadow:0 0 0 4px rgba(124,140,248,.20); }
+        /* 下拉选项字体颜色 */
+        select.form-input option{ color:#0f172a; }
+
+        /* 背景装饰 */
+        .modal-content.fullscreen:before{ content:""; position:absolute; inset:-10%; background:radial-gradient(700px 300px at 10% -10%, rgba(102,126,234,.20), transparent 60%), radial-gradient(500px 260px at 90% 10%, rgba(118,75,162,.18), transparent 65%); filter:blur(10px); pointer-events:none; }
+
+        /* 大屏两列 */
+        @media (min-width: 920px){
+            .form-grid{ grid-template-columns:1fr 1fr; }
+            .form-grid .span-2{ grid-column:span 2; }
+        }
+        
+        .keyword-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+        }
+        
+        .keyword-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3);
+        }
+        
+        .keyword-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; }
+        
+        .keyword-user {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .user-avatar { width:40px; height:40px; border-radius:50%; background:linear-gradient(135deg,#667eea,#764ba2); display:flex; align-items:center; justify-content:center; color:#fff; font-size:18px; font-weight:600; }
+        
+        .user-info h3 { font-size:15px; font-weight:600; color:#2d3748; margin-bottom:2px; }
+        
+        .user-info p { font-size:11px; color:#718096; }
+        
+        .status-badge { padding:4px 10px; border-radius:16px; font-size:11px; font-weight:600; display:flex; align-items:center; gap:4px; min-width:72px; justify-content:center; }
+        
+        .status-pending {
+            background: linear-gradient(135deg, #fef3c7, #fde68a);
+            color: #92400e;
+            border: 1px solid #f59e0b;
+        }
+        
+        .status-passed {
+            background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+            color: #065f46;
+            border: 1px solid #10b981;
+        }
+        
+        .status-rejected {
+            background: linear-gradient(135deg, #fee2e2, #fecaca);
+            color: #991b1b;
+            border: 1px solid #ef4444;
+        }
+        
+        .keyword-details { background:linear-gradient(135deg,#f8fafc,#ffffff); border-radius:12px; padding:10px; margin-bottom:10px; }
+        
+        .detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+        
+        .detail-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .detail-label { font-size:11px; color:#6b7280; font-weight:500; }
+        
+        .detail-value { font-size:13px; color:#374151; font-weight:600; }
+        
+        /* 紧凑型标签布局 */
+        .tag-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 6px 0;
+        }
+        
+        .info-tag {
+            background: #f3f4f6;
+            border: 1px solid #d1d5db;
+            border-radius: 12px;
+            padding: 4px 10px;
+            font-size: 12px;
+            color: #374151;
+            white-space: nowrap;
+        }
+        
+        .info-tag .tag-label {
+            font-weight: 500;
+            color: #6b7280;
+            margin-right: 4px;
+        }
+        
+        .info-tag .tag-value {
+            font-weight: 600;
+            color: #374151;
+        }
+        
+        /* 关键词显示区域 */
+        .keyword-display { background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:8px; margin:8px 0; position:relative; }
+        
+        .keyword-display .keyword-label {
+            font-size: 12px;
+            color: #6b7280;
+            font-weight: 500;
+            margin-bottom: 6px;
+        }
+        
+        .keyword-display .keyword-text { font-size:14px; font-weight:700; color:#667eea; word-break:break-all; line-height:1.3; padding-right:32px; }
+        
+        .copy-btn { position:absolute; top:50%; right:10px; transform:translateY(-50%); width:24px; height:24px; border:none; background:#667eea; color:#fff; border-radius:6px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:12px; transition:all .3s ease; }
+        
+        .copy-btn:hover {
+            background: #5b21b6;
+            transform: translateY(-50%) scale(1.05);
+        }
+        
+        .copy-btn:active {
+            transform: translateY(-50%) scale(0.95);
+        }
+        
+        .copy-btn.copied {
+            background: #10b981;
+        }
+        
+        .copy-btn.copied::after {
+            content: '✓';
+            position: absolute;
+        }
+        
+        /* 关键词状态显示样式 */
+        .keyword-display.pending {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+        }
+        
+        .keyword-display.pending .keyword-text.status-text {
+            color: #d97706;
+            font-weight: 600;
+        }
+        
+        .keyword-display.rejected {
+            background: #fee2e2;
+            border: 1px solid #ef4444;
+        }
+        
+        .keyword-display.rejected .keyword-text.status-text {
+            color: #dc2626;
+            font-weight: 600;
+        }
+        
+        .status-icon {
+            position: absolute;
+            top: 50%;
+            right: 12px;
+            transform: translateY(-50%);
+            color: inherit;
+            font-size: 14px;
+            opacity: 0.7;
+        }
+        
+        .keyword-display.pending .status-icon {
+            color: #d97706;
+        }
+        
+        .keyword-display.rejected .status-icon {
+            color: #dc2626;
+        }
+        
+        /* ID 显示优化 */
+        .id-display { background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; padding:6px 10px; margin:10px 0; display:flex; align-items:center; justify-content:space-between; }
+        
+        .id-display .id-label { font-size:11px; color:#6b7280; font-weight:500; }
+        
+        .id-display .id-value { font-size:12px; color:#374151; font-weight:600; font-family:'Monaco','Menlo',monospace; }
+        
+        .keyword-actions { display:flex; gap:6px; margin-top:8px; }
+        
+        .action-btn { padding:6px 12px; border-radius:10px; font-size:13px; font-weight:500; cursor:pointer; transition:all .3s ease; border:none; display:flex; align-items:center; gap:6px; }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #f1f5f9;
+            color: #64748b;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .btn-secondary:hover {
+            background: #e2e8f0;
+        }
+        
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6b7280;
+        }
+        
+        .empty-state i {
+            font-size: 64px;
+            margin-bottom: 20px;
+            color: #d1d5db;
+        }
+        
+        .empty-state h3 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #374151;
+        }
+        
+        .empty-state p {
+            font-size: 16px;
+            margin-bottom: 24px;
+        }
+        
+        /* 底部添加按钮 */
+        .floating-action {
+            position: fixed;
+            bottom: 18px;
+            left: 20px;
+            right: 20px;
+            z-index: 99;
+        }
+        
+        .add-keyword-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 16px;
+            padding: 16px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 8px 32px rgba(102, 126, 234, 0.4);
+        }
+        
+        .add-keyword-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(102, 126, 234, 0.5);
+        }
+        
+        /* 加载状态 */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 28px;
+        }
+        
+        .loader {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e2e8f0;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* 动画效果 */
+        .fade-in {
+            animation: fadeInUp 0.6s ease-out;
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 480px) {
+            .stats-container {
+                grid-template-columns: repeat(4, 1fr);
+            }
+            
+            .stat-card {
+                padding: 12px 8px;
+            }
+            
+            .stat-number {
+                font-size: 20px;
+            }
+            
+            .detail-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* 筛选标签样式 */
+        .filter-indicator {
+            position: absolute;
+            bottom: -2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 20px;
+            height: 2px;
+            background: white;
+            border-radius: 1px;
+        }
+        
+        /* 隐藏旧版紫色区域（顶部标签/搜索/静态列表），保留底部“申请新关键词”按钮 */
+        body > div.bg-white.px-4.pt-2,
+        body > div.p-4.flex.items-center,
+        body > div.bg-white.rounded-lg.mx-4.overflow-hidden.shadow-sm {
+            display: none !important;
+        }
+
+        /* 简洁模式：隐藏 申请ID、经验、渠道 */
+        .id-display { display: none !important; }
+        .tag-row .info-tag:nth-child(1), /* 经验 */
+        .tag-row .info-tag:nth-child(2)  /* 渠道 */{ display: none !important; }
+    </style>
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <nav class="navbar">
+        <button class="back-btn" onclick="goBack()">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+        <h1 class="title">
+            <i class="fas fa-key"></i>
+            我的关键词
+        </h1>
+        <div class="actions">
+            <button class="action-btn" onclick="refreshData()">
+                <i class="fas fa-sync-alt"></i>
+                </button>
+            <button class="action-btn" onclick="showSettings()">
+                    <i class="fas fa-cog"></i>
+                </button>
+        </div>
+    </nav>
+    
+    <!-- 统计卡片区域 -->
+    <div class="stats-container">
+        <div class="stat-card active" data-filter="all" onclick="filterKeywords('all', this)">
+            <div class="stat-number" id="totalCount">0</div>
+            <div class="stat-label">全部</div>
+            </div>
+        <div class="stat-card" data-filter="pending" onclick="filterKeywords('pending', this)">
+            <div class="stat-number" id="pendingCount">0</div>
+            <div class="stat-label">待审核</div>
+            </div>
+        <div class="stat-card" data-filter="passed" onclick="filterKeywords('passed', this)">
+            <div class="stat-number" id="passedCount">0</div>
+            <div class="stat-label">已通过</div>
+            </div>
+        <div class="stat-card" data-filter="rejected" onclick="filterKeywords('rejected', this)">
+            <div class="stat-number" id="rejectedCount">0</div>
+            <div class="stat-label">未通过</div>
+        </div>
+    </div>
+    
+    <!-- 搜索栏（按需求移除显示） -->
+    <!--
+    <div class="search-container">
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" placeholder="搜索关键词、用户名或推广渠道" id="searchInput">
+            <button onclick="clearSearch()" id="clearBtn" style="display: none;">
+                <i class="fas fa-times" style="color: #9ca3af;"></i>
+            </button>
+        </div>
+    </div>
+    
+    <!-- 主要内容区域（按需求移除显示） -->
+    <main class="main-content">
+        <div id="keywordsContainer">
+            <div class="loading" id="loadingState">
+                <div class="loader"></div>
+            </div>
+        </div>
+    </main>
+    -->
+    
+    <!-- 底部添加按钮 -->
+    <div class="floating-action">
+        <button class="add-keyword-btn" onclick="addNewKeyword()">
+            <i class="fas fa-plus"></i>
+            申请新关键词
+        </button>
+    </div>
+    
+    <script>
+        // 🔧 新增：Supabase配置和初始化
+        let supabase = null;
+        const SUPABASE_URL = 'https://ybrveusbwjusnrzgfnok.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlicnZldXNid2p1c25yemdmbm9rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY0ODU1NjIsImV4cCI6MjA3MjA2MTU2Mn0.JKPSUli-q9wRuDagE6kwltLk9XgfygE8yznm-Ca82Qk';
+        
+        // 初始化Supabase客户端
+        function initSupabase() {
+            try {
+                if (typeof window.supabase !== 'undefined') {
+                    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                    console.log('✅ Supabase客户端初始化成功');
+                    return true;
+                } else {
+                    console.error('❌ Supabase SDK未加载');
+                    return false;
+                }
+            } catch (error) {
+                console.error('❌ Supabase初始化失败:', error);
+                return false;
+            }
+        }
+        
+        // 应用状态管理
+        const appState = {
+            currentFilter: 'all',
+            searchQuery: '',
+            keywords: [],
+            currentUser: null
+        };
+        
+        // 页面初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            const params = new URLSearchParams(window.location.search);
+            // 记录来源任务：kk | xray | wk
+            appState.sourceTask = params.get('task') || 'kk';
+            
+            // 根据任务类型更新页面标题
+            const titleMap = {
+                'xray': '我的关键词 - x雷浏览器搜索',
+                'wk': '我的关键词 - 悟空搜索',
+                'kk': '我的关键词 - KK搜索任务',
+                'kkdisk': '我的关键词 - KK网盘'
+            };
+            document.title = titleMap[appState.sourceTask] || '我的关键词 - KK搜索任务平台';
+            
+            // 更新页面显示的标题
+            const headerTitle = document.querySelector('.title');
+            if (headerTitle) {
+                const taskNames = {
+                    'xray': 'x雷浏览器搜索',
+                    'wk': '悟空搜索', 
+                    'kk': 'KK搜索',
+                    'kkdisk': 'KK网盘'
+                };
+                headerTitle.innerHTML = `<i class="fas fa-key"></i>我的关键词（${taskNames[appState.sourceTask] || 'KK搜索'}）`;
+            }
+            
+            initializePage();
+        });
+        
+        // 初始化页面
+        async function initializePage() {
+            // 🔧 修复：优先初始化Supabase，延迟执行确保SDK加载
+            setTimeout(() => {
+                const supabaseReady = initSupabase();
+                if (!supabaseReady) {
+                    console.warn('⚠️ Supabase初始化失败，将只能使用本地数据');
+                } else {
+                    // 🔧 Supabase初始化成功后，设置自动刷新
+                    setupAutoRefresh();
+                }
+            }, 500);
+            
+            // 确保用户登录状态
+            appState.currentUser = ensureUserLogin();
+            
+            // 加载关键词数据（现在支持从数据库加载）
+            await loadKeywords();
+
+            // 监听后台“关键词失效”推送（通过localStorage事件）
+            try{
+                window.addEventListener('storage', function(e){
+                    if(e && e.key && e.key.startsWith('invalid_keywords_updated')){
+                        showToast('您有关键词被标记为失效，无法结算收益，请重新申请新的关键词', 'error');
+                        loadKeywords();
+                    }
+                });
+            }catch(_){ }
+            
+            // 设置搜索监听
+            // 搜索区域已移除，不再初始化
+            // setupSearch();
+            
+            // 初始化动画
+            document.body.classList.add('fade-in');
+        }
+        
+        // 🔧 修复：确保用户登录状态，使用稳定的用户ID
+        function ensureUserLogin() {
+            let currentUser = getCurrentUser();
+            
+            // 🔧 修复：如果没有用户或用户ID不是统一格式，创建/使用统一用户
+            if (!currentUser || !currentUser.id || currentUser.id.startsWith('temp_') || currentUser.id.startsWith('user_')) {
+                console.log('🔧 创建稳定用户ID以解决数据不一致问题');
+                
+                // 尝试从现有数据中恢复用户信息
+                const existingUserInfo = findExistingUserInfo();
+                
+                const stableUser = {
+                    id: '555', // 🔧 统一格式：使用"555"与申请页面保持一致
+                    username: '555', // 🔧 统一用户名
+                    isTemp: false,
+                    created_at: new Date().toISOString(),
+                    migrated: true // 标记为已迁移
+                };
+                
+                localStorage.setItem('currentUser', JSON.stringify(stableUser));
+                currentUser = stableUser;
+                
+                // 🔧 迁移现有数据到稳定用户ID下
+                migrateExistingData(currentUser.id);
+                
+                console.log('✅ 稳定用户创建完成:', currentUser);
+            }
+            
+            return currentUser;
+        }
+        
+        // 🔧 新增：查找现有用户信息
+        function findExistingUserInfo() {
+            try {
+                // 查找所有关键词数据，提取用户信息
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith('keywords_')) {
+                        const data = JSON.parse(localStorage.getItem(key));
+                        if (Array.isArray(data) && data.length > 0) {
+                            const firstRecord = data[0];
+                            if (firstRecord.username && firstRecord.username !== '游客用户') {
+                                console.log('🔍 从现有数据中找到用户信息:', firstRecord.username);
+                                return {
+                                    username: '555', // 🔧 统一用户名
+                                    id: '555' // 🔧 统一ID格式，去掉user_前缀
+                                };
+                            }
+                        }
+                    }
+                }
+                
+                // 如果没有找到，返回统一的默认信息
+                return { username: '555', id: '555' }; // 🔧 统一ID格式
+            } catch (error) {
+                console.warn('查找现有用户信息失败:', error);
+                return { username: '555', id: '555' }; // 🔧 统一ID格式
+            }
+        }
+        
+        // 🔧 新增：迁移现有数据到稳定用户ID
+        function migrateExistingData(stableUserId) {
+            try {
+                const targetKey = `keywords_${stableUserId}`;
+                let targetData = JSON.parse(localStorage.getItem(targetKey) || '[]');
+                let migratedCount = 0;
+                
+                // 查找所有需要迁移的数据
+                const keysToMigrate = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith('keywords_') && key !== targetKey) {
+                        keysToMigrate.push(key);
+                    }
+                }
+                
+                // 迁移数据
+                keysToMigrate.forEach(key => {
+                    try {
+                        const data = JSON.parse(localStorage.getItem(key));
+                        if (Array.isArray(data)) {
+                            data.forEach(item => {
+                                // 检查是否已存在相同ID的记录
+                                const existingIndex = targetData.findIndex(existing => existing.id === item.id);
+                                if (existingIndex === -1) {
+                                    // 更新记录的用户ID
+                                    item.userId = stableUserId;
+                                    targetData.push(item);
+                                    migratedCount++;
+                                }
+                            });
+                        }
+                        // 删除旧键
+                        localStorage.removeItem(key);
+                        console.log(`🔄 已迁移数据键: ${key}`);
+                    } catch (e) {
+                        console.warn(`迁移数据失败: ${key}`, e);
+                    }
+                });
+                
+                // 保存合并后的数据
+                if (migratedCount > 0) {
+                    localStorage.setItem(targetKey, JSON.stringify(targetData));
+                    console.log(`✅ 数据迁移完成，迁移了 ${migratedCount} 条记录到 ${targetKey}`);
+                }
+                
+            } catch (error) {
+                console.error('数据迁移失败:', error);
+            }
+        }
+
+        // 获取当前用户
+        function getCurrentUser() {
+            try {
+                const currentUser = localStorage.getItem('currentUser');
+                return currentUser ? JSON.parse(currentUser) : null;
+            } catch (error) {
+                return null;
+            }
+        }
+        
+        // 🔧 修复：加载关键词数据，优先从数据库读取
+        async function loadKeywords() {
+            try {
+                // 模拟加载延时
+                await new Promise(resolve => setTimeout(resolve, 800));
+                
+                // 🔧 修复：优先从数据库获取数据
+                let keywords = [];
+                let dataSource = 'localStorage';
+                
+                if (supabase && appState.currentUser) {
+                    console.log('📡 优先从数据库加载关键词数据...');
+                    try {
+                        const { data: dbKeywords, error } = await supabase
+                            .from('keyword_applications')
+                            .select('*')
+                            .eq('user_id', appState.currentUser.id)
+                            .eq('task_type', appState.sourceTask === 'xray' ? 'x雷浏览器搜索任务' : (appState.sourceTask==='wk' ? '悟空搜索任务' : (appState.sourceTask==='kkdisk' ? 'KK网盘任务' : 'KK搜索任务')))
+                            .order('created_at', { ascending: false });
+                        
+                        if (!error && dbKeywords && dbKeywords.length > 0) {
+                            // 转换数据库数据格式以匹配前端显示
+                            keywords = dbKeywords.map(app => ({
+                                id: app.id,
+                                username: app.username,
+                                userId: app.user_id,
+                                experience: app.experience,
+                                channel: app.promotion_channel,
+                                category: app.task_type || '关键词推广',
+                                keywords: app.keywords,
+                                status: app.status,
+                                assigned_keywords: app.assigned_keywords,
+                                reject_reason: app.reject_reason,
+                                reject_note: app.reject_note,
+                                approve_note: app.approve_note,
+                                submitTime: app.created_at,
+                                created_at: app.created_at,
+                                updated_at: app.updated_at
+                            }));
+                            
+                            dataSource = 'database';
+                            console.log(`✅ 从数据库成功加载了 ${keywords.length} 条关键词记录`);
+                            
+                            // 同步到localStorage作为备份
+                            syncToLocalStorage(appState.currentUser.id, keywords);
+                        } else if (error) {
+                            console.warn('⚠️ 数据库查询失败:', error);
+                        }
+                    } catch (dbError) {
+                        console.warn('⚠️ 数据库连接异常:', dbError);
+                    }
+                }
+                
+                // 如果数据库没有数据或连接失败，从localStorage读取
+                if (keywords.length === 0) {
+                    console.log('🔄 从localStorage加载关键词数据...');
+                    keywords = getUserKeywords(appState.currentUser.id);
+                    // 依据任务来源过滤：
+                    // - xray 视图：只展示明确为 x雷 的记录
+                    // - kk 视图：展示 KK 或无 task_type 的旧记录
+                    if (appState.sourceTask === 'xray') {
+                        keywords = keywords.filter(k => k.task_type === 'x雷浏览器搜索任务');
+                    } else if (appState.sourceTask === 'wk') {
+                        keywords = keywords.filter(k => k.task_type === '悟空搜索任务');
+                    } else if (appState.sourceTask === 'kkdisk') {
+                        keywords = keywords.filter(k => k.task_type === 'KK网盘任务');
+                    } else {
+                        keywords = keywords.filter(k => k.task_type === 'KK搜索任务');
+                    }
+                    dataSource = 'localStorage';
+                }
+                
+                appState.keywords = keywords;
+                console.log(`📊 最终加载了 ${keywords.length} 条记录，数据源: ${dataSource}`);
+                
+                // 更新统计数据
+                updateStats(keywords);
+                
+                // 渲染关键词列表
+                renderKeywords(keywords);
+                
+            } catch (error) {
+                console.error('加载关键词失败:', error);
+                showError('加载关键词数据失败，请刷新重试');
+            }
+        }
+        
+        // 🔧 新增：将数据库数据同步到localStorage作为备份
+        function syncToLocalStorage(userId, keywords) {
+            try {
+                const keywordKey = `keywords_${userId}`;
+                localStorage.setItem(keywordKey, JSON.stringify(keywords));
+                console.log(`💾 已同步 ${keywords.length} 条记录到localStorage备份`);
+            } catch (error) {
+                console.warn('同步到localStorage失败:', error);
+            }
+        }
+        
+        // 获取用户关键词
+        function getUserKeywords(userId) {
+            try {
+                const keywordKey = `keywords_${userId}`;
+                const keywords = localStorage.getItem(keywordKey);
+                const keywordArray = keywords ? JSON.parse(keywords) : [];
+                
+                // 🔧 修复：按提交时间降序排序，最新记录在前面
+                keywordArray.sort((a, b) => {
+                    const timeA = new Date(a.submitTime || a.created_at || 0);
+                    const timeB = new Date(b.submitTime || b.created_at || 0);
+                    return timeB - timeA; // 降序排序，最新的在前面
+                });
+                
+                console.log(`📋 用户 ${userId} 的关键词已按时间排序，共 ${keywordArray.length} 条记录`);
+                
+                return keywordArray;
+            } catch (error) {
+                console.error('获取关键词失败:', error);
+                return [];
+            }
+        }
+        
+        // 更新统计数据
+        function updateStats(keywords) {
+            const totalCount = keywords.length;
+            const pendingCount = keywords.filter(k => 
+                k.status === 'pending' || k.status === '待审核' || !k.status
+            ).length;
+            const passedCount = keywords.filter(k => 
+                k.status === 'passed' || k.status === 'approved' || k.status === '已通过'
+            ).length;
+            const rejectedCount = keywords.filter(k => 
+                k.status === 'rejected' || k.status === '已拒绝'
+            ).length;
+            
+            document.getElementById('totalCount').textContent = totalCount;
+            document.getElementById('pendingCount').textContent = pendingCount;
+            document.getElementById('passedCount').textContent = passedCount;
+            document.getElementById('rejectedCount').textContent = rejectedCount;
+        }
+        
+        // 渲染关键词列表
+        function renderKeywords(keywords) {
+            const container = document.getElementById('keywordsContainer');
+            
+            if (keywords.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-key"></i>
+                        <h3>暂无关键词申请</h3>
+                        <p>您还没有申请过关键词，点击下方按钮开始申请吧！</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            keywords.forEach((keyword, index) => {
+                if (shouldShowKeyword(keyword)) {
+                    html += renderKeywordCard(keyword, index);
+                }
+            });
+            
+            if (html === '') {
+                html = `
+                    <div class="empty-state">
+                        <i class="fas fa-search"></i>
+                        <h3>没有找到匹配的结果</h3>
+                        <p>请尝试调整筛选条件或搜索关键词</p>
+                        <button class="btn-secondary action-btn" onclick="clearFilters()" style="padding: 12px 24px; font-size: 16px;">
+                            <i class="fas fa-undo"></i>
+                            清除筛选
+                        </button>
+                    </div>
+                `;
+            }
+            
+            container.innerHTML = html;
+        }
+        
+        // 判断是否显示关键词
+        function shouldShowKeyword(keyword) {
+            // 状态筛选
+            if (appState.currentFilter !== 'all') {
+                const status = keyword.status || 'pending';
+                let normalizedStatus = status;
+                
+                // 标准化状态值
+                if (status === 'approved' || status === '已通过') {
+                    normalizedStatus = 'passed';
+                } else if (status === '已拒绝') {
+                    normalizedStatus = 'rejected';
+                } else if (status === '待审核') {
+                    normalizedStatus = 'pending';
+                }
+                
+                if (normalizedStatus !== appState.currentFilter) {
+                    return false;
+                }
+            }
+            
+            // 搜索筛选
+            if (appState.searchQuery) {
+                const query = appState.searchQuery.toLowerCase();
+                const searchText = [
+                    keyword.username || '',
+                    keyword.keyword || '',
+                    keyword.assigned_keywords || '', // 🔧 修复：包含分配的关键词
+                    keyword.channel || '',
+                    keyword.category || '',
+                    keyword.id || ''
+                ].join(' ').toLowerCase();
+                
+                if (!searchText.includes(query)) {
+                    return false;
+                }
+            }
+            
+            return true;
+        }
+        
+        // 渲染关键词卡片
+        function renderKeywordCard(keyword, index) {
+            const status = keyword.status || 'pending';
+            const statusText = getStatusText(status);
+            const statusClass = getStatusClass(status);
+            const statusIcon = getStatusIcon(status);
+            
+            const channelText = getChannelText(keyword.channel);
+            const categoryText = getCategoryText(keyword.category);
+            const experienceText = getExperienceText(keyword.experience);
+            
+            return `
+                <div class="keyword-card fade-in" style="animation-delay: ${index * 0.1}s">
+                    <div class="keyword-header">
+                        <div class="keyword-user">
+                            <div class="user-avatar">
+                                ${getAvatarText(keyword.username)}
+                            </div>
+                            <div class="user-info">
+                                <h3>${keyword.username || '未知用户'}</h3>
+                                <p>申请时间：${formatTime(keyword.submitTime)}</p>
+                            </div>
+                        </div>
+                        <div class="status-badge ${statusClass}">
+                            <i class="${statusIcon}"></i>
+                            ${statusText}
+                        </div>
+                    </div>
+                    
+                    <div class="keyword-details">
+                        <!-- 申请ID显示 -->
+                        <div class="id-display">
+                            <span class="id-label">申请ID</span>
+                            <span class="id-value">${keyword.id || 'KW' + Date.now().toString().slice(-6)}</span>
+                        </div>
+                        
+                        <!-- 推广信息标签行 -->
+                        <div class="tag-row">
+                            <div class="info-tag">
+                                <span class="tag-label">经验:</span>
+                                <span class="tag-value">${experienceText}</span>
+                            </div>
+                            <div class="info-tag">
+                                <span class="tag-label">渠道:</span>
+                                <span class="tag-value">${channelText}</span>
+                            </div>
+                            <div class="info-tag">
+                                <span class="tag-label">类型:</span>
+                                <span class="tag-value">${categoryText}</span>
+                            </div>
+                        </div>
+                        
+                        ${(() => {
+                            // 🔧 修复：严格的关键词显示逻辑
+                            const isApproved = keyword.status === 'approved' || keyword.status === '已通过';
+                            const isPending = keyword.status === 'pending' || keyword.status === '待审核';
+                            const isRejected = keyword.status === 'rejected' || keyword.status === '已拒绝';
+                            const isInvalid = (keyword.approve_note||'').includes('失效:');
+                            
+                            // 只有审核通过且有管理员分配的关键词时才显示真正的关键词
+                            if (isApproved && !isInvalid && keyword.assigned_keywords && keyword.assigned_keywords.trim() && appState.sourceTask!=='kkdisk') {
+                                return `
+                                    <div class="keyword-display">
+                                        <div class="keyword-label">分配关键词</div>
+                                        <div class="keyword-text">${keyword.assigned_keywords}</div>
+                                        <button class="copy-btn" onclick="copyKeyword(\`${keyword.assigned_keywords.replace(/\`/g, '\\`')}\`, this)" title="复制关键词">
+                                            <i class="fas fa-copy"></i>
+                                        </button>
+                                    </div>
+                                `;
+                            } else {
+                                // 其他情况：待审核、已拒绝、或已通过但未分配关键词
+                                let statusText = '';
+                                let statusClass = '';
+                                
+                                if (isInvalid) {
+                                    statusText = '关键词已失效，无法结算收益，请重新申请';
+                                    statusClass = 'rejected';
+                                } else if (isPending) {
+                                    statusText = (appState.sourceTask==='kkdisk') ? '等待审核' : '关键词待分配';
+                                    statusClass = 'pending';
+                                } else if (isRejected) {
+                                    statusText = '申请已拒绝';
+                                    statusClass = 'rejected';
+                                } else if (isApproved) {
+                                    statusText = (appState.sourceTask==='kkdisk') ? '审核通过' : '关键词待分配';
+                                    statusClass = (appState.sourceTask==='kkdisk') ? 'status-passed' : 'pending';
+                                } else {
+                                    statusText = '关键词待分配';
+                                    statusClass = 'pending';
+                                }
+                                
+                                return `
+                                    <div class="keyword-display ${statusClass}">
+                                        <div class="keyword-label">关键词状态</div>
+                                        <div class="keyword-text status-text">${statusText}</div>
+                                        <div class="status-icon">
+                                            <i class="fas ${isInvalid ? 'fa-ban' : isPending ? 'fa-clock' : isRejected ? 'fa-times-circle' : 'fa-clock'}"></i>
+                                        </div>
+                                    </div>
+                                `;
+                            }
+                        })()}
+                        
+                        ${(keyword.rejectReason || keyword.reject_reason) ? `
+                            <div class="detail-item" style="margin-top: 12px;">
+                                <div class="detail-label">拒绝原因</div>
+                                <div class="detail-value" style="color: #ef4444; font-weight: 600;">${keyword.rejectReason || keyword.reject_reason}</div>
+                            </div>
+                        ` : ''}
+                        
+                        ${(keyword.reject_note && (keyword.status === 'rejected' || keyword.status === '已拒绝')) ? `
+                            <div class="detail-item" style="margin-top: 8px;">
+                                <div class="detail-label">详细说明</div>
+                                <div class="detail-value" style="color: #ef4444; font-size: 14px; line-height: 1.5;">${keyword.reject_note}</div>
+                            </div>
+                        ` : ''}
+                        
+                        ${(keyword.approve_note && (keyword.status === 'approved' || keyword.status === '已通过')) ? `
+                            <div class="detail-item" style="margin-top: 8px;">
+                                <div class="detail-label">审核备注</div>
+                                <div class="detail-value" style="color: #10b981; font-size: 14px; line-height: 1.5;">${keyword.approve_note}</div>
+                            </div>
+                        ` : ''}
+                    </div>
+                    
+                    <div class="keyword-actions">
+                        ${getActionButtons(keyword)}
+                    </div>
+                    </div>
+                `;
+        }
+
+        // 获取状态文本
+        function getStatusText(status) {
+            switch(status) {
+                case 'approved':
+                case 'passed': 
+                case '已通过': 
+                    return '审核通过';
+                case 'rejected':
+                case '已拒绝': 
+                    return '审核拒绝';
+                case 'pending':
+                case '待审核': 
+                    return '审核中';
+                default: 
+                    return '审核中';
+            }
+        }
+
+        // 获取状态样式类
+        function getStatusClass(status) {
+            switch(status) {
+                case 'approved':
+                case 'passed':
+                case '已通过': 
+                    return 'status-passed';
+                case 'rejected':
+                case '已拒绝': 
+                    return 'status-rejected';
+                case 'pending':
+                case '待审核': 
+                    return 'status-pending';
+                default: 
+                    return 'status-pending';
+            }
+        }
+        
+        // 获取状态图标
+        function getStatusIcon(status) {
+            switch(status) {
+                case 'approved':
+                case 'passed':
+                case '已通过': 
+                    return 'fas fa-check-circle';
+                case 'rejected':
+                case '已拒绝': 
+                    return 'fas fa-times-circle';
+                case 'pending':
+                case '待审核': 
+                    return 'fas fa-clock';
+                default: 
+                    return 'fas fa-clock';
+            }
+        }
+        
+        // 🔧 修复：获取渠道文本 - 直接返回用户输入的中文数据
+        function getChannelText(channel) {
+            // 如果已经是中文，直接返回
+            if (channel && typeof channel === 'string') {
+                // 处理可能的旧版本英文key映射
+                const channelMap = {
+                    'douyin': '抖音平台',
+                    'wechat': '微信朋友圈',
+                    'kuaishou': '快手平台',
+                    'qq': 'QQ群/空间'
+                };
+                
+                // 如果是英文key，转换为中文
+                if (channelMap[channel]) {
+                    return channelMap[channel];
+                }
+                
+                // 否则直接返回（应该是中文）
+                return channel;
+            }
+            return '未设置';
+        }
+        
+        // 🔧 修复：获取类别文本 - 直接返回用户输入的中文数据
+        function getCategoryText(category) {
+            // 如果已经是中文，直接返回
+            if (category && typeof category === 'string') {
+                // 处理可能的旧版本英文key映射
+                const categoryMap = {
+                    'study': '学习资源',
+                    'entertainment': '娱乐内容'
+                };
+                
+                // 如果是英文key，转换为中文
+                if (categoryMap[category]) {
+                    return categoryMap[category];
+                }
+                
+                // 否则直接返回（应该是中文）
+                return category;
+            }
+            return '未设置';
+        }
+        
+        // 🔧 修复：获取经验文本 - 直接返回用户输入的中文数据
+        function getExperienceText(experience) {
+            // 如果已经是中文，直接返回
+            if (experience && typeof experience === 'string') {
+                // 处理可能的旧版本英文key映射
+                const experienceMap = {
+                    'experienced': '我很有经验',
+                    'learning': '正在学习中'
+                };
+                
+                // 如果是英文key，转换为中文
+                if (experienceMap[experience]) {
+                    return experienceMap[experience];
+                }
+                
+                // 否则直接返回（应该是中文）
+                return experience;
+            }
+            return '未设置';
+        }
+        
+        // 获取头像文字
+        function getAvatarText(username) {
+            if (!username) return 'U';
+            return username.charAt(0).toUpperCase();
+        }
+        
+        // 格式化时间
+        function formatTime(timeString) {
+            if (!timeString) return '刚刚';
+            try {
+                const date = new Date(timeString);
+                const now = new Date();
+                const diff = now - date;
+                
+                if (diff < 60000) return '刚刚';
+                if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前';
+                if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前';
+                if (diff < 2592000000) return Math.floor(diff / 86400000) + '天前';
+                
+                return date.toLocaleDateString('zh-CN');
+            } catch (error) {
+                return timeString;
+            }
+        }
+        
+        // 获取操作按钮
+        function getActionButtons(keyword) {
+            const status = keyword.status || 'pending';
+            
+            let buttons = '';
+            
+            if (status === 'passed') {
+                buttons += `
+                    <button class="action-btn btn-primary" onclick="copyKeyword('${keyword.keyword || ''}')">
+                        <i class="fas fa-copy"></i>
+                        复制关键词
+                    </button>
+                `;
+            } else if (status === 'rejected') {
+                buttons += `
+                    <button class="action-btn btn-primary" onclick="reapplyKeyword('${keyword.id}')">
+                        <i class="fas fa-redo"></i>
+                        重新申请
+                    </button>
+                `;
+            } else {
+                buttons = '';
+            }
+            // 回填与回填记录（仅悟空搜索且审核通过显示）
+            if ((status === 'approved' || status === 'passed' || status === '已通过') && appState.sourceTask === 'wk') {
+                buttons += `
+                    <button class="action-btn btn-primary" onclick="openFeedbackModal('${keyword.id||''}')">
+                        <i class="fas fa-edit"></i>
+                        回填
+                    </button>
+                    <button class="action-btn btn-secondary" onclick="viewFeedbackHistory('${keyword.id||''}')">
+                        <i class="fas fa-list"></i>
+                        回填记录
+                    </button>
+                `;
+            }
+            
+            return buttons;
+        }
+        
+        // 筛选关键词
+        function filterKeywords(filter, element) {
+            // 更新当前筛选状态
+            appState.currentFilter = filter;
+            
+            // 更新统计卡片样式
+            document.querySelectorAll('.stat-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            element.classList.add('active');
+            
+            // 重新渲染列表
+            renderKeywords(appState.keywords);
+            
+            // 触感反馈
+            if (navigator.vibrate) {
+                navigator.vibrate(50);
+            }
+        }
+        
+        // 设置搜索监听
+        // 搜索区域已移除，保留空实现避免报错
+        function setupSearch() {}
+        
+        // 清除搜索
+        function clearSearch() { appState.searchQuery = ''; }
+        
+        // 清除筛选
+        function clearFilters() {
+            appState.currentFilter = 'all';
+            appState.searchQuery = '';
+            
+            document.getElementById('searchInput').value = '';
+            document.getElementById('clearBtn').style.display = 'none';
+            
+            document.querySelectorAll('.stat-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            document.querySelector('[data-filter="all"]').classList.add('active');
+            
+            renderKeywords(appState.keywords);
+        }
+        
+        // 🔧 修复：刷新数据，强制从数据库重新加载
+        async function refreshData() {
+            document.querySelector('.navbar .action-btn i.fa-sync-alt').style.animation = 'spin 1s linear infinite';
+            
+            try {
+                console.log('🔄 手动刷新数据，强制从数据库加载...');
+                await loadKeywords();
+                showToast('数据刷新成功', 'success');
+            } catch (error) {
+                console.error('刷新数据失败:', error);
+                showToast('刷新失败，请重试', 'error');
+            } finally {
+                document.querySelector('.navbar .action-btn i.fa-sync-alt').style.animation = '';
+            }
+        }
+        
+        // 🔧 新增：设置自动刷新，定期从数据库同步最新状态
+        function setupAutoRefresh() {
+            console.log('⏰ 设置自动数据同步...');
+            
+            // 每60秒自动刷新一次数据
+            setInterval(async () => {
+                try {
+                    console.log('🔄 自动同步数据库状态...');
+                    await loadKeywords();
+                } catch (error) {
+                    console.warn('自动刷新失败:', error);
+                }
+            }, 60000);
+            
+            // 页面获得焦点时刷新
+            window.addEventListener('focus', () => {
+                console.log('🔄 页面获得焦点，刷新数据...');
+                setTimeout(() => {
+                    loadKeywords();
+                }, 1000);
+            });
+            
+            console.log('✅ 自动数据同步已设置');
+        }
+        
+        // 添加新关键词
+        function addNewKeyword() {
+            if (navigator.vibrate) {
+                navigator.vibrate(100);
+            }
+            // 根据当前视图跳转到对应任务的申请页
+            const target = (appState.sourceTask === 'xray') ? 'xray-search-keywords.html' : 'quark-search-keywords.html';
+            window.location.href = target;
+        }
+        
+        // 复制关键词
+        function copyKeyword(keyword, button) {
+            if (!keyword) {
+                showToast('没有可复制的关键词', 'error');
+                return;
+            }
+            
+            // 更新按钮状态
+            if (button) {
+                const originalHtml = button.innerHTML;
+                button.classList.add('copied');
+                button.innerHTML = '<i class="fas fa-check"></i>';
+                button.disabled = true;
+                
+                // 2秒后恢复按钮状态
+                setTimeout(() => {
+                    button.classList.remove('copied');
+                    button.innerHTML = originalHtml;
+                    button.disabled = false;
+                }, 2000);
+            }
+            
+            try {
+                navigator.clipboard.writeText(keyword).then(() => {
+                    showToast('关键词已复制到剪贴板', 'success');
+                    if (navigator.vibrate) {
+                        navigator.vibrate(50);
+                    }
+                }).catch(() => {
+                    // 如果 clipboard API 失败，使用降级方案
+                    fallbackCopy(keyword);
+                });
+            } catch (error) {
+                // 降级方案
+                fallbackCopy(keyword);
+            }
+        }
+        
+        // 降级复制方案
+        function fallbackCopy(keyword) {
+            try {
+                const textArea = document.createElement('textarea');
+                textArea.value = keyword;
+                textArea.style.position = 'fixed';
+                textArea.style.opacity = '0';
+                document.body.appendChild(textArea);
+                textArea.select();
+                textArea.setSelectionRange(0, 99999); // 对移动端兼容
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showToast('关键词已复制到剪贴板', 'success');
+            } catch (error) {
+                console.error('复制失败:', error);
+                showToast('复制失败，请手动选择并复制', 'error');
+            }
+        }
+        
+        // 重新申请
+        function reapplyKeyword(keywordId) {
+            const keyword = appState.keywords.find(k => k.id === keywordId);
+            if (!keyword) {
+                showToast('找不到该关键词信息', 'error');
+                return;
+            }
+            
+            if (confirm('确定要重新申请这个关键词吗？')) {
+                // 重新跳转到对应任务的申请页面
+                const isXray = keyword.task_type === 'x雷浏览器搜索任务' || appState.sourceTask === 'xray';
+                window.location.href = isXray ? 'xray-search-keywords.html' : 'quark-search-keywords.html';
+            }
+        }
+        
+        // 已移除 查看详情 与 取消申请 功能
+        
+        // 显示设置
+        function showSettings() {
+            showToast('设置功能开发中', 'info');
+        }
+        
+        // 返回功能
+        function goBack() {
+            if (navigator.vibrate) {
+                navigator.vibrate(50);
+            }
+            
+            if (document.referrer) {
+                history.back();
+            } else {
+                window.location.href = 'index.html';
+            }
+        }
+        
+        // 显示提示消息
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            const bgColor = {
+                'success': '#10b981',
+                'error': '#ef4444',
+                'info': '#374151'
+            }[type] || '#374151';
+            
+            toast.style.cssText = `
+                position: fixed;
+                top: 100px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: ${bgColor};
+                color: white;
+                padding: 12px 24px;
+                border-radius: 12px;
+                font-size: 14px;
+                font-weight: 500;
+                z-index: 1000;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            `;
+            toast.textContent = message;
+            
+            document.body.appendChild(toast);
+            
+            requestAnimationFrame(() => {
+                toast.style.opacity = '1';
+            });
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => {
+                    if (document.body.contains(toast)) {
+                        document.body.removeChild(toast);
+                    }
+                }, 300);
+            }, 3000);
+        }
+        
+        // 显示错误
+        function showError(message) {
+            const container = document.getElementById('keywordsContainer');
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-exclamation-triangle" style="color: #ef4444;"></i>
+                    <h3 style="color: #ef4444;">加载失败</h3>
+                    <p>${message}</p>
+                    <button class="btn-primary action-btn" onclick="refreshData()" style="padding: 12px 24px; font-size: 16px;">
+                        <i class="fas fa-sync-alt"></i>
+                        重新加载
+                    </button>
+                </div>
+            `;
+        }
+    </script>
+    
+    <!-- 回填信息模态框 -->
+    <div id="feedbackModal" class="modal" style="display:none;">
+        <div class="modal-content fullscreen">
+            <div class="modal-header gradient">
+                <div>
+                    <div class="modal-title"><i class="fas fa-edit"></i> 关键词回填</div>
+                    <div class="modal-sub">请按要求完善信息，便于审核快速通过</div>
+            </div>
+                <button class="close-btn" onclick="closeFeedbackModal()" style="color:#fff">&times;</button>
+            </div>
+            <div class="modal-body fill">
+                <div class="form-shell content-grid">
+                    <div class="form-card">
+                        <div class="form-grid">
+                            <div class="form-group span-2">
+                                <label class="form-label">关键词</label>
+                                <div class="input-with-icon">
+                                    <i class="fas fa-key input-icon"></i>
+                                    <input id="fb_keyword" class="form-input" placeholder="请输入关键词">
+            </div>
+                                <div class="hint">示例：11、品牌词、作品标题中的核心词等</div>
+            </div>
+                            <div class="form-group span-2">
+                                <label class="form-label">链接地址</label>
+                                <div class="input-with-icon">
+                                    <i class="fas fa-link input-icon"></i>
+                                    <input id="fb_link" class="form-input" placeholder="请输入链接">
+        </div>
+                                <div class="hint">请粘贴作品/商品/帖子链接或收录链接</div>
+    </div>
+    
+    <!-- 回填记录模态框 -->
+    <div id="feedbackHistoryModal" class="modal" style="display:none;">
+        <div class="modal-content" style="max-width:680px;width:92%;">
+            <div class="modal-header gradient">
+                <div>
+                    <div class="modal-title"><i class="fas fa-list"></i> 我的回填记录</div>
+                    <div class="modal-sub">仅展示当前申请的历史回填</div>
+                </div>
+                <button class="close-btn" onclick="closeFeedbackHistoryModal()" style="color:#fff">&times;</button>
+            </div>
+            <div class="modal-body" style="max-height:70vh;overflow:auto;">
+                <table style="width:100%;border-collapse:collapse;">
+                    <thead>
+                        <tr style="background:#f3f4f6;">
+                            <th style="text-align:left;padding:8px 10px;border:1px solid #e5e7eb;">时间</th>
+                            <th style="text-align:left;padding:8px 10px;border:1px solid #e5e7eb;">关键词</th>
+                            <th style="text-align:left;padding:8px 10px;border:1px solid #e5e7eb;">平台</th>
+                            <th style="text-align:left;padding:8px 10px;border:1px solid #e5e7eb;">方式</th>
+                            <th style="text-align:left;padding:8px 10px;border:1px solid #e5e7eb;">链接</th>
+                            <th style="text-align:left;padding:8px 10px;border:1px solid #e5e7eb;">昵称</th>
+                        </tr>
+                    </thead>
+                    <tbody id="feedbackHistoryBody">
+                        <tr><td colspan="6" style="text-align:center;color:#6b7280;padding:16px;">暂无记录</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeFeedbackHistoryModal()">关闭</button>
+            </div>
+        </div>
+    </div>
+                            <div class="form-group">
+                                <label class="form-label">平台名称</label>
+                                <div class="input-with-icon select-field" id="cs-platform">
+                                    <i class="fas fa-globe input-icon"></i>
+                                    <select id="fb_platform" class="form-input" style="appearance:none;">
+                                        <option value="抖音">抖音</option>
+                                        <option value="快手">快手</option>
+                                        <option value="拼多多">拼多多</option>
+                                        <option value="淘宝">淘宝</option>
+                                        <option value="闲鱼">闲鱼</option>
+                                        <option value="网站">网站</option>
+                                    </select>
+                                    <div class="cs-display">抖音</div>
+                                    <div class="dropdown-proxy">
+                                        <svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
+        </div>
+                                    <div class="cs-options"><ul>
+                                        <li data-val="抖音">抖音</li>
+                                        <li data-val="快手">快手</li>
+                                        <li data-val="拼多多">拼多多</li>
+                                        <li data-val="淘宝">淘宝</li>
+                                        <li data-val="闲鱼">闲鱼</li>
+                                        <li data-val="网站">网站</li>
+                                    </ul></div>
+        </div>
+                                <div class="hint">从下拉选择，无需手动输入</div>
+    </div>
+                            <div class="form-group">
+                                <label class="form-label">推广方式</label>
+                                <div class="input-with-icon select-field" id="cs-method">
+                                    <i class="fas fa-bullhorn input-icon"></i>
+                                    <select id="fb_method" class="form-input" style="appearance:none;">
+                                        <option value="截流">截流</option>
+                                        <option value="短视频">短视频</option>
+                                        <option value="图文">图文</option>
+                                        <option value="直播">直播</option>
+                                        <option value="其他">其他</option>
+                                    </select>
+                                    <div class="cs-display">截流</div>
+                                    <div class="dropdown-proxy">
+                                        <svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
+                    </div>
+                                    <div class="cs-options"><ul>
+                                        <li data-val="截流">截流</li>
+                                        <li data-val="短视频">短视频</li>
+                                        <li data-val="图文">图文</li>
+                                        <li data-val="直播">直播</li>
+                                        <li data-val="其他">其他</li>
+                                    </ul></div>
+                    </div>
+                                <div class="hint">从下拉选择，无需手动输入</div>
+                </div>
+                            <div class="form-group span-2">
+                                <label class="form-label">账号昵称（用于后台识别）</label>
+                                <div class="input-with-icon">
+                                    <i class="fas fa-user input-icon"></i>
+                                    <input id="fb_nickname" class="form-input" placeholder="请输入你的账号昵称">
+            </div>
+    </div>
+            </div>
+        </div>
+        
+                            </div>
+                            </div>
+            <div class="action-bar">
+                <button class="btn" onclick="closeFeedbackModal()">取消</button>
+                <button class="btn btn-primary" onclick="submitFeedback()">提交回填</button>
+                        </div>
+                        </div>
+                    </div>
+                    
+    <script>
+    let feedbackTargetId = null;
+    function openFeedbackModal(appId){ feedbackTargetId = appId; document.getElementById('feedbackModal').style.display='flex'; }
+    function closeFeedbackModal(){ document.getElementById('feedbackModal').style.display='none'; feedbackTargetId=null; }
+    function viewFeedbackHistory(appId){ try{ window.location.href = 'feedback-history.html?id='+encodeURIComponent(appId); }catch(_){}}
+    function openFeedbackHistoryModal(appId){ try{ renderFeedbackHistory(appId); document.getElementById('feedbackHistoryModal').style.display='flex'; }catch(e){ console.error(e); }}
+    function closeFeedbackHistoryModal(){ try{ document.getElementById('feedbackHistoryModal').style.display='none'; }catch(_){}}
+
+    function renderFeedbackHistory(appId){
+        try{
+            const body = document.getElementById('feedbackHistoryBody');
+            if(!body) return;
+            const userId = (appState.currentUser && appState.currentUser.id) || '555';
+            // 优先从 localStorage 当前用户的 keywords 列表读取
+            let records = [];
+            try{
+                const userKey = 'keywords_'+userId;
+                const list = JSON.parse(localStorage.getItem(userKey)||'[]');
+                const it = list.find(x=> String(x.id||'')===String(appId));
+                if(it){
+                    if(Array.isArray(it.user_feedback)) records = it.user_feedback.slice();
+                    else if(it.user_feedback) records = [it.user_feedback];
+                }
+            }catch(_){ }
+            // 兜底：从全局 promotionApplications 读取
+            if(!records || records.length===0){
+                try{
+                    const gl = JSON.parse(localStorage.getItem('promotionApplications')||'[]');
+                    const it = gl.find(x=> String(x.id||'')===String(appId));
+                    if(it){
+                        if(Array.isArray(it.user_feedback)) records = it.user_feedback.slice();
+                        else if(it.user_feedback) records = [it.user_feedback];
+                    }
+                }catch(_){ }
+            }
+            if(!records || records.length===0){
+                body.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#6b7280;padding:16px;">暂无记录</td></tr>';
+                return;
+            }
+            const esc = s => String(s==null?'':s).replace(/[&<>]/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;' }[m]));
+            const rows = records.map(r=>{
+                const t = r.time || r.created_at || '-';
+                return `<tr>
+                    <td style="padding:8px 10px;border:1px solid #e5e7eb;white-space:nowrap;">${esc(formatTime(t))}</td>
+                    <td style="padding:8px 10px;border:1px solid #e5e7eb;">${esc(r.keyword||'-')}</td>
+                    <td style="padding:8px 10px;border:1px solid #e5e7eb;">${esc(r.platform||'-')}</td>
+                    <td style="padding:8px 10px;border:1px solid #e5e7eb;">${esc(r.method||'-')}</td>
+                    <td style="padding:8px 10px;border:1px solid #e5e7eb;max-width:220px;word-break:break-all;">${esc(r.link||'-')}</td>
+                    <td style="padding:8px 10px;border:1px solid #e5e7eb;">${esc(r.nickname||'-')}</td>
+                </tr>`;
+            }).join('');
+            body.innerHTML = rows;
+        }catch(e){ console.error('renderFeedbackHistory error', e); }
+    }
+    async function submitFeedback(){
+        try{
+            const kw = (document.getElementById('fb_keyword')?.value||'').trim();
+            const link = (document.getElementById('fb_link')?.value||'').trim();
+            const platform = (document.getElementById('fb_platform')?.value||'').trim();
+            const method = (document.getElementById('fb_method')?.value||'').trim();
+            const nick = (document.getElementById('fb_nickname')?.value||'').trim();
+            if(!kw||!link||!platform||!method||!nick){ alert('请完整填写所有回填项'); return; }
+            const fbRecord = { time:new Date().toISOString(), keyword:kw, link, platform, method, nickname:nick };
+            
+            // 本地缓存更新
+            try{
+                const userId = appState.currentUser.id;
+                const key = 'keywords_'+userId;
+                const list = JSON.parse(localStorage.getItem(key)||'[]');
+                const idx = list.findIndex(x=>String(x.id||'')===String(feedbackTargetId));
+                if(idx>-1){
+                    const cur = list[idx];
+                    if(!Array.isArray(cur.user_feedback)) cur.user_feedback = [];
+                    cur.user_feedback.unshift(fbRecord);
+                    localStorage.setItem(key, JSON.stringify(list));
+                }
+            }catch(_){ }
+            
+            // 全局列表同步（后台从这里读取）
+            try{
+                const globalKey='promotionApplications';
+                const gl=JSON.parse(localStorage.getItem(globalKey)||'[]');
+                const gIdx = gl.findIndex(x=>String(x.id||'')===String(feedbackTargetId));
+                if(gIdx>-1){
+                    if(!Array.isArray(gl[gIdx].user_feedback)) gl[gIdx].user_feedback = [];
+                    gl[gIdx].user_feedback.unshift(fbRecord);
+                    localStorage.setItem(globalKey, JSON.stringify(gl));
+                }
+            }catch(_){ }
+            
+            // 远端写入（先读取再追加，避免覆盖；若列不存在则跳过且不报错）
+            try{
+                if(supabase){
+                    // 安全探测：不指定列，拿一行样本判断是否存在 user_feedback 列
+                    let hasColumn = false;
+                    try{
+                        const { data: probe } = await supabase
+                            .from('keyword_applications')
+                            .select('*')
+                            .limit(1);
+                        if(Array.isArray(probe) && probe.length>0){
+                            hasColumn = Object.prototype.hasOwnProperty.call(probe[0], 'user_feedback');
+                        }
+                    }catch(_){ hasColumn = false; }
+                    if(hasColumn){
+                        const { data: existing, error: selErr } = await supabase
+                            .from('keyword_applications')
+                            .select('user_feedback')
+                            .eq('id', feedbackTargetId)
+                            .single();
+                        if(!selErr){
+                            const feedbackArr = Array.isArray(existing?.user_feedback) ? existing.user_feedback.slice() : [];
+                            feedbackArr.unshift(fbRecord);
+                            const { error } = await supabase
+                                .from('keyword_applications')
+                                .update({ user_feedback: feedbackArr })
+                                .eq('id', feedbackTargetId);
+                            if(error){ console.warn('数据库写入失败，仅保存到本地:', error); }
+                            else { console.log('✅ 回填写入数据库'); }
+                        }
+                    }else{
+                        console.log('user_feedback 列不存在，已跳过远端写入');
+                    }
+                }
+            }catch(e){ console.warn('远端写入失败，仅保存到本地:', e); }
+            
+            alert('回填提交成功'); closeFeedbackModal();
+        }catch(e){ alert('提交失败，请重试'); console.error(e); }
+    }
+    // 预览联动
+    (function(){
+        try{
+            const selP=document.getElementById('fb_platform'); const selM=document.getElementById('fb_method'); const nn=document.getElementById('fb_nickname');
+            const sync=()=>{
+                const get =(id,val)=>{ const el=document.getElementById(id); if(el) el.textContent = val||'-'; };
+                if(selP) get('prv_platform', selP.value);
+                if(selM) get('prv_method', selM.value);
+                if(nn) get('prv_nickname', nn.value.trim());
+            };
+            if(selP) selP.addEventListener('change', sync);
+            if(selM) selM.addEventListener('change', sync);
+            if(nn) nn.addEventListener('input', sync);
+            sync();
+        }catch(_){ }
+    })();
+
+    // 自定义选择框交互（带下滑动画）
+    (function(){
+        function bindCustomSelect(wrapperId, hiddenSelectId){
+            const wrap = document.getElementById(wrapperId); if(!wrap) return;
+            const display = wrap.querySelector('.cs-display');
+            const options = wrap.querySelector('.cs-options');
+            const items = options.querySelectorAll('li');
+            const hidden = document.getElementById(hiddenSelectId);
+
+            function open(){ wrap.classList.add('cs-open'); }
+            function close(){ wrap.classList.remove('cs-open'); }
+            function toggle(){ wrap.classList.toggle('cs-open'); }
+            function choose(val){ if(display){ display.textContent = val; } if(hidden){ hidden.value = val; hidden.dispatchEvent(new Event('change')); } close(); }
+
+            display.addEventListener('click', toggle);
+            wrap.querySelector('.dropdown-proxy').addEventListener('click', toggle);
+            items.forEach(li=> li.addEventListener('click', ()=> choose(li.getAttribute('data-val'))));
+            document.addEventListener('click', (e)=>{ if(!wrap.contains(e.target)) close(); });
+        }
+        bindCustomSelect('cs-platform','fb_platform');
+        bindCustomSelect('cs-method','fb_method');
+    })();
+    </script>
+    
+    <!-- 🗑️ 紫色区域的静态关键词列表已完全删除 -->
+</body>
+</html>

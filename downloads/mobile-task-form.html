@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>任务提交 - 关键词设置</title>
+    <style>
+        /* 基础样式设置 */
+        :root {
+            --primary-color: #4080ff;
+            --secondary-color: #f5f7fa;
+            --text-color: #333333;
+            --light-text: #666666;
+            --border-color: #e5e7eb;
+            --error-color: #f56c6c;
+            --success-color: #67c23a;
+            --border-radius: 12px;
+            --button-height: 48px;
+            --input-height: 50px;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f5f7fa;
+            color: var(--text-color);
+            line-height: 1.5;
+            font-size: 16px;
+            padding-bottom: calc(var(--button-height) + 32px);
+        }
+        
+        /* 头部导航样式 */
+        .header {
+            display: flex;
+            align-items: center;
+            padding: 16px;
+            background-color: white;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+        
+        .back-button {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 50%;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 20px;
+            color: var(--text-color);
+        }
+        
+        .back-button:active {
+            background-color: rgba(0, 0, 0, 0.05);
+        }
+        
+        .header-title {
+            flex: 1;
+            text-align: center;
+            font-size: 18px;
+            font-weight: 500;
+        }
+        
+        .home-icon {
+            width: 24px;
+            height: 24px;
+            margin: 0 8px;
+        }
+        
+        .more-button {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 50%;
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+        
+        /* 表单内容区域样式 */
+        .container {
+            padding: 16px;
+        }
+        
+        .section {
+            background-color: white;
+            border-radius: var(--border-radius);
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .section-title .info-link {
+            margin-left: auto;
+            color: var(--primary-color);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+            font-weight: normal;
+        }
+        
+        .info-link .arrow-icon {
+            margin-left: 4px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        
+        .required {
+            color: var(--error-color);
+            margin-right: 4px;
+        }
+        
+        .input-field {
+            display: block;
+            width: 100%;
+            height: var(--input-height);
+            padding: 12px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 16px;
+            outline: none;
+            transition: all 0.3s;
+        }
+        
+        .input-field:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(64, 128, 255, 0.1);
+        }
+        
+        /* 选项按钮组样式 */
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+        
+        .option-button {
+            flex: 1;
+            min-width: 120px;
+            height: var(--button-height);
+            padding: 0 16px;
+            background-color: var(--secondary-color);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            font-size: 16px;
+            color: var(--text-color);
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .option-button.selected {
+            background-color: rgba(64, 128, 255, 0.1);
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+            font-weight: 500;
+        }
+        
+        .option-button:active {
+            transform: scale(0.98);
+        }
+        
+        /* 站点输入字段 */
+        .site-input-container {
+            position: relative;
+            margin-bottom: 16px;
+        }
+        
+        .site-input {
+            padding-right: 80px;
+        }
+        
+        .site-select-link {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--primary-color);
+            text-decoration: none;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+        }
+        
+        /* 添加关键词按钮 */
+        .add-keyword-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: var(--button-height);
+            background-color: rgba(64, 128, 255, 0.1);
+            border: 1px dashed var(--primary-color);
+            border-radius: 24px;
+            color: var(--primary-color);
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 12px;
+        }
+        
+        .add-keyword-button:active {
+            background-color: rgba(64, 128, 255, 0.2);
+        }
+        
+        .add-icon {
+            width: 20px;
+            height: 20px;
+            margin-right: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        /* 提交按钮 */
+        .submit-button-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 16px;
+            background-color: white;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+        }
+        
+        .submit-button {
+            width: 100%;
+            height: var(--button-height);
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 24px;
+            font-size: 18px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .submit-button:active {
+            background-color: #3070e0;
+            transform: translateY(1px);
+        }
+        
+        /* 工具提示 */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            margin-left: 4px;
+        }
+        
+        .tooltip-icon {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background-color: #ccc;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+        
+        .tooltip-content {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            width: 200px;
+            font-size: 12px;
+            visibility: hidden;
+            opacity: 0;
+            transition: all 0.3s;
+            z-index: 100;
+        }
+        
+        .tooltip:hover .tooltip-content {
+            visibility: visible;
+            opacity: 1;
+            bottom: calc(100% + 5px);
+        }
+    </style>
+    <!-- 消息提示样式 -->
+    <style>
+.toast-container {
+    position: fixed;
+    bottom: 80px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 9999;
+}
+
+.toast-message {
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 24px;
+    font-size: 14px;
+    max-width: 80%;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.3s, transform 0.3s;
+}
+
+.toast-message.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* 按钮选中状态指示器 */
+.option-button .check-icon {
+    opacity: 0;
+    margin-left: 8px;
+    transition: opacity 0.3s;
+    color: var(--primary-color);
+    font-weight: bold;
+}
+
+.option-button.selected .check-icon {
+    opacity: 1;
+}
+
+/* 开发中功能样式 */
+.developing-badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background-color: var(--error-color);
+    color: white;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    opacity: 0;
+    transform: scale(0.8);
+    transition: opacity 0.3s, transform 0.3s;
+}
+
+.option-button:hover .developing-badge,
+.option-button.selected .developing-badge {
+    opacity: 1;
+    transform: scale(1);
+}
+</style>
+
+<!-- 提示消息容器 -->
+<div class="toast-container">
+    <div class="toast-message" id="toastMessage"></div>
+</div>
+</head>
+<body>
+    <!-- 头部导航 -->
+    <header class="header">
+        <button class="back-button" id="backButton">←</button>
+        <div class="header-title">
+            <img src="home-icon.png" alt="主页" class="home-icon">
+            做任务
+        </div>
+        <button class="more-button">⋮</button>
+    </header>
+    
+    <!-- 表单内容区域 -->
+    <div class="container">
+        <div class="section">
+            <h2 class="section-title">
+                关键词1
+                <a href="#" class="info-link">
+                    教作说明 <span class="arrow-icon">›</span>
+                </a>
+            </h2>
+            
+            <!-- 提词方式 -->
+            <div class="form-group">
+                <label class="form-label">
+                    <span class="required">*</span> 提词方式
+                </label>
+                <div class="button-group">
+                    <button class="option-button selected" id="keywordBtn">关键词提词</button>
+                    <button class="option-button" id="channelBtn">高过审通道</button>
+                </div>
+            </div>
+            
+            <!-- 是否知道kk搜索的推广方式 -->
+            <div class="form-group">
+                <label class="form-label">
+                    <span class="required">*</span> 是否知道kk搜索的推广方式
+                </label>
+                <div class="button-group">
+                    <button class="option-button selected" id="knowBtn">知道</button>
+                    <button class="option-button" id="unknowBtn">不知道</button>
+                </div>
+            </div>
+            
+            <!-- 类型 -->
+            <div class="form-group">
+                <label class="form-label">
+                    <span class="required">*</span> 类型
+                </label>
+                <input type="text" class="input-field" placeholder="夸克学习" value="夸克学习" readonly>
+            </div>
+            
+            <!-- 站点 -->
+            <div class="form-group">
+                <label class="form-label">
+                    <span class="required">*</span> 站点
+                </label>
+                <div class="button-group">
+                    <button class="option-button selected" id="recommendSiteBtn">推荐站点</button>
+                    <button class="option-button" id="customSiteBtn">自定义站点</button>
+                </div>
+                
+                <!-- 站点选择框 -->
+                <div class="site-input-container">
+                    <input type="text" class="input-field site-input" placeholder="请选择站点" readonly>
+                    <a href="#" class="site-select-link">
+                        请选择 <span class="arrow-icon">›</span>
+                    </a>
+                </div>
+            </div>
+            
+            <!-- 添加关键词按钮 -->
+            <button class="add-keyword-button">
+                <span class="add-icon">+</span> 新增关键词
+            </button>
+        </div>
+    </div>
+    
+    <!-- 提交按钮 -->
+    <div class="submit-button-container">
+        <button class="submit-button">提交</button>
+    </div>
+
+    <script>
+        // 显示提示消息函数
+        function showToast(message, duration = 2000) {
+            const toast = document.getElementById('toastMessage');
+            toast.textContent = message;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, duration);
+        }
+        
+        // 按钮交互效果
+        document.querySelectorAll('.button-group').forEach(group => {
+            const buttons = group.querySelectorAll('.option-button');
+            
+            buttons.forEach(button => {
+                // 添加选中状态的对勾图标
+                const checkIcon = document.createElement('span');
+                checkIcon.className = 'check-icon';
+                checkIcon.textContent = '✓';
+                button.appendChild(checkIcon);
+                
+                // 为高过审通道按钮添加开发中标记
+                if (button.id === 'channelBtn') {
+                    const developingBadge = document.createElement('span');
+                    developingBadge.className = 'developing-badge';
+                    developingBadge.textContent = '开发中';
+                    button.appendChild(developingBadge);
+                    button.style.position = 'relative';
+                }
+                
+                button.addEventListener('click', function() {
+                    // 如果是高过审通道按钮，显示开发中提示
+                    if (this.id === 'channelBtn') {
+                        showToast('该功能正在开发中，敬请期待！', 3000);
+                    }
+                    
+                    // 移除同组所有按钮的选中状态
+                    buttons.forEach(btn => {
+                        btn.classList.remove('selected');
+                    });
+                    
+                    // 添加当前按钮的选中状态
+                    this.classList.add('selected');
+                    
+                    // 显示选中了哪个按钮的提示
+                    const buttonText = this.textContent.replace('✓', '').replace('开发中', '').trim();
+                    showToast(`您选择了: ${buttonText}`);
+                });
+                
+                // 添加触摸反馈
+                button.addEventListener('touchstart', function() {
+                    this.style.opacity = '0.8';
+                });
+                
+                button.addEventListener('touchend', function() {
+                    this.style.opacity = '1';
+                });
+            });
+        });
+        
+        // 返回按钮功能
+        document.getElementById('backButton').addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            history.back();
+        });
+        
+        // 提交按钮触摸反馈
+        const submitButton = document.querySelector('.submit-button');
+        submitButton.addEventListener('touchstart', function() {
+            this.style.backgroundColor = '#3070e0';
+        });
+        
+        submitButton.addEventListener('touchend', function() {
+            this.style.backgroundColor = '';
+        });
+        
+        // 添加关键词按钮
+        const addKeywordButton = document.querySelector('.add-keyword-button');
+        addKeywordButton.addEventListener('click', function() {
+            alert('即将添加新的关键词');
+        });
+    </script>
+</body>
+</html>

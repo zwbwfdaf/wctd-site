@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="format-detection" content="telephone=no">
+    <title>KK搜索任务平台 - 文创推广平台</title>
+    
+    <!-- 嵌入式数据库修复 - 直接解决问题 -->
+    <script>
+        console.log('🚨 启动嵌入式数据库修复...');
+        
+        // Supabase配置（代理优先）
+        const SUPABASE_DIRECT_URL = 'https://ybrveusbwjusnrzgfnok.supabase.co';
+        const SUPABASE_PROXY_URL = 'https://api.wctd.xyz/sb';
+        let SUPABASE_URL = SUPABASE_PROXY_URL;
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlicnZldXNid2p1c25yemdmbm9rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY0ODU1NjIsImV4cCI6MjA3MjA2MTU2Mn0.JKPSUli-q9wRuDagE6kwltLk9XgfygE8yznm-Ca82Qk';
+        
+        // Supabase SDK CDN URL
+        const SUPABASE_CDN_URLS = [
+            'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js',
+            'https://unpkg.com/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js',
+            'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js'
+        ];
+        
+        // 全局变量
+        let supabaseClient = null;
+        let isInitialized = false;
+        let loadingPromise = null;
+        
+        // 显示错误信息
+        function showErrorMessage(message, autoHide = true) {
+            // 删除已有错误信息
+            const existingError = document.querySelector('.database-error');
+            if (existingError) {
+                existingError.remove();
+            }
+            
+            // 创建错误信息
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'database-error';
+            errorDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: #fee;
+                color: #c33;
+                padding: 15px 20px;
+                border-radius: 8px;
+                border: 1px solid #fcc;
+                z-index: 10000;
+                max-width: 90%;
+                text-align: center;
+                font-weight: 500;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            `;
+            
+            // 如果是组件加载失败，显示更友好的提示
+            if (message.includes('组件加载失败')) {
+                errorDiv.innerHTML = `
+                    <div style="margin-bottom: 8px;">❌ ${message}</div>
+                    <div style="font-size: 12px; color: #666;">
+                        正在自动修复中...
+                    </div>
+                `;
+            } else {
+                errorDiv.innerHTML = `❌ ${message}`;
+            }
+            
+            document.body.appendChild(errorDiv);
+            
+            // 自动隐藏
+            if (autoHide) {
+                setTimeout(() => {
+                    if (errorDiv.parentNode) {
+                        errorDiv.parentNode.removeChild(errorDiv);
+                    }
+                }, 7000);
+            }
+            
+            return errorDiv;
+        }
+        
+        // 显示成功信息
+        function showSuccessMessage(message) {
+            // 删除已有错误信息
+            const existingError = document.querySelector('.database-error');
+            if (existingError) {
+                existingError.remove();
+            }
+            
+            // 创建成功信息
+            const successDiv = document.createElement('div');
+            successDiv.className = 'database-success';
+            successDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: #d4edda;
+                color: #155724;
+                padding: 15px 20px;
+                border-radius: 8px;
+                border: 1px solid #c3e6cb;
+                z-index: 10000;
+                max-width: 90%;
+                text-align: center;
+                font-weight: 500;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            `;
+            
+            successDiv.innerHTML = `✅ ${message}`;
+            document.body.appendChild(successDiv);
+            
+            // 自动隐藏
+            setTimeout(() => {
+                if (successDiv.parentNode) {
+                    successDiv.parentNode.removeChild(successDiv);
+                }
+            }, 5000);
+            
+            return successDiv;
+        }
+        
+        // 加载Supabase SDK
+        function loadSupabaseSDK() {
+            if (loadingPromise) {
+                return loadingPromise;
+            }
+            
+            loadingPromise = new Promise((resolve, reject) => {
+                // 检查是否已经加载
+                if (window.supabase && typeof window.supabase.createClient === 'function') {
+                    console.log('✅ Supabase SDK已存在');
+                    resolve(window.supabase);
+                    return;
+                }
+                
+                console.log('📦 开始加载Supabase SDK...');
+                
+                let currentIndex = 0;
+                
+                function tryNextCDN() {
+                    if (currentIndex >= SUPABASE_CDN_URLS.length) {
+                        reject(new Error('所有CDN都无法加载Supabase SDK'));
+                        return;
+                    }
+                    
+                    const url = SUPABASE_CDN_URLS[currentIndex];
+                    console.log(`🔄 尝试CDN #${currentIndex + 1}: ${url}`);
+                    
+                    const script = document.createElement('script');
+                    script.src = url;
+                    script.async = true;
+                    script.crossOrigin = 'anonymous';
+                    
+                    // 加载成功
+                    script.onload = function() {
+                        console.log(`✅ CDN #${currentIndex + 1} 加载成功`);
+                        
+                        // 检查全局supabase对象
+                        if (window.supabase && typeof window.supabase.createClient === 'function') {
+                            console.log('✅ Supabase创建器函数已可用');
+                            resolve(window.supabase);
+                        } else {
+                            console.error(`❌ CDN #${currentIndex + 1} 无法提供supabase对象`);
+                            currentIndex++;
+                            tryNextCDN();
+                        }
+                    };
+                    
+                    // 加载失败
+                    script.onerror = function() {
+                        console.error(`❌ CDN #${currentIndex + 1} 加载失败`);
+                        currentIndex++;
+                        tryNextCDN();
+                    };
+                    
+                    // 添加到页面
+                    document.head.appendChild(script);
+                    
+                    // 超时处理
+                    setTimeout(() => {
+                        if (currentIndex < SUPABASE_CDN_URLS.length && !window.supabase) {
+                            console.log(`⏰ CDN #${currentIndex + 1} 加载超时`);
+                            currentIndex++;
+                            tryNextCDN();
+                        }
+                    }, 10000);
+                }
+                
+                // 开始尝试第一个CDN
+                tryNextCDN();
+            });
+            
+            return loadingPromise;
+        }
+        
+        // 初始化数据库
+        async function initDatabase() {
+            try {
+                console.log('🔗 连接到Supabase数据库...');
+                
+                // 加载SDK
+                const supabase = await loadSupabaseSDK();
+                
+                // 创建客户端（先代理后直连）
+                console.log('🔧 创建Supabase客户端...');
+                try{
+                    supabaseClient = supabase.createClient(SUPABASE_PROXY_URL, SUPABASE_ANON_KEY);
+                    await Promise.race([
+                        supabaseClient.from('users').select('id', { count:'exact', head:true }).limit(1),
+                        new Promise((_,rej)=>setTimeout(()=>rej(new Error('proxy_timeout')),5000))
+                    ]);
+                    SUPABASE_URL = SUPABASE_PROXY_URL;
+                }catch(e){
+                    console.warn('⚠️ 代理不可用，回退直连', e && e.message);
+                    supabaseClient = supabase.createClient(SUPABASE_DIRECT_URL, SUPABASE_ANON_KEY);
+                    SUPABASE_URL = SUPABASE_DIRECT_URL;
+                }
+                
+                if (!supabaseClient) {
+                    throw new Error('客户端创建失败');
+                }
+                
+                console.log('✅ Supabase客户端创建成功');
+                
+                // 测试连接
+                console.log('🧪 测试数据库连接...');
+                const { data, error } = await supabaseClient
+                    .from('users')
+                    .select('id')
+                    .limit(1);
+                    
+                if (error) {
+                    console.warn(`⚠️ 数据库测试查询返回错误: ${error.message}`);
+                    
+                    // 如果是表不存在的错误，说明连接是正常的
+                    if (error.message.includes('relation') && error.message.includes('does not exist')) {
+                        console.log('✅ 数据库连接正常（表结构待验证）');
+                    } else if (error.code === '42P01') {
+                        console.log('✅ 数据库连接正常（权限或表结构问题）');
+                    } else {
+                        console.warn('⚠️ 可能存在权限或配置问题，但连接已建立');
+                    }
+                } else {
+                    console.log('✅ 数据库连接和查询测试完全成功');
+                }
+                
+                isInitialized = true;
+                
+                // 绑定到全局对象
+                window.supabaseClient = supabaseClient;
+                window.dbReady = true;
+                
+                // 显示成功信息
+                showSuccessMessage('数据库连接成功');
+                
+                // 移除错误提示
+                const errorDiv = document.querySelector('.database-error');
+                if (errorDiv) {
+                    errorDiv.remove();
+                }
+                
+                console.log('🎉 数据库初始化完成！');
+                return supabaseClient;
+                
+            } catch (error) {
+                console.error('❌ 数据库初始化失败:', error);
+                
+                // 提供更具体的错误信息
+                let errorMessage = '数据库连接失败';
+                if (error.message.includes('network') || error.message.includes('fetch')) {
+                    errorMessage = '网络连接失败，请检查网络设置';
+                } else if (error.message.includes('SDK') || error.message.includes('加载器')) {
+                    errorMessage = '数据库组件加载失败，正在尝试修复...';
+                    
+                    // 尝试延迟重新初始化
+                    setTimeout(() => {
+                        console.log('🔄 尝试重新初始化数据库连接...');
+                        initDatabase().then(() => {
+                            console.log('✅ 数据库重新连接成功');
+                            
+                            // 移除错误提示并刷新页面
+                            const existingError = document.querySelector('.database-error');
+                            if (existingError) {
+                                existingError.remove();
+                            }
+                            
+                        }).catch(retryError => {
+                            console.error('❌ 重新连接仍然失败:', retryError);
+                        });
+                    }, 2000);
+                } else if (error.message.includes('401') || error.message.includes('403')) {
+                    errorMessage = '数据库访问权限错误，请联系管理员';
+                }
+                
+                // 显示错误信息
+                showErrorMessage(errorMessage);
+                
+                throw error;
+            }
+        }
+        
+        // 获取数据库客户端
+        function getClient() {
+            return supabaseClient;
+        }
+        
+        // 检查是否就绪
+        function isReady() {
+            return isInitialized && supabaseClient !== null;
+        }
+        
+        // 导出函数到全局
+        window.db = {
+            init: initDatabase,
+            getClient: getClient,
+            isReady: isReady
+        };
+        
+        // 页面加载完成后初始化
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function() {
+                console.log('📄 DOM加载完成，准备初始化数据库...');
+                setTimeout(initDatabase, 300);
+            });
+        } else {
+            console.log('📄 DOM已就绪，立即初始化数据库');
+            setTimeout(initDatabase, 300);
+        }
+        
+        console.log('🚨 嵌入式数据库修复器已加载');
+    </script>
+    
+    <!-- 正常的页面样式和脚本 -->
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            padding-bottom: 80px;
+        }
+        
+        /* 顶部英雄区域 */
+        .hero-section {
+            padding: 60px 20px 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* 装饰性背景元素 */
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: rgba(255, 255, 255, 0.05);
+            transform: rotate(35deg);
+            z-index: -1;
+        }
+        
+        /* 平台Logo */
+        .platform-logo {
+            margin-bottom: 25px;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .platform-logo img {
+            width: 100px;
+            height: auto;
+        }
+        
+        /* 平台名称 */
+        .platform-name {
+            font-size: 28px;
+            font-weight: bold;
+            color: white;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+            position: relative;
+            z-index: 2;
+        }
+        
+        /* 平台描述 */
+        .platform-desc {
+            font-size: 16px;
+            color: rgba(255, 255, 255, 0.85);
+            max-width: 85%;
+            margin: 0 auto 30px;
+            position: relative;
+            z-index: 2;
+        }
+        
+        /* 主按钮 */
+        .main-btn {
+            background: white;
+            color: #764ba2;
+            font-weight: bold;
+            font-size: 16px;
+            padding: 12px 30px;
+            border-radius: 100px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+            text-decoration: none;
+            display: inline-block;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .main-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 25px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* 内容卡片 */
+        .content-cards {
+            padding: 0 15px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        /* 卡片部分样式 */
+        .section-title {
+            font-size: 22px;
+            font-weight: bold;
+            color: white;
+            margin: 30px 0 15px 15px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+        }
+        
+        .card-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            width: calc(33.33% - 15px);
+            min-width: 250px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15);
+        }
+        
+        .card-icon {
+            width: 60px;
+            height: 60px;
+            background: #f0f4ff;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 15px;
+        }
+        
+        .card-icon img {
+            width: 32px;
+            height: 32px;
+            object-fit: contain;
+        }
+        
+        .card-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #444;
+        }
+        
+        .card-desc {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 15px;
+        }
+        
+        .card-price {
+            font-size: 20px;
+            font-weight: bold;
+            color: #667eea;
+            margin-top: 10px;
+        }
+        
+        /* 底部导航栏 */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            display: flex;
+            justify-content: space-around;
+            padding: 12px 0;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+        }
+        
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 20%;
+            text-decoration: none;
+            color: #666;
+            font-size: 12px;
+        }
+        
+        .nav-item.active {
+            color: #667eea;
+        }
+        
+        .nav-icon {
+            font-size: 24px;
+            margin-bottom: 4px;
+        }
+        
+        /* 类别筛选 */
+        .category-filter {
+            display: flex;
+            overflow-x: auto;
+            padding: 10px 15px;
+            gap: 10px;
+            scrollbar-width: none; /* Firefox */
+            margin-bottom: 15px;
+        }
+        
+        .category-filter::-webkit-scrollbar {
+            display: none; /* Chrome, Safari */
+        }
+        
+        .category-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border-radius: 100px;
+            padding: 8px 15px;
+            font-size: 14px;
+            white-space: nowrap;
+            border: none;
+        }
+        
+        .category-btn.active {
+            background: white;
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="hero-section">
+        <div class="platform-logo">
+            <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9Im5vbmUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTIgMkwycyAxMCA1IDBhMTAgMTAgMCAwIDAgMjAgMGMtMTAgNS0xMCAwLTEwIDB6Ii8+PHBhdGggZD0iTTEyIDEyYTEwIDEwIDAgMSAwIDAgOCAxMCAxMCAwIDAgMCAwLTh6Ii8+PHBhdGggZD0iTTEyIDE0YTIgMiAwIDEgMCAwLTQgMiAyIDAgMCAwIDAgNHoiLz48L3N2Zz4=" alt="Logo">
+        </div>
+        <div class="platform-name">KK搜索任务平台</div>
+        <div class="platform-desc">专业的文创推广平台，注册领取更多好礼！</div>
+        <a href="login.html" class="main-btn">立即登录</a>
+    </div>
+
+    <div class="category-filter">
+        <button class="category-btn active">全部任务</button>
+        <button class="category-btn">搜索推广</button>
+        <button class="category-btn">网盘推广</button>
+        <button class="category-btn">视频推广</button>
+        <button class="category-btn">平台推广</button>
+    </div>
+
+    <div class="content-cards">
+        <h2 class="section-title">热门项目</h2>
+        <div class="card-container">
+            <div class="card" onclick="location.href='login.html'">
+                <div class="card-icon">
+                    <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM2NjdlZWEiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTEgNEg0YTIgMiAwIDAgMC0yIDJ2MTRhMiAyIDAgMCAwIDIgMmg3bTYtMTZoN2EyIDIgMCAwIDEgMiAydjE0YTIgMiAwIDAgMS0yIDJoLTdtLTMtNWwtNC00bTAgMGw0LTRtLTQgNGgxMSIvPjwvc3ZnPg==" alt="KK搜索">
+                </div>
+                <h3 class="card-title">KK搜索</h3>
+                <p class="card-desc">高收益搜索任务</p>
+                <div class="card-price">¥11.00</div>
+            </div>
+
+            <div class="card" onclick="location.href='login.html'">
+                <div class="card-icon">
+                    <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM2NjdlZWEiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMTggOEgzQzEuOSA4IDEgOC45IDEgMTBzLjkgMiAyIDJoMTVtMC00djhNNiAxMi41djNNNiAydjMiLz48L3N2Zz4=" alt="KK网盘">
+                </div>
+                <h3 class="card-title">KK网盘</h3>
+                <p class="card-desc">网盘推广任务</p>
+                <div class="card-price">¥9.00</div>
+            </div>
+
+            <div class="card" onclick="location.href='login.html'">
+                <div class="card-icon">
+                    <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM2NjdlZWEiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cmVjdCB4PSIyIiB5PSIyIiB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHJ4PSIyLjE4IiByeT0iMi4xOCIvPjxwYXRoIGQ9Ik0xMCA5bDUgMyAtNSAzVjlaIi8+PC9zdmc+" alt="视频推广">
+                </div>
+                <h3 class="card-title">视频推广</h3>
+                <p class="card-desc">视频平台任务</p>
+                <div class="card-price">¥10.00</div>
+            </div>
+        </div>
+
+        <h2 class="section-title">精选任务</h2>
+        <div class="card-container">
+            <div class="card" onclick="location.href='login.html'">
+                <div class="card-icon">
+                    <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM2NjdlZWEiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNNCAxMGwzIDMgNS02Ii8+PHBhdGggZD0iTTE0IDE0bDEuMjMgMS40MyBhMiAyIDAgMCAxIDEgMS43NFYyMmwtNS4xLTJMNSAyMnYtNC44M2MwLS43LjItMS41LjQtMi4ybC4wMy0uMUMzLjggNiAxMC42IDUgMTYuNSA1YzIgMCA1IDIgNSAyczAtMiA2IDBjMCAwLTEgMC0zIC40TDE3IDE2Ii8+PC9zdmc+" alt="Orange Icon">
+                </div>
+                <h3 class="card-title">悟空搜索</h3>
+                <p class="card-desc">完成搜索关键词任务</p>
+                <div class="card-price">¥10.00</div>
+            </div>
+
+            <div class="card" onclick="location.href='login.html'">
+                <div class="card-icon">
+                    <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM2NjdlZWEiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMjIgMTAuNUw0IDE4UzEgMTEgMTEgMkwyMSA3IiBmaWxsPSJub25lIi8+PHBhdGggZD0iTTIyIDEwVjZNMTAgM0wxOCAxNi44Ii8+PC9zdmc+" alt="Green Icon">
+                </div>
+                <h3 class="card-title">视频互刷</h3>
+                <p class="card-desc">视频互助推广任务</p>
+                <div class="card-price">¥8.50</div>
+            </div>
+
+            <div class="card" onclick="location.href='login.html'">
+                <div class="card-icon">
+                    <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM2NjdlZWEiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cmVjdCB4PSIzIiB5PSIzIiB3aWR0aD0iMTgiIGhlaWdodD0iMTgiIHJ4PSI2LjE4IiByeT0iNi4xOCIvPjxwYXRoIGQ9Ik04IDEyaDgiLz48cGF0aCBkPSJNMTIgOHY4Ii8+PC9zdmc+" alt="Blue Icon">
+                </div>
+                <h3 class="card-title">网盘上传</h3>
+                <p class="card-desc">网盘资源分享任务</p>
+                <div class="card-price">¥7.00</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-nav">
+        <a href="#" class="nav-item active">
+            <div class="nav-icon">🏠</div>
+            <div class="nav-text">首页</div>
+        </a>
+        <a href="login.html" class="nav-item">
+            <div class="nav-icon">📋</div>
+            <div class="nav-text">任务</div>
+        </a>
+        <a href="login.html" class="nav-item">
+            <div class="nav-icon">🔍</div>
+            <div class="nav-text">发现</div>
+        </a>
+        <a href="login.html" class="nav-item">
+            <div class="nav-icon">💰</div>
+            <div class="nav-text">钱包</div>
+        </a>
+        <a href="login.html" class="nav-item">
+            <div class="nav-icon">👤</div>
+            <div class="nav-text">我的</div>
+        </a>
+    </div>
+</body>
+</html>

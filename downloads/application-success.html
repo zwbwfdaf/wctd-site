@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>申请提交成功</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f8f9fa;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+        }
+
+        .success-container {
+            background: white;
+            border-radius: 20px;
+            padding: 60px 40px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        .success-icon {
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, #10B981, #059669);
+            border-radius: 50%;
+            margin: 0 auto 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            box-shadow: 0 8px 30px rgba(16, 185, 129, 0.3);
+        }
+
+        .success-icon::before {
+            content: '';
+            position: absolute;
+            width: 140px;
+            height: 140px;
+            background: rgba(16, 185, 129, 0.1);
+            border-radius: 50%;
+            top: -10px;
+            left: -10px;
+            animation: pulse 2s infinite;
+        }
+
+        .check-mark {
+            color: white;
+            font-size: 48px;
+            font-weight: bold;
+            position: relative;
+            z-index: 2;
+        }
+
+        .success-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1F2937;
+            margin-bottom: 20px;
+            letter-spacing: -0.5px;
+        }
+
+        .success-message {
+            font-size: 16px;
+            color: #6B7280;
+            line-height: 1.6;
+            margin-bottom: 40px;
+            padding: 0 10px;
+        }
+
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .btn {
+            padding: 16px 24px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #8B5CF6, #A855F7);
+            color: white;
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+        }
+
+        .btn-secondary {
+            background: #F9FAFB;
+            color: #374151;
+            border: 2px solid #E5E7EB;
+        }
+
+        .btn-secondary:hover {
+            background: #F3F4F6;
+            border-color: #D1D5DB;
+            transform: translateY(-1px);
+        }
+
+        .chat-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, #8B5CF6, #A855F7);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4);
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        .chat-btn:hover {
+            transform: scale(1.1);
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.1);
+                opacity: 0.7;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .success-container {
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        /* 移动端优化 */
+        @media (max-width: 480px) {
+            .success-container {
+                padding: 40px 30px;
+                margin: 20px;
+            }
+
+            .success-icon {
+                width: 100px;
+                height: 100px;
+                margin-bottom: 25px;
+            }
+
+            .success-icon::before {
+                width: 120px;
+                height: 120px;
+                top: -10px;
+                left: -10px;
+            }
+
+            .check-mark {
+                font-size: 40px;
+            }
+
+            .success-title {
+                font-size: 24px;
+                margin-bottom: 16px;
+            }
+
+            .success-message {
+                font-size: 15px;
+                margin-bottom: 30px;
+            }
+
+            .btn {
+                padding: 14px 20px;
+                font-size: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="success-container">
+        <div class="success-icon">
+            <div class="check-mark">✓</div>
+        </div>
+        
+        <h1 class="success-title">申请提交成功！</h1>
+        
+        <p class="success-message">
+            您的关键词申请已成功提交，我们将在24小时内完成审核。审核结果将及时通知您，请耐心等待。
+        </p>
+        
+        <div class="button-group">
+            <a href="my-keywords.html" class="btn btn-primary">
+                📋 查看我的申请
+            </a>
+            <a href="index.html" class="btn btn-secondary">
+                🏠 返回首页
+            </a>
+        </div>
+    </div>
+
+    <!-- 聊天按钮 -->
+    <button class="chat-btn" onclick="showChatSupport()">
+        💬
+    </button>
+
+    <script>
+        // 页面加载时播放成功动画
+        document.addEventListener('DOMContentLoaded', function() {
+            // 添加成功音效（如果需要）
+            playSuccessAnimation();
+            
+            // 记录申请成功事件
+            logApplicationSuccess();
+        });
+
+        function playSuccessAnimation() {
+            const icon = document.querySelector('.success-icon');
+            const title = document.querySelector('.success-title');
+            const message = document.querySelector('.success-message');
+            const buttons = document.querySelector('.button-group');
+
+            // 延时显示各个元素
+            setTimeout(() => {
+                title.style.animation = 'fadeInUp 0.5s ease-out';
+            }, 200);
+
+            setTimeout(() => {
+                message.style.animation = 'fadeInUp 0.5s ease-out';
+            }, 400);
+
+            setTimeout(() => {
+                buttons.style.animation = 'fadeInUp 0.5s ease-out';
+            }, 600);
+        }
+
+        function logApplicationSuccess() {
+            // 记录申请成功时间
+            const successTime = new Date().toISOString();
+            localStorage.setItem('lastApplicationSuccess', successTime);
+            
+            console.log('✅ 关键词申请成功页面已显示');
+        }
+
+        function showChatSupport() {
+            alert('如有疑问，请联系客服！');
+        }
+
+        // 防止用户后退到表单页面后重复提交
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted) {
+                // 页面从缓存恢复，刷新页面状态
+                location.reload();
+            }
+        });
+
+        // 键盘快捷键支持
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                // 回车键快速查看申请
+                window.location.href = 'my-keywords.html';
+            } else if (e.key === 'Escape') {
+                // ESC键返回首页
+                window.location.href = 'index.html';
+            }
+        });
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

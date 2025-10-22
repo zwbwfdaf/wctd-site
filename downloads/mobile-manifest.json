@@ -1,0 +1,202 @@
+{
+  "name": "文创邦",
+  "short_name": "文创平台",
+  "description": "专业的文创内容推广管理平台",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#667eea",
+  "theme_color": "#667eea",
+  "lang": "zh-CN",
+  "scope": "./",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "./mobile-assets/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./mobile-assets/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./mobile-assets/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./mobile-assets/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./mobile-assets/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./mobile-assets/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./mobile-assets/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./mobile-assets/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "./mobile-assets/screenshot1.png",
+      "sizes": "720x1280",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "./mobile-assets/screenshot2.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "登录",
+      "short_name": "登录",
+      "description": "快速登录平台",
+      "url": "./login.html",
+      "icons": [
+        {
+          "src": "./mobile-assets/login-icon.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "我的任务",
+      "short_name": "任务",
+      "description": "查看我的任务",
+      "url": "./my-tasks.html",
+      "icons": [
+        {
+          "src": "./mobile-assets/task-icon.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "我的钱包",
+      "short_name": "钱包",
+      "description": "查看钱包余额",
+      "url": "./my-wallet.html",
+      "icons": [
+        {
+          "src": "./mobile-assets/wallet-icon.png",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ],
+  "prefer_related_applications": false,
+  "edge_side_panel": {
+    "preferred_width": 400
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

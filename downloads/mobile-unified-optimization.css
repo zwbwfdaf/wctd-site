@@ -1,0 +1,670 @@
+/* 文创推广平台 - 统一移动端优化样式 */
+/* 专为手机端设计，优化字体大小和间距 */
+
+/* 基础变量定义 */
+:root {
+    /* 移动端专用变量 */
+    --mobile-padding-xs: 0.5rem;    /* 8px */
+    --mobile-padding-sm: 0.75rem;   /* 12px */
+    --mobile-padding-md: 1rem;      /* 16px */
+    --mobile-padding-lg: 1.25rem;   /* 20px */
+    
+    /* 移动端字体大小 */
+    --mobile-text-xs: 0.75rem;      /* 12px */
+    --mobile-text-sm: 0.875rem;     /* 14px */
+    --mobile-text-base: 1rem;       /* 16px */
+    --mobile-text-lg: 1.125rem;     /* 18px */
+    --mobile-text-xl: 1.25rem;      /* 20px */
+    
+    /* 移动端行高 */
+    --mobile-leading-tight: 1.25;
+    --mobile-leading-normal: 1.5;
+    --mobile-leading-relaxed: 1.75;
+    
+    /* 移动端边框圆角 */
+    --mobile-rounded-sm: 0.375rem;  /* 6px */
+    --mobile-rounded-md: 0.5rem;    /* 8px */
+    --mobile-rounded-lg: 0.75rem;   /* 12px */
+    
+    /* 安全区域适配 */
+    --safe-area-top: env(safe-area-inset-top, 0px);
+    --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-area-left: env(safe-area-inset-left, 0px);
+    --safe-area-right: env(safe-area-inset-right, 0px);
+}
+
+/* 全局移动端基础样式 */
+* {
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    box-sizing: border-box;
+}
+
+html {
+    font-size: 16px;
+    scroll-behavior: smooth;
+}
+
+body {
+    font-size: var(--mobile-text-base);
+    line-height: var(--mobile-leading-normal);
+    overflow-x: hidden;
+    margin: 0;
+    padding: 0;
+}
+
+/* 主要内容区域适配 */
+main {
+    padding-bottom: calc(64px + var(--safe-area-bottom));
+    min-height: calc(100vh - 64px - var(--safe-area-bottom));
+}
+
+/* 头部区域优化 */
+.header, .header-gradient {
+    padding-top: var(--safe-area-top);
+    padding-left: calc(var(--mobile-padding-md) + var(--safe-area-left));
+    padding-right: calc(var(--mobile-padding-md) + var(--safe-area-right));
+}
+
+/* 容器和布局优化 */
+.container {
+    padding-left: var(--mobile-padding-md);
+    padding-right: var(--mobile-padding-md);
+    max-width: 100%;
+}
+
+/* 任务卡片统一优化 - 适合手机端 */
+.task-card {
+    background: white;
+    border-radius: var(--mobile-rounded-lg);
+    padding: var(--mobile-padding-sm);
+    margin-bottom: var(--mobile-padding-sm);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+    border: 1px solid #f0f0f0;
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.task-card:active {
+    transform: scale(0.98);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* 任务卡片内容优化 */
+.task-card h3 {
+    font-size: var(--mobile-text-sm) !important;
+    line-height: var(--mobile-leading-tight) !important;
+    font-weight: 600 !important;
+    margin: 0 0 0.25rem 0 !important;
+    color: #1f2937;
+}
+
+.task-card p {
+    font-size: var(--mobile-text-xs) !important;
+    line-height: var(--mobile-leading-normal) !important;
+    margin: 0 0 0.25rem 0 !important;
+    color: #6b7280;
+}
+
+.task-card .text-red-600 {
+    font-size: var(--mobile-text-sm) !important;
+    font-weight: 700 !important;
+    color: #dc2626 !important;
+}
+
+.task-card .text-lg {
+    font-size: var(--mobile-text-base) !important;
+}
+
+/* 任务卡片图标优化 */
+.task-card img,
+.task-card .w-5,
+.task-card .h-5,
+.task-card .w-6,
+.task-card .h-6 {
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: var(--mobile-rounded-sm);
+    flex-shrink: 0;
+}
+
+/* 网格布局优化 */
+.grid {
+    gap: var(--mobile-padding-sm);
+}
+
+.grid-cols-2 > * {
+    min-height: 120px;
+}
+
+/* 按钮优化 */
+button, .btn {
+    min-height: 44px;
+    min-width: 44px;
+    padding: var(--mobile-padding-sm) var(--mobile-padding-md);
+    font-size: var(--mobile-text-sm);
+    border-radius: var(--mobile-rounded-md);
+    transition: all 0.2s ease;
+    touch-action: manipulation;
+}
+
+button:active, .btn:active {
+    transform: scale(0.96);
+}
+
+/* 链接优化 */
+a {
+    min-height: 44px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: manipulation;
+}
+
+/* 表单控件优化 */
+input, select, textarea {
+    min-height: 44px;
+    padding: var(--mobile-padding-sm);
+    font-size: var(--mobile-text-base);
+    border-radius: var(--mobile-rounded-md);
+    border: 1px solid #d1d5db;
+    transition: all 0.2s ease;
+}
+
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* 导航优化 */
+footer.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    border-top: 1px solid #e5e7eb;
+    padding: var(--mobile-padding-sm) 0;
+    padding-bottom: calc(var(--mobile-padding-sm) + var(--safe-area-bottom));
+    height: calc(64px + var(--safe-area-bottom));
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    z-index: 50;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+}
+
+footer.bottom-nav a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-decoration: none;
+    color: #6b7280;
+    transition: color 0.2s ease;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.25rem;
+}
+
+footer.bottom-nav a.active {
+    color: #3b82f6;
+}
+
+footer.bottom-nav a i {
+    font-size: 1.25rem;
+    margin-bottom: 0.125rem;
+}
+
+footer.bottom-nav a span {
+    font-size: var(--mobile-text-xs);
+    line-height: 1;
+}
+
+/* 模态框优化 */
+.modal-content {
+    width: calc(100% - 2rem);
+    max-width: none;
+    margin: 1rem;
+    max-height: calc(100vh - 2rem);
+    border-radius: var(--mobile-rounded-lg);
+}
+
+.modal-header {
+    padding: var(--mobile-padding-md);
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-body {
+    padding: var(--mobile-padding-md);
+    max-height: 60vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.modal-footer {
+    padding: var(--mobile-padding-md);
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    flex-direction: column;
+    gap: var(--mobile-padding-sm);
+}
+
+.modal-footer button {
+    width: 100%;
+}
+
+/* 轮播图优化 */
+#banner-carousel {
+    height: 180px;
+    border-radius: var(--mobile-rounded-lg);
+    overflow: hidden;
+    margin-bottom: var(--mobile-padding-md);
+}
+
+/* 分类按钮优化 */
+.category-btn {
+    padding: var(--mobile-padding-sm) var(--mobile-padding-md);
+    font-size: var(--mobile-text-sm);
+    border-radius: var(--mobile-rounded-md);
+    min-height: 40px;
+    white-space: nowrap;
+}
+
+/* 排行榜优化 */
+.rank-item {
+    padding: var(--mobile-padding-md);
+    margin-bottom: var(--mobile-padding-sm);
+    border-radius: var(--mobile-rounded-md);
+    background: white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.rank-number {
+    width: 32px;
+    height: 32px;
+    font-size: var(--mobile-text-sm);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    margin-right: var(--mobile-padding-sm);
+}
+
+.rank-username, .rank-amount {
+    font-size: var(--mobile-text-sm);
+}
+
+/* 选项卡优化 */
+.tab-container {
+    padding: var(--mobile-padding-sm);
+    display: flex;
+    gap: var(--mobile-padding-sm);
+}
+
+.tab-active, .tab-inactive {
+    padding: var(--mobile-padding-sm) var(--mobile-padding-md);
+    font-size: var(--mobile-text-sm);
+    border-radius: var(--mobile-rounded-md);
+    border: 2px solid transparent;
+    transition: all 0.2s ease;
+    min-height: 40px;
+}
+
+.tab-active {
+    background: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+}
+
+.tab-inactive {
+    background: #f3f4f6;
+    color: #6b7280;
+    border-color: #e5e7eb;
+}
+
+/* 加载状态优化 */
+.loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #f3f4f6;
+    border-top: 3px solid #3b82f6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* 通知优化 */
+.notification {
+    position: fixed;
+    top: calc(var(--safe-area-top) + 1rem);
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100% - 2rem);
+    max-width: 400px;
+    padding: var(--mobile-padding-md);
+    border-radius: var(--mobile-rounded-md);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+}
+
+/* 表格移动端优化 */
+.table-mobile {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+    border-radius: var(--mobile-rounded-md);
+}
+
+.table-mobile table {
+    min-width: 100%;
+}
+
+.table-mobile th, .table-mobile td {
+    padding: var(--mobile-padding-sm);
+    font-size: var(--mobile-text-sm);
+    white-space: nowrap;
+}
+
+/* 滚动条优化 */
+::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.3);
+}
+
+/* 特定屏幕尺寸优化 */
+@media (max-width: 375px) {
+    /* 小屏手机 (iPhone SE, iPhone 12 mini) */
+    :root {
+        --mobile-padding-md: 0.75rem;
+        --mobile-text-base: 0.875rem;
+        --mobile-text-sm: 0.8125rem;
+        --mobile-text-xs: 0.71875rem;
+    }
+    
+    .task-card {
+        min-height: 110px;
+        padding: 0.625rem;
+    }
+    
+    .task-card img,
+    .task-card .w-5,
+    .task-card .h-5,
+    .task-card .w-6,
+    .task-card .h-6 {
+        width: 36px !important;
+        height: 36px !important;
+    }
+    
+    #banner-carousel {
+        height: 160px;
+    }
+}
+
+@media (min-width: 376px) and (max-width: 414px) {
+    /* 标准手机 (iPhone 12, iPhone 13) */
+    .task-card {
+        min-height: 120px;
+    }
+    
+    #banner-carousel {
+        height: 180px;
+    }
+}
+
+@media (min-width: 415px) and (max-width: 480px) {
+    /* 大屏手机 (iPhone 14 Pro Max) */
+    :root {
+        --mobile-text-base: 1.0625rem;
+        --mobile-text-sm: 0.9375rem;
+        --mobile-text-xs: 0.8125rem;
+    }
+    
+    .task-card {
+        min-height: 130px;
+        padding: 0.875rem;
+    }
+    
+    .task-card img,
+    .task-card .w-5,
+    .task-card .h-5,
+    .task-card .w-6,
+    .task-card .h-6 {
+        width: 44px !important;
+        height: 44px !important;
+    }
+    
+    #banner-carousel {
+        height: 200px;
+    }
+}
+
+/* 横屏模式适配 */
+@media (orientation: landscape) and (max-height: 500px) {
+    :root {
+        --mobile-padding-md: 0.5rem;
+        --mobile-text-base: 0.875rem;
+        --mobile-text-sm: 0.8125rem;
+        --mobile-text-xs: 0.71875rem;
+    }
+    
+    .task-card {
+        min-height: 100px;
+        padding: 0.5rem;
+    }
+    
+    #banner-carousel {
+        height: 120px;
+    }
+    
+    footer.bottom-nav {
+        height: calc(48px + var(--safe-area-bottom));
+        padding: 0.25rem 0;
+        padding-bottom: calc(0.25rem + var(--safe-area-bottom));
+    }
+    
+    footer.bottom-nav a i {
+        font-size: 1.125rem;
+    }
+    
+    footer.bottom-nav a span {
+        font-size: 0.6875rem;
+    }
+    
+    main {
+        padding-bottom: calc(48px + var(--safe-area-bottom));
+    }
+}
+
+/* 确保文本可读性 */
+.text-ellipsis {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.text-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.text-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* 优化触摸反馈 */
+.touch-feedback:active {
+    background-color: rgba(0, 0, 0, 0.05);
+    transform: scale(0.98);
+}
+
+/* 确保内容不被遮挡 */
+.content-safe {
+    padding-top: var(--safe-area-top);
+    padding-bottom: calc(64px + var(--safe-area-bottom));
+    padding-left: var(--safe-area-left);
+    padding-right: var(--safe-area-right);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

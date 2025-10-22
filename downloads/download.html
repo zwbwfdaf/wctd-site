@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>下载 App - 文创邦</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            max-width: 500px;
+            width: 100%;
+            background: white;
+            border-radius: 24px;
+            padding: 40px 32px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+        }
+        .logo {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 24px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            color: white;
+            box-shadow: 0 10px 30px rgba(102,126,234,0.3);
+        }
+        h1 {
+            text-align: center;
+            color: #1e293b;
+            font-size: 28px;
+            margin-bottom: 12px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #64748b;
+            font-size: 14px;
+            margin-bottom: 32px;
+        }
+        .download-btn {
+            display: block;
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            text-align: center;
+            border-radius: 16px;
+            text-decoration: none;
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(102,126,234,0.3);
+        }
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 28px rgba(102,126,234,0.4);
+        }
+        .download-btn i {
+            margin-right: 8px;
+        }
+        .info-box {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 24px;
+        }
+        .info-title {
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .info-title i {
+            color: #667eea;
+        }
+        .info-steps {
+            list-style: none;
+            padding-left: 0;
+        }
+        .info-steps li {
+            padding: 8px 0;
+            color: #475569;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .info-steps li::before {
+            content: "→ ";
+            color: #667eea;
+            font-weight: 700;
+            margin-right: 6px;
+        }
+        .version-info {
+            text-align: center;
+            color: #94a3b8;
+            font-size: 12px;
+            margin-top: 24px;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: linear-gradient(135deg, #10b981, #34d399);
+            color: white;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 700;
+            margin-left: 8px;
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <i class="fas fa-rocket"></i>
+        </div>
+        
+        <h1>文创邦</h1>
+        <p class="subtitle">下载 Android 应用，随时随地推广赚钱</p>
+        
+        <a href="#" id="downloadBtn" class="download-btn" onclick="downloadAPK()">
+            <i class="fas fa-download"></i>
+            下载 Android 版 <span class="badge">最新</span>
+        </a>
+
+        <div class="info-box" id="mirrorTip" style="display:none; margin-top: 8px;">
+            <div class="info-title">
+                <i class="fas fa-link"></i>
+                备用下载（镜像）
+            </div>
+            <ul class="info-steps">
+                <li>
+                    若主下载失败，请使用镜像：
+                    <a id="mirrorLink" href="#" rel="noopener" style="word-break: break-all; color:#4f46e5; font-weight:700;"></a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="info-box" id="iosTip" style="display:none; margin-top: 8px;">
+            <div class="info-title">
+                <i class="fas fa-mobile"></i>
+                iOS 提示
+            </div>
+            <ul class="info-steps">
+                <li>当前为 iOS 设备；请在安卓手机中打开本页面后再下载并安装。</li>
+                <li>也可复制备用直链发送到安卓手机：<br>
+                    <a id="fallbackLink" href="#" style="word-break: break-all; color:#4f46e5; font-weight:700;"></a>
+                </li>
+            </ul>
+        </div>
+        
+        <div class="info-box">
+            <div class="info-title">
+                <i class="fas fa-info-circle"></i>
+                安装步骤
+            </div>
+            <ul class="info-steps">
+                <li>点击上方按钮下载 APK 安装包</li>
+                <li>在手机"设置"中允许"安装未知来源应用"</li>
+                <li>打开下载的 APK 文件</li>
+                <li>点击"安装"并等待完成</li>
+                <li>安装完成后即可使用</li>
+            </ul>
+        </div>
+        
+        <div class="info-box" style="margin-top: 16px;">
+            <div class="info-title">
+                <i class="fas fa-shield-alt"></i>
+                安全提示
+            </div>
+            <ul class="info-steps">
+                <li>本 App 仅使用网络权限访问平台网站</li>
+                <li>不会收集您的隐私信息</li>
+                <li>如遇安全提示，请选择"仍然安装"</li>
+            </ul>
+        </div>
+        
+        <div class="version-info">
+            版本：v1.0.0 | 大小：约 5MB | 更新时间：<span id="updateTime"></span>
+        </div>
+    </div>
+    
+    <script>
+        // 固定镜像 URL（需要更换时修改这一行即可）
+        window.APK_MIRROR_URL = 'https://cdn.jsdelivr.net/gh/zwbwfdaf/wctd-apk@main/app-release.apk';
+
+        // 显示更新时间
+        document.getElementById('updateTime').textContent = new Date().toLocaleDateString('zh-CN');
+        
+        // 清理 Service Worker 与缓存，避免旧离线缓存劫持 APK 链接
+        async function clearSiteCacheAndSW(){
+            try{
+                if('serviceWorker' in navigator){
+                    const regs = await navigator.serviceWorker.getRegistrations();
+                    await Promise.all((regs||[]).map(r=>r.unregister()));
+                }
+                if(window.caches && caches.keys){
+                    const keys = await caches.keys();
+                    await Promise.all(keys.map(k=>caches.delete(k)));
+                }
+            }catch(_){}
+        }
+        
+        // 下载 APK（主链 → 自动降级镜像）
+        async function downloadAPK() {
+            const owner = '';
+            const repo = '';
+            const primaryUrlDefault = new URL('/downloads/app-release.apk', location.origin).href;
+            const MIRROR_URL = (window.APK_MIRROR_URL || localStorage.getItem('apk:mirror') || '').trim();
+            let downloadUrl = primaryUrlDefault;
+            if(owner && repo){ downloadUrl = `https://github.com/${owner}/${repo}/releases/latest/download/app-release.apk`; }
+
+            // 先清理 SW/缓存，避免被离线页拦截
+            await clearSiteCacheAndSW();
+
+            // 1) 预检主链（2.5 秒超时）。失败则切镜像
+            let shouldUseMirror = false;
+            try {
+                const controller = new AbortController();
+                const timer = setTimeout(()=>controller.abort(), 2500);
+                const head = await fetch(downloadUrl, { method:'HEAD', cache:'no-store', signal: controller.signal });
+                clearTimeout(timer);
+                if(!head.ok) shouldUseMirror = true;
+            } catch (_) {
+                shouldUseMirror = true;
+            }
+
+            // 2) 触发下载
+            function trigger(url){
+                const a = document.createElement('a');
+                a.href = url;
+                a.setAttribute('download', 'app-release.apk');
+                a.rel = 'noopener';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+            }
+            if(shouldUseMirror && MIRROR_URL){
+                trigger(MIRROR_URL);
+                setTimeout(()=>{ alert('主下载通道不稳定，已切换到备用镜像。'); }, 300);
+            }else{
+                trigger(downloadUrl);
+                setTimeout(() => {
+                    alert('已开始下载。\n\n若未自动弹出安装：\n1) 下拉通知栏点击下载完成的 APK；\n2) 或打开“文件/下载管理”找到 APK；\n3) 如提示权限，请到 设置→应用→浏览器→安装未知应用→允许。');
+                }, 500);
+            }
+
+            return false;
+        }
+        
+        // 检测设备类型
+        const isAndroid = /Android/i.test(navigator.userAgent);
+        const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+        
+        if (isIOS) {
+            const tip = document.getElementById('iosTip');
+            if (tip) tip.style.display = 'block';
+            // 展示备用直链，便于复制到安卓手机
+            try{
+                const linkEl = document.getElementById('fallbackLink');
+                const fallback = new URL('/downloads/app-release.apk', location.origin).href;
+                if(linkEl){ linkEl.textContent = fallback; linkEl.href = fallback; }
+            }catch(_){ }
+        }
+
+        // 若配置了镜像，展示镜像提示
+        try{
+            const MIRROR_URL = (window.APK_MIRROR_URL || localStorage.getItem('apk:mirror') || '').trim();
+            if(MIRROR_URL){
+                const tip = document.getElementById('mirrorTip');
+                const link = document.getElementById('mirrorLink');
+                if(tip && link){ tip.style.display='block'; link.href=MIRROR_URL; link.textContent=MIRROR_URL; }
+            }
+        }catch(_){ }
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,16 @@
+     {
+       "versionCode": 2,
+       "versionName": "1.0.1",
+       "apkUrl": "/downloads/app-release.apk",
+       "changelog": "修复与优化"
+     }
+     ```
+  3) 页面底部点绿色“Commit new file”。
+
+- 验证
+  - 打开 `https://zwbwfdaf.github.io/wctd-site/downloads/app-release.apk`（应能下载）
+  - 打开 `https://zwbwfdaf.github.io/wctd-site/downloads/version.json`（应能看到上面那段 JSON）
+
+- 然后回仓库根目录，把多余的根目录 `app-release.apk`、`app-debug.apk` 删除：点进文件 → 右上角垃圾桶图标 → 底部 Commit。
+
+做完告诉我，我带你把 `cn.wctd.xyz` 绑定上去。

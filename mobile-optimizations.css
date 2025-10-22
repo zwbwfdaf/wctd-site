@@ -1,0 +1,241 @@
+/* 移动端优化样式表 */
+
+/* 基础优化 */
+* {
+    -webkit-tap-highlight-color: transparent; /* 去除默认点击高亮 */
+    touch-action: manipulation; /* 优化触摸操作 */
+}
+
+body {
+    overscroll-behavior: none; /* 防止过度滚动 */
+    -webkit-font-smoothing: antialiased; /* 字体渲染优化 */
+    -moz-osx-font-smoothing: grayscale;
+    padding-bottom: env(safe-area-inset-bottom, 60px); /* 适配全面屏底部 */
+    padding-top: env(safe-area-inset-top, 0); /* 适配全面屏顶部 */
+}
+
+/* 按钮触控优化 */
+button, 
+.btn,
+[role="button"],
+.menu-item,
+.tab,
+.setting-item,
+.option-button,
+.filter-button,
+.action-button {
+    min-height: 48px; /* 确保最小触控区域 */
+    min-width: 48px;
+    position: relative;
+    overflow: hidden; /* 为涟漪效果准备 */
+}
+
+/* 触摸反馈效果 */
+button:active, 
+.btn:active,
+[role="button"]:active,
+.menu-item:active,
+.setting-item:active,
+.filter-button:active,
+.option-button:active,
+.tab:active,
+.action-button:active {
+    transform: scale(0.96);
+    transition: transform 0.2s;
+}
+
+/* 添加涟漪效果 */
+.ripple {
+    position: absolute;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    transform: scale(0);
+    animation: ripple 0.6s linear;
+    pointer-events: none;
+}
+
+@keyframes ripple {
+    to {
+        transform: scale(4);
+        opacity: 0;
+    }
+}
+
+/* 表单元素优化 */
+input, 
+textarea, 
+select {
+    font-size: 16px !important; /* 避免iOS自动缩放 */
+    min-height: 48px;
+    border-radius: 8px;
+    padding: 12px 16px;
+}
+
+input:focus, 
+textarea:focus, 
+select:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+}
+
+/* 页面切换动画 */
+.page-transition {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 滚动优化 */
+.scroll-container {
+    -webkit-overflow-scrolling: touch; /* 平滑滚动 */
+    overflow-y: auto;
+    scrollbar-width: none; /* Firefox */
+}
+
+.scroll-container::-webkit-scrollbar {
+    display: none; /* Chrome, Safari */
+}
+
+/* 可点击元素激活状态 */
+.nav-button:active,
+.menu-icon:active,
+.contact-icon:active {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Toast消息提示 */
+.toast-container {
+    position: fixed;
+    bottom: 80px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 9999;
+}
+
+.toast-message {
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 24px;
+    font-size: 14px;
+    max-width: 80%;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.3s, transform 0.3s;
+}
+
+.toast-message.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* 底部安全区域适配 */
+.bottom-nav {
+    padding-bottom: env(safe-area-inset-bottom, 16px) !important;
+}
+
+/* 顶部安全区域适配 */
+.top-bar {
+    padding-top: env(safe-area-inset-top, 16px) !important;
+}
+
+/* 加载指示器 */
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(79, 70, 229, 0.2);
+    border-radius: 50%;
+    border-top-color: #4f46e5;
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.loading-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+/* 元素间距压缩 */
+.compact-layout {
+    margin-top: -4px;
+    margin-bottom: -4px;
+}
+
+.compact-layout > * {
+    margin-top: 4px;
+    margin-bottom: 4px;
+}
+
+.compact-text {
+    line-height: 1.2;
+}
+
+/* 选中状态指示器 */
+.selected-indicator {
+    position: relative;
+}
+
+.selected-indicator::after {
+    content: '✓';
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #4f46e5;
+    font-weight: bold;
+}
+
+/* 下拉刷新指示器 */
+.ptr-indicator {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,.95);
+    border-bottom: 1px solid #eef2f7;
+    transform: translateY(-100%);
+    transition: transform .2s ease;
+    z-index: 9999;
+    color: #4f46e5;
+    font-weight: 600;
+}
+.ptr-indicator.show { transform: translateY(0); }
+.ptr-spinner { width: 20px; height: 20px; border: 2px solid rgba(79,70,229,.25); border-top-color:#4f46e5; border-radius:50%; animation: spin .8s linear infinite; margin-right:8px; }
+
+/* 骨架屏（闪烁流光） */
+.skeleton { position: relative; overflow: hidden; background-color: #f3f4f6; }
+.skeleton::after { content:''; position:absolute; inset:0; transform: translateX(-100%); background-image: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.6), rgba(255,255,255,0)); animation: shimmer 1.2s infinite; }
+@keyframes shimmer { 100% { transform: translateX(100%); } }
+.skeleton-line { height: 14px; border-radius: 8px; margin: 8px 0; }
+.skeleton-rect { border-radius: 12px; }

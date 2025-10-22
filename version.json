@@ -1,0 +1,7 @@
+{
+  "versionCode": 2,
+  "versionName": "1.0.1",
+  "apkUrl": "/downloads/app-release.apk",
+  "changelog": "修复应用图标，新增启动时检测新版本并支持一键下载安装。"
+}
+

@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#667eea">
+    <title>x雷浏览器搜索任务 - 推广平台</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif; background: #ffffff; min-height: 100vh; color: #333; overflow-x: hidden; -webkit-font-smoothing: auto; text-rendering: optimizeLegibility; padding-bottom: 100px; }
+        .top-hero { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); padding: 8px 0 24px; border-bottom-left-radius: 16px; border-bottom-right-radius: 16px; box-shadow: 0 6px 24px rgba(102,126,234,0.25); }
+        .top-card { width: calc(100% - 24px); margin: 10px auto 0; background: #ffffff; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); padding: 12px; }
+        .chips-row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom: 10px; }
+        .chip { padding: 8px 12px; border-radius: 9999px; background:#f3f4f6; color:#6b7280; font-weight:800; font-size: 13px; }
+        .chip.primary { background:#ff6b6b; color:#fff; }
+        .header { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255, 255, 255, 0.2); padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+        .back-btn { width: 36px; height: 36px; border-radius: 50%; background: rgba(255, 255, 255, 0.2); border: none; color: white; font-size: 16px; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; text-decoration: none; }
+        .back-btn:hover { background: rgba(255, 255, 255, 0.3); transform: scale(1.05); }
+        .header-title { color: white; font-size: 16px; font-weight: 600; flex: 1; text-align: center; margin: 0 12px; -webkit-font-smoothing: antialiased; }
+        .header-actions { display: flex; gap: 8px; align-items: center; }
+        .header-action { color: white; font-size: 14px; opacity: 0.8; }
+        .main-content { padding: 0 12px 12px; background: #ffffff; }
+        .ranking-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); border-radius: 16px; padding: 16px; margin: 12px 0; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1); }
+        .ranking-title { font-size: 15px; font-weight: 700; color: #333; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+        .ranking-list { display: flex; overflow-x: auto; gap: 12px; padding: 8px 0 0; }
+        .ranking-item { min-width: 80px; text-align: center; position: relative; }
+        .ranking-number { position: absolute; top: -6px; left: 50%; transform: translateX(-50%); width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: white; z-index: 2; background: linear-gradient(135deg, #ffd700, #ffb347); }
+        .ranking-avatar { width: 48px; height: 48px; border-radius: 50%; background: #ddd; background-size: cover; background-position: center; margin: 6px auto 8px; border: 2px solid white; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); }
+        .ranking-name { font-size: 12px; font-weight: 600; color: #333; }
+        .ranking-amount { font-size: 13px; font-weight: 700; color: #667eea; }
+        .accordion-card { background: #f6f8fc; border-radius: 14px; margin-bottom: 10px; overflow: hidden; box-shadow: inset 0 0 0 1px #eef2f7; }
+        .accordion-header { padding: 14px 16px; display: flex; align-items: center; cursor: pointer; transition: all 0.3s ease; background: transparent; }
+        .accordion-icon { font-size: 16px; margin-right: 12px; width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: #fff; background: linear-gradient(135deg, #ff8a00, #ff4d4f); box-shadow: 0 3px 10px rgba(255,77,79,0.25); }
+        .accordion-title { flex: 1; font-size: 15px; font-weight: 700; color:#0f172a; }
+        .accordion-arrow { font-size: 12px; color:#94a3b8; transition: transform 0.3s ease; }
+        .accordion-content { max-height: 0; overflow: hidden; transition: all 0.3s ease; background: #ffffff; border-radius: 12px; margin: 0 12px; }
+        .accordion-content.active { max-height: 500px; margin: 6px 12px 10px; border:1px solid #eef2f7; }
+        .content-inner { padding: 12px 16px; color: #666; line-height: 1.5; font-size: 13px; -webkit-font-smoothing: antialiased; }
+        .bottom-buttons { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 12px 16px 16px; display: flex; gap: 10px; box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1); z-index: 100; }
+        .btn { flex: 1; padding: 12px 16px; border-radius: 12px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; transition: all 0.3s ease; text-decoration: none; text-align: center; display: flex; align-items: center; justify-content: center; gap: 6px; }
+        .btn-outline { background: white; color: #667eea; border: 2px solid #667eea; }
+        .btn-outline:hover { background: #667eea; color: white; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3); }
+        .btn-primary { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4); }
+    </style>
+</head>
+<body>
+    <div class="top-hero">
+        <div class="header">
+            <a href="index.html" class="back-btn"><i class="fas fa-arrow-left"></i></a>
+            <div class="header-title">x雷浏览器搜索</div>
+            <div class="header-actions"><span class="header-action">•••</span></div>
+        </div>
+        <div class="top-card">
+            <div class="chips-row">
+                <span class="chip primary">T+2 日出日结</span>
+                <span class="chip">拉新7-10</span>
+            </div>
+            <div class="reward-card" style="box-shadow:none; padding:0; background:#fff;">
+                <div class="reward-items" style="margin:0;">
+                    <div class="reward-item" style="display:flex; align-items:center; padding:8px 0; border-bottom:1px solid rgba(0,0,0,0.06);">
+                        <div class="reward-icon" style="width:32px;height:32px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-right:10px;font-size:13px;font-weight:600;">¥</div>
+                        <span class="reward-name" style="flex:1;color:#333;font-size:14px;font-weight:500;">按拉新量结算（拉新1-10人）</span>
+                        <span class="reward-value" style="color:#667eea;font-size:15px;font-weight:800;">¥7.00/人</span>
+                    </div>
+                    <div class="reward-item" style="display:flex; align-items:center; padding:8px 0; border-bottom:1px solid rgba(0,0,0,0.06);">
+                        <div class="reward-icon" style="width:32px;height:32px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-right:10px;font-size:13px;font-weight:600;">¥</div>
+                        <span class="reward-name" style="flex:1;color:#333;font-size:14px;font-weight:500;">按拉新量结算（拉新10-100人）</span>
+                        <span class="reward-value" style="color:#667eea;font-size:15px;font-weight:800;">¥8.00/人</span>
+                    </div>
+                    <div class="reward-item" style="display:flex; align-items:center; padding:8px 0; border-bottom:1px solid rgba(0,0,0,0.06);">
+                        <div class="reward-icon" style="width:32px;height:32px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-right:10px;font-size:13px;font-weight:600;">¥</div>
+                        <span class="reward-name" style="flex:1;color:#333;font-size:14px;font-weight:500;">按拉新量结算（拉新100-200人）</span>
+                        <span class="reward-value" style="color:#667eea;font-size:15px;font-weight:800;">¥9.00/人</span>
+                    </div>
+                    <div class="reward-item" style="display:flex; align-items:center; padding:8px 0;">
+                        <div class="reward-icon" style="width:32px;height:32px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-right:10px;font-size:13px;font-weight:600;">¥</div>
+                        <span class="reward-name" style="flex:1;color:#333;font-size:14px;font-weight:500;">按拉新量结算（拉新200-1000人）</span>
+                        <span class="reward-value" style="color:#667eea;font-size:15px;font-weight:800;">¥10.00/人</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="ranking-card">
+            <div class="ranking-title"><i class="fas fa-trophy"></i>达人收益排行榜</div>
+            <div class="ranking-list">
+                <div class="ranking-item">
+                    <div class="ranking-number">1</div>
+                    <div class="ranking-avatar" style="background-image:url('tp/微信图片_20250913162419.jpg');"></div>
+                    <div class="ranking-name">推广达人A</div>
+                    <div class="ranking-amount">¥2,380</div>
+                </div>
+                <div class="ranking-item">
+                    <div class="ranking-number" style="background:linear-gradient(135deg,#c0c0c0,#a0a0a0);">2</div>
+                    <div class="ranking-avatar" style="background-image:url('tp/微信图片_20250913162419.jpg');"></div>
+                    <div class="ranking-name">推广达人B</div>
+                    <div class="ranking-amount">¥1,960</div>
+                </div>
+                <div class="ranking-item">
+                    <div class="ranking-number" style="background:linear-gradient(135deg,#cd7f32,#b8860b);">3</div>
+                    <div class="ranking-avatar" style="background-image:url('tp/微信图片_20250913162419.jpg');"></div>
+                    <div class="ranking-name">推广达人C</div>
+                    <div class="ranking-amount">¥1,630</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-card">
+            <div class="accordion-header" onclick="toggleAccordion(this, 'requirements')">
+                <div class="accordion-icon">⭐</div>
+                <div class="accordion-title">项目要求</div>
+                <div class="accordion-arrow"><i class="fas fa-chevron-down"></i></div>
+            </div>
+            <div class="accordion-content" id="requirements">
+                <div class="content-inner">
+                    <p>📝 <strong>基本要求：</strong></p>
+                    <p>• 在指定的x雷浏览器内完成搜索任务</p>
+                    <p>• 搜索行为需真实有效，禁止刷量</p>
+                    <p>• 遵守平台与渠道相关规定</p>
+                    <br>
+                    <p>🎯 <strong>推广要求：</strong></p>
+                    <p>• 新用户通过您的推广首次在x雷浏览器内完成搜索</p>
+                    <p>• 失活用户回流并完成有效搜索</p>
+                    <p>• 活跃用户保持一定周期内的使用频次</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-card">
+            <div class="accordion-header" onclick="toggleAccordion(this, 'introduction')">
+                <div class="accordion-icon">ℹ️</div>
+                <div class="accordion-title">项目介绍</div>
+                <div class="accordion-arrow"><i class="fas fa-chevron-down"></i></div>
+            </div>
+            <div class="accordion-content" id="introduction">
+                <div class="content-inner">
+                    <p>🔍 <strong>x雷浏览器搜索项目介绍：</strong></p>
+                    <p>x雷浏览器搜索面向广泛的移动端与桌面端用户，聚焦真实搜索行为的推广任务。完成指定关键词的搜索动作即可产生结算。</p>
+                    <br>
+                    <p>💰 <strong>收益模式：</strong></p>
+                    <p>• 按拉新量结算：</p>
+                    <p>— 拉新1-10人：¥7/人</p>
+                    <p>— 拉新10-100人：¥8/人</p>
+                    <p>— 拉新100-200人：¥9/人</p>
+                    <p>— 拉新200-1000人：¥10/人</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="accordion-card">
+            <div class="accordion-header" onclick="toggleAccordion(this, 'standards')">
+                <div class="accordion-icon">💎</div>
+                <div class="accordion-title">结算标准</div>
+                <div class="accordion-arrow"><i class="fas fa-chevron-down"></i></div>
+            </div>
+            <div class="accordion-content" id="standards">
+                <div class="content-inner">
+                    <p>📊 <strong>结算周期：</strong></p>
+                    <p>• 日结/周结/月结（视渠道规则）</p>
+                    <br>
+                    <p>✅ <strong>结算条件：</strong></p>
+                    <p>• 推广用户真实有效，符合防作弊规则</p>
+                    <p>• 按规定完成最低任务量</p>
+                    <p>• 无违规记录</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-buttons">
+        <button class="btn btn-outline" onclick="window.location.href='my-keywords.html?task=xray'">
+            <i class="fas fa-list"></i>
+            查看关键词
+        </button>
+        <button class="btn btn-primary" onclick="openPromotionPage()">
+            <i class="fas fa-rocket"></i>
+            申请推广
+        </button>
+    </div>
+
+    <script>
+        function toggleAccordion(header, contentId) {
+            const content = document.getElementById(contentId);
+            const allContents = document.querySelectorAll('.accordion-content');
+            const allHeaders = document.querySelectorAll('.accordion-header');
+            allContents.forEach(item => { if (item.id !== contentId) item.classList.remove('active'); });
+            allHeaders.forEach(item => { if (item !== header) item.classList.remove('active'); });
+            header.classList.toggle('active');
+            content.classList.toggle('active');
+        }
+        function openPromotionPage(){ window.location.href = 'xray-search-keywords.html'; }
+    </script>
+</body>
+</html>
+
+
+
+

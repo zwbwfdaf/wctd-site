@@ -1,0 +1,1211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#667eea">
+    <title>收益中心 - KK搜索任务平台</title>
+    <!-- 紧急数据库修复器 -->
+    <script src="emergency-database-fix.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        /* 顶部导航栏 */
+        .navbar {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .navbar .title {
+            color: white;
+            font-size: 18px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .navbar .title i {
+            margin-right: 8px;
+        }
+        
+        /* 收益总览卡片 */
+        .earnings-overview {
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .main-earnings-card {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 28px 24px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .main-earnings-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb, #ff9ff3);
+        }
+        
+        .main-balance {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        
+        .balance-label {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+        
+        .balance-amount {
+            color: white;
+            font-size: 36px;
+            font-weight: 700;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            margin-bottom: 4px;
+        }
+        
+        .sync-status {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        
+        .earnings-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-top: 24px;
+        }
+        
+        .stat-item {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 16px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .stat-label {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 12px;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+        
+        .stat-value {
+            color: white;
+            font-size: 20px;
+            font-weight: 700;
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* 操作按钮区域 */
+        .action-buttons {
+            padding: 0 20px 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        
+        .action-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 16px;
+            padding: 14px 20px;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .action-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+        }
+        
+        .action-btn.primary {
+            background: linear-gradient(135deg, #ff6b6b, #feca57);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+        
+        .action-btn.primary:hover {
+            background: linear-gradient(135deg, #ff5252, #ff9800);
+            box-shadow: 0 8px 24px rgba(255, 107, 107, 0.4);
+        }
+        
+        /* 主要内容区域 */
+        .main-content {
+            background: white;
+            border-radius: 24px 24px 0 0;
+            min-height: calc(100vh - 300px);
+            padding: 24px 20px 120px;
+            position: relative;
+        }
+        
+        .content-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .content-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #2d3748;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .view-more-btn {
+            color: #667eea;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+        
+        .view-more-btn:hover {
+            color: #5a67d8;
+        }
+        
+        /* 收益记录卡片 */
+        .record-card {
+            background: white;
+            border-radius: 16px;
+            padding: 16px 20px;
+            margin-bottom: 12px;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .record-card:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+        }
+        
+        .record-card.earning::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(135deg, #10b981, #34d399);
+        }
+        
+        .record-card.withdrawal::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(135deg, #ef4444, #f87171);
+        }
+        
+        .record-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+        
+        .record-info h4 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 4px;
+        }
+        
+        .record-time {
+            font-size: 12px;
+            color: #718096;
+        }
+        
+        .record-amount {
+            font-size: 18px;
+            font-weight: 700;
+            text-align: right;
+        }
+        
+        .record-amount.earning {
+            color: #10b981;
+        }
+        
+        .record-amount.withdrawal {
+            color: #ef4444;
+        }
+
+        /* 新版行布局 */
+        .record-row { display:flex; align-items:center; gap:14px; }
+        .record-icon { width:36px; height:36px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#fff; box-shadow:0 6px 16px rgba(0,0,0,0.08); font-size:14px; }
+        .record-icon.earning { background: linear-gradient(135deg,#10b981,#34d399); }
+        .record-icon.withdrawal { background: linear-gradient(135deg,#ef4444,#f97316); }
+        .record-body { flex:1; }
+        .record-title { font-size:15px; font-weight:700; color:#111827; }
+        .record-sub { margin-top:4px; display:flex; align-items:center; gap:6px; color:#6b7280; font-size:12px; }
+        .chip { padding:2px 8px; background:#f3f4f6; border:1px solid #e5e7eb; border-radius:999px; font-size:12px; color:#374151; }
+        .chip.keyword { background:rgba(102,126,234,.08); border-color:rgba(102,126,234,.18); color:#4f46e5; }
+        .chip.status-ok { background:rgba(16,185,129,.1); border-color:rgba(16,185,129,.2); color:#059669; }
+        .chip.status-pending { background:rgba(245,158,11,.1); border-color:rgba(245,158,11,.2); color:#b45309; }
+        .chip.status-fail { background:rgba(239,68,68,.1); border-color:rgba(239,68,68,.2); color:#dc2626; }
+        .record-right { text-align:right; }
+        .record-right .amount { font-size:18px; font-weight:800; }
+        .record-right .amount.earning { color:#10b981; }
+        .record-right .amount.withdrawal { color:#ef4444; }
+        
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6b7280;
+        }
+        
+        .empty-state i {
+            font-size: 64px;
+            margin-bottom: 20px;
+            color: #d1d5db;
+        }
+        
+        .empty-state h3 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #374151;
+        }
+        
+        .empty-state p {
+            font-size: 16px;
+            margin-bottom: 24px;
+        }
+        
+        /* 底部导航 */
+        .bottom-navigation {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-top: 1px solid #e2e8f0;
+            padding: 16px 0 20px 0;
+            box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+        }
+        
+        .nav-container {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 0 16px;
+        }
+        
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-decoration: none;
+            color: #9ca3af;
+            transition: all 0.3s ease;
+            padding: 12px 16px;
+            border-radius: 12px;
+            min-width: 68px;
+            flex: 1;
+            max-width: 80px;
+        }
+        
+        .nav-item.active {
+            color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+        }
+        
+        .nav-item i {
+            font-size: 22px;
+            margin-bottom: 6px;
+        }
+        
+        .nav-item span {
+            font-size: 11px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        /* 移动端导航优化 */
+        @media (max-width: 480px) {
+            .bottom-navigation {
+                padding: 16px 0 20px 0;
+                padding-bottom: max(20px, env(safe-area-inset-bottom));
+            }
+            
+            .nav-container {
+                padding: 0 8px;
+            }
+            
+            .nav-item {
+                padding: 12px 8px;
+                min-width: 55px;
+                max-width: 68px;
+            }
+            
+            .nav-item i {
+                font-size: 20px;
+                margin-bottom: 6px;
+            }
+            
+            .nav-item span {
+                font-size: 10px;
+            }
+        }
+
+        /* 加载动画 */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+        }
+        
+        .loader {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e2e8f0;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* 动画效果 */
+        .fade-in {
+            animation: fadeInUp 0.6s ease-out;
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* 脉冲动画 */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .sync-icon {
+            animation: pulse 2s infinite;
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 480px) {
+            .main-earnings-card {
+                padding: 20px 16px;
+            }
+            
+            .balance-amount {
+                font-size: 32px;
+            }
+            
+            .stat-value {
+                font-size: 18px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <nav class="navbar">
+        <h1 class="title">
+            <i class="fas fa-chart-line"></i>
+            收益中心
+        </h1>
+    </nav>
+    
+    <!-- 收益总览 -->
+    <div class="earnings-overview fade-in">
+        <div class="main-earnings-card">
+            <div class="main-balance">
+                <div class="balance-label">可提现收益</div>
+                <div class="balance-amount">¥<span id="withdrawable-amount">0.00</span></div>
+                <div class="sync-status">
+                    <i class="fas fa-sync-alt sync-icon"></i>
+                    <span id="sync-status-text">正在同步数据...</span>
+                </div>
+            </div>
+            
+            <div class="earnings-stats">
+                <div class="stat-item">
+                    <div class="stat-label">累计收益</div>
+                    <div class="stat-value">¥<span id="total-income">0.00</span></div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">今日收益</div>
+                    <div class="stat-value">¥<span id="today-income">0.00</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 操作按钮 -->
+    <div class="action-buttons fade-in" style="animation-delay: 0.2s;">
+        <button class="action-btn primary" onclick="calculateEarnings()">
+            <i class="fas fa-calculator"></i>
+            计算收益
+        </button>
+        <button class="action-btn" onclick="goToWallet()">
+            <i class="fas fa-credit-card"></i>
+            申请提现
+        </button>
+    </div>
+    
+    <!-- 主要内容区域 -->
+    <main class="main-content fade-in" style="animation-delay: 0.4s;">
+        <div class="content-header">
+            <h2 class="content-title">
+                <i class="fas fa-history"></i>
+                收益记录
+            </h2>
+            <div class="view-more-btn" onclick="showAllRecords()">
+                查看全部
+                <i class="fas fa-chevron-right" style="margin-left: 4px; font-size: 12px;"></i>
+            </div>
+        </div>
+        
+        <div id="earnings-list">
+            <!-- 收益记录将在这里动态加载 -->
+            <div class="loading" id="recordsLoading">
+                <div class="loader"></div>
+            </div>
+        </div>
+    </main>
+    
+    <!-- 底部导航 -->
+    <nav class="bottom-navigation">
+        <div class="nav-container">
+            <a href="index.html" class="nav-item">
+                <i class="fas fa-home"></i>
+                <span>首页</span>
+            </a>
+            <a href="ranking.html" class="nav-item">
+                <i class="fas fa-trophy"></i>
+                <span>榜单</span>
+            </a>
+            <a href="income.html" class="nav-item active">
+                <i class="fas fa-chart-line"></i>
+                <span>收益</span>
+            </a>
+            <a href="profile.html" class="nav-item">
+                <i class="fas fa-user"></i>
+                <span>我的</span>
+            </a>
+        </div>
+    </nav>
+
+    <!-- 由 emergency-database-fix.js 负责加载 Supabase SDK 与客户端 -->
+    <script>
+        // 确保Supabase已加载
+        function waitForSupabase() {
+            return new Promise((resolve) => {
+                const checkReady = () => {
+                    try {
+                        if (typeof window.getEmergencyClient === 'function' && window.getEmergencyClient()) return true;
+                        if (window.supabase) return true;
+                    } catch (_) {}
+                    return false;
+                };
+                if (checkReady()) return resolve();
+                const timer = setInterval(() => { if (checkReady()) { clearInterval(timer); resolve(); } }, 100);
+                setTimeout(() => { try { clearInterval(timer); } catch(_){} resolve(); }, 10000);
+            });
+        }
+
+        // 检查用户登录状态（未登录直接跳转到登录页）
+        async function checkUserLogin() {
+            try {
+                const raw = localStorage.getItem('currentUser');
+                if (!raw) { window.location.replace('login.html?redirect=income'); return false; }
+                const u = JSON.parse(raw);
+                const uid = u && (u.id || u['用户ID']);
+                if (!uid || u.isTemp) { window.location.replace('login.html?redirect=income'); return false; }
+                return true;
+            } catch (_) {
+                window.location.replace('login.html?redirect=income');
+                return false;
+            }
+        }
+
+        // 初始化Supabase（走应急客户端）
+        async function initializeSupabase() {
+            try {
+                if (typeof window.emergencyInitDatabase === 'function') {
+                    await window.emergencyInitDatabase();
+                    console.log('Supabase初始化成功 (emergency)');
+                }
+            } catch (error) {
+                console.warn('Supabase初始化警告:', error);
+            }
+            return true;
+        }
+
+        // 获取统一的 Supabase 客户端
+        async function ensureClient() {
+            try {
+                if (typeof window.getEmergencyClient === 'function') {
+                    const c1 = window.getEmergencyClient();
+                    if (c1 && typeof c1.from === 'function') return c1;
+                }
+                if (typeof window.emergencyInitDatabase === 'function') {
+                    await window.emergencyInitDatabase();
+                    const c2 = (typeof window.getEmergencyClient === 'function') ? window.getEmergencyClient() : null;
+                    if (c2 && typeof c2.from === 'function') return c2;
+                }
+            } catch (_) {}
+            return null;
+        }
+
+        // 状态辅助：标准化收益/提现状态
+        function parseStatusFlags(raw){
+            const s = (raw||'').toString().toLowerCase();
+            const isRejected = ['rejected','reject','fail','failed','canceled','cancelled','已拒绝','已取消','撤销','作废'].some(k=> s.includes(k));
+            const isCompleted = ['completed','complete','success','done','已完成','已入账','成功'].some(k=> s.includes(k));
+            const isPending = !isRejected && !isCompleted && ['pending','review','审核','在途','处理中','processing','process','等待','待'].some(k=> s.includes(k));
+            return { isRejected, isCompleted, isPending };
+        }
+
+        // 从localStorage获取收益数据
+        function getEarningsFromLocalStorage() {
+            const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+            const username = currentUser.username || currentUser.用户名 || currentUser.id || currentUser.用户ID;
+            
+            if (!username) {
+                console.warn('未找到用户名');
+                return [];
+            }
+
+            // 获取管理系统添加的收益数据
+            const earnings = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.startsWith('earning_')) {
+                    try {
+                        const earning = JSON.parse(localStorage.getItem(key));
+                        // 检查是否属于当前用户
+                        if (earning.username === username || earning.用户名 === username) {
+                            earnings.push(earning);
+                        }
+                    } catch (e) {
+                        console.warn('解析收益数据失败:', key, e);
+                    }
+                }
+            }
+            
+            return earnings;
+        }
+
+        // 计算总收益和今日收益
+        async function calculateEarnings() {
+            try {
+                // 显示同步动画
+                document.getElementById('sync-status-text').textContent = '正在同步数据...';
+                document.querySelector('.sync-icon').style.animation = 'spin 1s linear infinite';
+                
+                const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+                const userId = currentUser.id || currentUser.用户ID;
+                
+                if (!userId) {
+                    console.warn('未找到用户ID');
+                    return { totalEarnings: 0, todayEarnings: 0 };
+                }
+
+                let earnings = [];
+                let supabaseWorking = false;
+                let hasLocalEarnings = false;
+
+                // 先尝试从 Supabase 获取数据
+                try {
+                    const client = await ensureClient();
+                    if (client && typeof window.dbQuery === 'function') {
+                        const res = await window.dbQuery((c)=> c
+                            .from('earnings')
+                            .select('*')
+                            .eq('user_id', userId)
+                        );
+                        earnings = res.data || [];
+                        supabaseWorking = true;
+                        console.log('从 Supabase 获取收益数据:', earnings.length);
+                    }
+                } catch (error) {
+                    console.warn('Supabase 获取收益失败:', error);
+                }
+
+                // 合并本地回退收益（即使云端可用也要合并，确保新增本地记录可见）
+                try {
+                    const localAdds = [];
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key && key.startsWith('earning_')) {
+                            try {
+                                const e = JSON.parse(localStorage.getItem(key));
+                                const uid = e.user_id || e.userId || e.用户ID;
+                                const uname = e.username || e.用户名;
+                                if (String(uid) === String(userId) || String(uname) === String(username)) {
+                                    localAdds.push(e);
+                                }
+                            } catch (_) {}
+                        }
+                    }
+                    if (!supabaseWorking && localAdds.length === 0) {
+                        // 兜底：旧格式
+                        earnings = getEarningsFromLocalStorage();
+                    } else {
+                        if (localAdds.length > 0) {
+                            hasLocalEarnings = true;
+                            earnings = [...earnings, ...localAdds];
+                        }
+                    }
+                    console.log('合并本地收益后条数:', earnings.length, '本地新增:', localAdds.length);
+                } catch (_) {}
+
+                // 计算总收益和今日收益
+                let totalEarnings = 0;
+                let todayEarnings = 0;
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                earnings.forEach(earning => {
+                    // 仅统计未撤销（非rejected/canceled）的收益
+                    const { isRejected } = parseStatusFlags(earning.status || earning.状态);
+                    if (isRejected) return;
+                    const amount = parseFloat(earning.amount || earning.金额 || earning.收益金额 || 0);
+                    totalEarnings += amount;
+
+                    const createdAt = new Date(earning.created_at || earning.创建时间 || earning.date || earning.时间);
+                    if (createdAt >= today) {
+                        todayEarnings += amount;
+                    }
+                });
+
+                // 获取提现总额
+                let totalWithdrawals = 0;
+                
+                if (supabaseWorking) {
+                    // 从 Supabase 获取提现数据
+                    try {
+                        const client = await ensureClient();
+                        if (client && typeof window.dbQuery === 'function') {
+                            const res = await window.dbQuery((c)=> c
+                                .from('withdrawals')
+                                .select('*')
+                                .eq('user_id', userId)
+                            );
+                            const withdrawals = res.data || [];
+                            withdrawals.forEach(withdrawal => {
+                                const amount = parseFloat(withdrawal.amount || withdrawal.金额 || 0);
+                                const { isRejected, isCompleted, isPending } = parseStatusFlags(withdrawal.status || withdrawal.状态);
+                                if (!isRejected && (isCompleted || isPending)) totalWithdrawals += amount;
+                            });
+                        }
+                    } catch (error) {
+                        console.warn('获取提现记录失败:', error);
+                    }
+                } else {
+                    // 从 localStorage 获取提现数据
+                    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+                    const username = currentUser.username || currentUser.用户名 || currentUser.id || currentUser.用户ID;
+                    
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key && key.startsWith('withdrawal_')) {
+                            try {
+                                const withdrawal = JSON.parse(localStorage.getItem(key));
+                                if (withdrawal.username === username || withdrawal.用户名 === username) {
+                                    const amount = parseFloat(withdrawal.amount || withdrawal.金额 || withdrawal.提现金额 || 0);
+                                    const statusText = (withdrawal.status || withdrawal.状态 || '').toString().toLowerCase();
+                                    const isRejected = ['rejected','fail','failed','已拒绝','审核不通过','未通过','失败'].some(k=> statusText.includes(k));
+                                    const isCompleted = ['completed','paid','success','已到账','已完成','已打款','已提现'].some(k=> statusText.includes(k));
+                                    const isPending = ['pending','review','审核中','待审核','处理中','在途','processing','process'].some(k=> statusText.includes(k));
+                                    if (!isRejected && (isCompleted || isPending)) {
+                                        totalWithdrawals += amount;
+                                    }
+                                }
+                            } catch (e) {
+                                console.warn('解析提现数据失败:', key, e);
+                            }
+                        }
+                    }
+                }
+
+                // 计算实际可提现金额
+                // 云端余额优先：若 users.wallet_balance 存在，以其为准，避免端侧与后台不同步
+                let withdrawableAmount = totalEarnings - totalWithdrawals;
+                if (supabaseWorking && !hasLocalEarnings) {
+                    try {
+                        const client = await ensureClient();
+                        if (client && typeof window.dbQuery === 'function') {
+                            const ures = await window.dbQuery((c)=> c.from('users').select('wallet_balance').eq('id', userId).single());
+                            const cloud = parseFloat((ures && ures.data && ures.data.wallet_balance) || NaN);
+                            if (isFinite(cloud)) withdrawableAmount = cloud;
+                        }
+                    } catch(_) {}
+                }
+
+                // 更新显示 - 使用动画效果
+                animateNumberUpdate('withdrawable-amount', parseFloat(document.getElementById('withdrawable-amount').textContent), withdrawableAmount);
+                animateNumberUpdate('total-income', parseFloat(document.getElementById('total-income').textContent), totalEarnings);
+                animateNumberUpdate('today-income', parseFloat(document.getElementById('today-income').textContent), todayEarnings);
+                
+                // 同步余额到localStorage和用户数据
+                currentUser.wallet_balance = withdrawableAmount;
+                currentUser.钱包余额 = withdrawableAmount;
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                localStorage.setItem('wallet_balance', withdrawableAmount.toString());
+                localStorage.setItem('钱包余额', withdrawableAmount.toString());
+
+                // 同步余额到所有页面
+                if (window.syncBalanceAcrossPages) {
+                    await window.syncBalanceAcrossPages();
+                }
+
+                // 更新同步状态
+                document.querySelector('.sync-icon').style.animation = '';
+                if (supabaseWorking) {
+                    document.getElementById('sync-status-text').textContent = '数据已同步 (云端)';
+                } else {
+                    document.getElementById('sync-status-text').textContent = '数据已同步 (本地)';
+                }
+                
+                return { totalEarnings, todayEarnings, withdrawableAmount };
+            } catch (error) {
+                console.error('计算收益失败:', error);
+                document.getElementById('sync-status-text').textContent = '同步失败，请重试';
+                document.querySelector('.sync-icon').style.animation = '';
+                return { totalEarnings: 0, todayEarnings: 0, withdrawableAmount: 0 };
+            }
+        }
+        
+        // 数字动画更新
+        function animateNumberUpdate(elementId, fromValue, toValue) {
+            const element = document.getElementById(elementId);
+            const duration = 1000; // 1秒动画
+            const steps = 60; // 60帧
+            const stepValue = (toValue - fromValue) / steps;
+            let currentValue = fromValue;
+            let currentStep = 0;
+            
+            const animate = () => {
+                if (currentStep < steps) {
+                    currentValue += stepValue;
+                    element.textContent = Math.max(0, currentValue).toFixed(2);
+                    currentStep++;
+                    requestAnimationFrame(animate);
+                } else {
+                    element.textContent = Math.max(0, toValue).toFixed(2);
+                }
+            };
+            
+            animate();
+        }
+
+        // 加载收益记录
+        async function loadEarningRecords() {
+            try {
+                const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+                const userId = currentUser.id || currentUser.用户ID;
+                const username = currentUser.username || currentUser.用户名 || userId;
+                
+                if (!userId && !username) {
+                    console.warn('未找到用户ID或用户名');
+                    return;
+                }
+
+                let earnings = [];
+                let withdrawals = [];
+                let supabaseWorking = false;
+
+                // 先尝试从 Supabase 获取数据
+                try {
+                    const client = await ensureClient();
+                    if (client && userId && typeof window.dbQuery === 'function') {
+                        const resE = await window.dbQuery((c)=> c
+                            .from('earnings')
+                            .select('*')
+                            .eq('user_id', userId)
+                            .order('created_at', { ascending: false })
+                        );
+                        const resW = await window.dbQuery((c)=> c
+                            .from('withdrawals')
+                            .select('*')
+                            .eq('user_id', userId)
+                            .order('created_at', { ascending: false })
+                        );
+                        earnings = resE.data || [];
+                        withdrawals = resW.data || [];
+                        supabaseWorking = true;
+                        console.log('从 Supabase 获取记录数据');
+                    }
+                } catch (error) {
+                    console.warn('Supabase 获取记录失败:', error);
+                }
+
+                // 合并本地记录（无论云端是否可用，都将本地新增合并进来，确保列表可见）
+                console.log('从 localStorage 获取记录数据');
+                // 获取收益记录
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith('earning_')) {
+                        try {
+                            const earning = JSON.parse(localStorage.getItem(key));
+                            if (earning.username === username || earning.用户名 === username || String(earning.user_id||earning.userId||'') === String(userId)) {
+                                earnings.push(earning);
+                            }
+                        } catch (e) {
+                            console.warn('解析收益记录失败:', key, e);
+                        }
+                    }
+                }
+
+                // 若云端不可用，也合并本地提现记录
+                if (!supabaseWorking) {
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key && key.startsWith('withdrawal_')) {
+                            try {
+                                const withdrawal = JSON.parse(localStorage.getItem(key));
+                                if (withdrawal.username === username || withdrawal.用户名 === username) {
+                                    withdrawals.push(withdrawal);
+                                }
+                            } catch (e) {
+                                console.warn('解析提现记录失败:', key, e);
+                            }
+                        }
+                    }
+                }
+
+                // 按时间排序
+                earnings.sort((a, b) => new Date(b.created_at || b.创建时间 || b.date || b.时间) - new Date(a.created_at || a.创建时间 || a.date || a.时间));
+                withdrawals.sort((a, b) => new Date(b.created_at || b.创建时间 || b.date || b.时间) - new Date(a.created_at || a.创建时间 || a.date || a.时间));
+
+                // 合并收益和提现记录
+                const allRecords = [];
+
+                // 处理收益记录（规范化展示：任务 - 关键词）
+                earnings?.forEach(earning => {
+                    // 跳过被撤销/拒绝的收益
+                    const { isRejected } = parseStatusFlags(earning.status || earning.状态);
+                    if (isRejected) return;
+                    let title = '';
+                    const taskName = earning.task_name || earning.任务名称 || '';
+                    const descRaw = earning.description || earning.任务描述 || '';
+                    let keyword = '';
+                    // 从 description 中尝试解析 keyword 字段
+                    try { const obj = JSON.parse(descRaw); if (obj && obj.keyword) keyword = obj.keyword; } catch(_) {}
+                    // 兜底：从 task_name 提取“-关键词”
+                    if (!keyword && taskName && taskName.includes('-')) {
+                        keyword = taskName.split('-').slice(1).join('-');
+                    }
+                    // 任务名（去掉 JSON）
+                    const taskTitle = taskName ? taskName.split('-')[0] : '任务收益';
+                    title = keyword ? `${taskTitle}-${keyword}` : (taskName || '任务收益');
+
+                    allRecords.push({
+                        type: 'earning',
+                        amount: parseFloat(earning.amount || earning.金额 || earning.收益金额 || 0),
+                        description: title,
+                        created_at: earning.created_at || earning.创建时间 || earning.date || earning.时间
+                    });
+                });
+
+                // 处理提现记录
+                withdrawals?.forEach(withdrawal => {
+                    const statusText = (withdrawal.status || withdrawal.状态 || '').toString().toLowerCase();
+                    const isRejected = ['rejected','fail','failed','已拒绝','审核不通过','未通过','失败'].some(k=> statusText.includes(k));
+                    const isCompleted = ['completed','paid','success','已到账','已完成','已打款','已提现'].some(k=> statusText.includes(k));
+                    const desc = isRejected ? '提现失败，资金已退回' : (isCompleted ? '提现到账' : '提现审核中');
+                    allRecords.push({
+                        type: 'withdrawal',
+                        amount: parseFloat(withdrawal.amount || withdrawal.金额 || withdrawal.提现金额 || 0),
+                        description: desc,
+                        created_at: withdrawal.created_at || withdrawal.创建时间 || withdrawal.date || withdrawal.时间
+                    });
+                });
+
+                // 按时间排序
+                allRecords.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+                // 渲染记录
+                renderEarningRecords(allRecords.slice(0, 10)); // 只显示最近10条记录
+
+            } catch (error) {
+                console.error('加载收益记录失败:', error);
+                showError('加载收益记录失败，请刷新重试');
+            }
+        }
+        
+        // 渲染收益记录
+        function renderEarningRecords(records) {
+            const container = document.getElementById('earnings-list');
+            
+            if (!records || records.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-chart-line"></i>
+                        <h3>暂无收益记录</h3>
+                        <p>您还没有收益记录，开始做任务赚取收益吧！</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            records.forEach((record, index) => {
+                const isEarning = record.type === 'earning';
+                const typeClass = isEarning ? 'earning' : 'withdrawal';
+                const prefix = isEarning ? '+' : '-';
+                const task = (record.description || '').split('-')[0] || '任务收益';
+                const keyword = (record.description || '').includes('-') ? record.description.split('-').slice(1).join('-') : '';
+                const statusChip = isEarning ? '<span class="chip status-ok">已入账</span>' : '<span class="chip status-pending">提现在途</span>';
+
+                html += `
+                    <div class="record-card ${typeClass} fade-in" style="animation-delay:${index*0.08}s;">
+                        <div class="record-row">
+                            <div class="record-icon ${typeClass}">
+                                <i class="fas ${isEarning ? 'fa-coins' : 'fa-wallet'}"></i>
+                            </div>
+                            <div class="record-body">
+                                <div class="record-title">${task}</div>
+                                <div class="record-sub">
+                                    ${keyword ? `<span class=\"chip keyword\">${keyword}</span>` : ''}
+                                    ${statusChip}
+                                    <span class="record-time">${formatTime(record.created_at)}</span>
+                                </div>
+                            </div>
+                            <div class="record-right">
+                                <div class="amount ${typeClass}">${prefix}¥${record.amount.toFixed(2)}</div>
+                            </div>
+                        </div>
+                    </div>`;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        // 格式化时间
+        function formatTime(timeString) {
+            if (!timeString) return '刚刚';
+            try {
+                const date = new Date(timeString);
+                const now = new Date();
+                const diff = now - date;
+                
+                if (diff < 60000) return '刚刚';
+                if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前';
+                if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前';
+                if (diff < 2592000000) return Math.floor(diff / 86400000) + '天前';
+                
+                return date.toLocaleDateString('zh-CN', {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } catch (error) {
+                return timeString;
+            }
+        }
+        
+        // 显示提现模态框
+        function showWithdrawModal() {
+            showToast('提现功能开发中，敬请期待！', 'info');
+        }
+        
+        // 显示所有记录
+        function showAllRecords() {
+            showToast('记录详情页面开发中', 'info');
+        }
+        
+        // 显示错误状态
+        function showError(message) {
+            const container = document.getElementById('earnings-list');
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-exclamation-triangle" style="color: #ef4444;"></i>
+                    <h3 style="color: #ef4444;">加载失败</h3>
+                    <p>${message}</p>
+                    <button onclick="loadEarningRecords()" style="padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 12px; cursor: pointer; margin-top: 16px;">
+                        <i class="fas fa-sync-alt" style="margin-right: 8px;"></i>
+                        重新加载
+                    </button>
+                </div>
+            `;
+        }
+
+        // 显示提示消息
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            const bgColor = {
+                'success': '#10b981',
+                'error': '#ef4444',
+                'info': '#374151'
+            }[type] || '#374151';
+            
+            toast.style.cssText = `
+                position: fixed;
+                top: 100px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: ${bgColor};
+                color: white;
+                padding: 12px 24px;
+                border-radius: 12px;
+                font-size: 14px;
+                font-weight: 500;
+                z-index: 1000;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            `;
+            toast.textContent = message;
+            
+            document.body.appendChild(toast);
+            
+            requestAnimationFrame(() => {
+                toast.style.opacity = '1';
+            });
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => {
+                    if (document.body.contains(toast)) {
+                        document.body.removeChild(toast);
+                    }
+                }, 300);
+            }, 3000);
+        }
+
+        // 页面初始化
+        async function initializePage() {
+            try {
+                // 等待Supabase加载
+                await waitForSupabase();
+                
+                // 检查登录状态
+                const isLoggedIn = await checkUserLogin();
+                if (!isLoggedIn) return;
+
+                // 初始化Supabase
+                await initializeSupabase();
+
+                // 计算收益并加载记录
+                await Promise.all([
+                    calculateEarnings(),
+                    loadEarningRecords()
+                ]);
+
+                // 设置定时刷新
+                setInterval(calculateEarnings, 60000); // 每分钟刷新一次
+
+            } catch (error) {
+                console.error('页面初始化失败:', error);
+                document.getElementById('sync-status-text').textContent = '初始化失败，请刷新重试';
+            }
+        }
+
+        // 当DOM加载完成后开始初始化
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializePage);
+        } else {
+            initializePage();
+        }
+
+        // 页面获得焦点时刷新数据
+        window.addEventListener('focus', () => {
+            calculateEarnings();
+            loadEarningRecords();
+        });
+
+        // 页面可见性改变时刷新数据
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) {
+                calculateEarnings();
+                loadEarningRecords();
+            }
+        });
+
+        // 跳转到我的钱包页面
+        function goToWallet() {
+            // 添加加载动画效果
+            const button = event.target.closest('.action-btn');
+            if (button) {
+                button.style.opacity = '0.7';
+                button.style.transform = 'scale(0.95)';
+            }
+            
+            // 短暂延迟后跳转，提供视觉反馈
+            setTimeout(() => {
+                window.location.href = 'my-wallet.html';
+            }, 150);
+        }
+    </script>
+</body>
+</html>

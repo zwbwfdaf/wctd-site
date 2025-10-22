@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#3b82f6">
+    <title>用户登录 - 文创邦</title>
+    <style>
+        :root { --primary-color:#ff7a45; --primary-light:#fff0e6; --gradient-start:#ff7a45; --gradient-end:#ff9500; --text-primary:#333; --text-secondary:#666; }
+        body { background:#F8EDE3; min-height:100vh; font-family:'PingFang SC',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; position:relative; overflow:hidden; margin:0; }
+        body::before { content:''; position:absolute; inset:0; background-image:url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100" opacity="0.08"><path d="M50 0 L100 50 L50 100 L0 50 Z" fill="%23D2B48C"/></svg>'); background-size:420px 420px; z-index:-1; }
+        .login-container { background:#fff; border-radius:18px; box-shadow:0 20px 40px rgba(0,0,0,.1); position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:92%; max-width:420px; padding:34px 26px; text-align:center; }
+        .logo { font-size:26px; font-weight:700; color:var(--primary-color); margin-bottom:24px; display:flex; align-items:center; justify-content:center; gap:8px; }
+        .form-group { margin:14px 0 18px; text-align:left; }
+        .form-group label { display:block; margin-bottom:8px; color:var(--text-primary); font-weight:500; }
+        .form-group input { width:100%; padding:12px 14px; border:2px solid #e1e5e9; border-radius:8px; font-size:16px; box-sizing:border-box; }
+        .form-group input:focus { outline:none; border-color:var(--primary-color); }
+        .login-btn { width:100%; padding:12px; background:linear-gradient(135deg,var(--gradient-start),var(--gradient-end)); color:#fff; border:none; border-radius:8px; font-size:16px; font-weight:500; cursor:pointer; margin-top:8px; }
+        .login-btn:disabled { opacity:.6; cursor:not-allowed; }
+        .status-message { margin-top:12px; padding:10px; border-radius:6px; font-size:14px; text-align:center; }
+        .status-success { background:#d4edda; color:#155724; border:1px solid #c3e6cb; }
+        .status-error { background:#f8d7da; color:#721c24; border:1px solid #f5c6cb; }
+        .status-info { background:#d1ecf1; color:#0c5460; border:1px solid #bee5eb; }
+        .bottom-nav { position:fixed; bottom:0; left:0; right:0; background:#fff; display:flex; justify-content:space-around; padding:12px 0; box-shadow:0 -2px 10px rgba(0,0,0,.08); }
+        .nav-item { display:flex; flex-direction:column; align-items:center; color:#666; font-size:12px; text-decoration:none; }
+        .nav-icon { font-size:20px; margin-bottom:4px; }
+    </style>
+    <script>
+    // 全内嵌修复：动态加载 Supabase UMD，创建客户端并提供登录能力
+    (function(){
+        const SUPABASE_URL = 'https://ybrveusbwjusnrzgfnok.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlicnZldXNid2p1c25yemdmbm9rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY0ODU1NjIsImV4cCI6MjA3MjA2MTU2Mn0.JKPSUli-q9wRuDagE6kwltLk9XgfygE8yznm-Ca82Qk';
+      const CDN_CANDIDATES = [
+                        'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js',
+        'https://unpkg.com/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js'
+      ];
+      let client=null, inited=false;
+
+      function msg(text, type){
+        const id='__db_msg__';
+        let box=document.getElementById(id);
+        if(!box){ box=document.createElement('div'); box.id=id; document.querySelector('.login-container').appendChild(box); }
+        box.className = 'status-message '+(type||'status-info');
+        box.textContent = text;
+      }
+
+      function clearMsg(){ const box=document.getElementById('__db_msg__'); if(box) box.remove(); }
+
+      function loadSDK(){
+        return new Promise((resolve,reject)=>{
+          if(window.supabase && typeof window.supabase.createClient==='function') return resolve(window.supabase);
+          let i=0; (function tryNext(){
+            if(i>=CDN_CANDIDATES.length) return reject(new Error('SDK加载失败'));
+            const s=document.createElement('script'); s.src=CDN_CANDIDATES[i]+'?v='+(Date.now()); s.async=true;
+            s.onload=()=>{ if(window.supabase && window.supabase.createClient) resolve(window.supabase); else { i++; tryNext(); } };
+            s.onerror=()=>{ i++; tryNext(); };
+            document.head.appendChild(s);
+          })();
+        });
+      }
+
+      async function initDB(){
+        if(inited) return client;
+        msg('正在连接数据库...', 'status-info');
+        const sdk = await loadSDK();
+        client = sdk.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        inited = true; clearMsg(); msg('数据库连接成功', 'status-success');
+        return client;
+      }
+
+      async function login(username, password){
+        const c = await initDB();
+        const { data, error } = await c.from('users').select('*').eq('用户名', username).single();
+        if(error){ if((error.message||'').includes('Row not found')) throw new Error('用户名或密码错误'); throw new Error('登录失败：'+error.message); }
+        if(!data || data.密码 !== password) throw new Error('用户名或密码错误');
+                return data;
+      }
+
+      window.__DB__ = { init:initDB, login };
+    })();
+    </script>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">🚀 <span>KK搜索任务平台</span></div>
+        <div class="form-group">
+            <label for="username">用户名</label>
+            <input id="username" placeholder="请输入用户名" autocomplete="username">
+        </div>
+        <div class="form-group">
+            <label for="password">密码</label>
+            <input id="password" type="password" placeholder="请输入密码" autocomplete="current-password">
+        </div>
+        
+        <button id="loginBtn" class="login-btn">登录</button>
+        <div id="status" class="status-message status-info" style="display:none;"></div>
+    </div>
+    
+    <div class="bottom-nav">
+        <a href="index.html" class="nav-item"><div class="nav-icon">🏠</div><div>首页</div></a>
+        <a href="#" class="nav-item"><div class="nav-icon">📋</div><div>任务</div></a>
+        <a href="#" class="nav-item"><div class="nav-icon">🔍</div><div>发现</div></a>
+        <a href="#" class="nav-item"><div class="nav-icon">💰</div><div>钱包</div></a>
+        <a href="#" class="nav-item"><div class="nav-icon">👤</div><div>我的</div></a>
+    </div>
+
+    <script>
+      const $ = sel => document.querySelector(sel);
+      $('#loginBtn').addEventListener('click', handleLogin);
+      document.addEventListener('keypress', e => { if(e.key==='Enter') handleLogin(); });
+      // 移除登录页邀请码逻辑（按需在注册页填写）
+
+      async function handleLogin(){
+        const u=$('#username').value.trim();
+        const p=$('#password').value.trim();
+        if(!u || !p){ show('请输入用户名和密码','error'); return; }
+        toggle(true); show('正在验证登录信息...','info');
+        try{
+          const user = await window.__DB__.login(u,p);
+          show('登录成功，正在跳转...','success');
+          localStorage.setItem('currentUser', JSON.stringify({ id:user.id, username:user.用户名, points:user.积分||0 }));
+          // 登录页不再处理邀请码
+          setTimeout(()=>location.href='index.html', 1200);
+        }catch(err){ show(err.message || '登录失败','error'); }
+        finally{ toggle(false); }
+      }
+
+      function show(text, type){
+        const el=$('#status'); el.style.display='block';
+        el.className='status-message '+(type==='success'?'status-success':type==='error'?'status-error':'status-info');
+        el.textContent=text;
+      }
+      function toggle(disabled){ $('#loginBtn').disabled=disabled; }
+
+      // 工具：邀请码编码/解码（Base64URL）
+      // 与团队页一致的短码：R + id后6位 + 校验位
+      function parseInviteCodeToUserId(code){
+        try{
+          const s=String(code||'');
+          if(!/^R[0-9A-Z]{7}$/.test(s)) return '';
+          const body=s.slice(1,7); const check=s.slice(7);
+          const chars='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+          let sum=0; for(let i=0;i<body.length;i++){ sum += body.charCodeAt(i); }
+          const expect=chars[sum%36]; if(check!==expect) return '';
+          // 无法从短码直接还原完整ID，绑定时仅记录 inviter 的后6位标识
+          return 'uid_tail_'+body; // 记录为后6位标识
+        }catch(_){ return ''; }
+      }
+
+      async function processReferralBinding(code, user){
+        const inviterId = parseInviteCodeToUserId(code);
+        if(!inviterId || !user || !user.id || String(inviterId)===String(user.id)) return;
+        // 保存到数据库（若可用），失败则回退到本地
+        try{
+          const c = await window.__DB__.init();
+          // 创建 referrals 表（如不存在则忽略错误）
+          try{ await c.rpc('exec_sql', { sql_query: "CREATE TABLE IF NOT EXISTS public.referrals (id uuid default gen_random_uuid() primary key, inviter_id text, invitee_id text, created_at timestamptz default now()); ALTER TABLE public.referrals ENABLE ROW LEVEL SECURITY; DROP POLICY IF EXISTS referrals_select ON public.referrals; CREATE POLICY referrals_select ON public.referrals FOR SELECT TO anon USING (true); DROP POLICY IF EXISTS referrals_insert ON public.referrals; CREATE POLICY referrals_insert ON public.referrals FOR INSERT TO anon WITH CHECK (true);" }); }catch(_){ }
+          const { error } = await c.from('referrals').insert([{ inviter_id: inviterId, invitee_id: user.id }]);
+          if(error) throw error;
+        }catch(_){
+          // 本地回退
+          try{ const arr=JSON.parse(localStorage.getItem('referrals')||'[]'); const dupe=arr.some(r=> r.inviter_id===inviterId && r.invitee_id===user.id); if(!dupe){ arr.push({ inviter_id:inviterId, invitee_id:user.id, created_at:new Date().toISOString() }); localStorage.setItem('referrals', JSON.stringify(arr)); } }catch(__){}
+        }
+        // 标记当前用户的上级
+        try{ const cu=JSON.parse(localStorage.getItem('currentUser')||'{}'); cu.invited_by = inviterId; localStorage.setItem('currentUser', JSON.stringify(cu)); }catch(_){ }
+      }
+
+      // 首次进入自动初始化数据库，若失败页面会保留提示
+      window.__DB__.init().catch(()=>{});
+    </script>
+</body>
+</html>

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>w空搜索任务</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+        body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Helvetica Neue',Arial,sans-serif;background:#fff;min-height:100vh;color:#333;-webkit-font-smoothing:auto;text-rendering:optimizeLegibility;padding-bottom:100px}
+        .top-hero{background:linear-gradient(135deg,#3b82f6 0%,#2563eb 100%);padding:8px 0 24px;border-bottom-left-radius:16px;border-bottom-right-radius:16px;box-shadow:0 6px 24px rgba(102,126,234,.25)}
+        .header{background:rgba(255,255,255,.1);backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,.2);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+        .back-btn{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.2);border:none;color:#fff;font-size:16px;display:flex;align-items:center;justify-content:center;text-decoration:none}
+        .header-title{color:#fff;font-size:16px;font-weight:600;flex:1;text-align:center;margin:0 12px}
+        .top-card{width:calc(100% - 24px);margin:10px auto 0;background:#fff;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.08);padding:12px}
+        .chips-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+        .chip{padding:8px 12px;border-radius:9999px;background:#f3f4f6;color:#6b7280;font-weight:800;font-size:13px}
+        .chip.primary{background:#ff6b6b;color:#fff}
+        .reward-card{background:#fff;color:#333;border-radius:16px;padding:8px;margin-bottom:10px}
+        .reward-item{display:flex;align-items:center;padding:8px 0;border-bottom:1px solid rgba(0,0,0,.06)}
+        .reward-item:last-child{border-bottom:none}
+        .reward-icon{width:32px;height:32px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-right:10px;font-size:13px;font-weight:600}
+        .reward-name{flex:1;font-size:14px;font-weight:500}
+        .reward-value{color:#667eea;font-size:15px;font-weight:800}
+        .main-content{padding:0 12px 12px}
+        .ranking-card{background:#fff;border-radius:16px;padding:16px;margin:12px 0;box-shadow:0 4px 20px rgba(0,0,0,.1)}
+        .ranking-title{display:flex;align-items:center;gap:6px;font-weight:700;margin-bottom:12px}
+        .ranking-list{display:flex;overflow-x:auto;gap:12px}
+        .ranking-item{min-width:80px;text-align:center;position:relative}
+        .ranking-number{position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;background:linear-gradient(135deg,#ffd700,#ffb347)}
+        .ranking-avatar{width:48px;height:48px;border-radius:50%;background:#ddd;background-size:cover;background-position:center;margin:6px auto 8px;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+        .accordion-card{background:#f6f8fc;border-radius:14px;margin-bottom:10px;overflow:hidden;box-shadow:inset 0 0 0 1px #eef2f7}
+        .accordion-header{padding:14px 16px;display:flex;align-items:center;cursor:pointer}
+        .accordion-icon{width:32px;height:32px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#fff;background:linear-gradient(135deg,#ff8a00,#ff4d4f);margin-right:12px}
+        .accordion-title{flex:1;font-size:15px;font-weight:700;color:#0f172a}
+        .accordion-content{max-height:0;overflow:hidden;transition:all .3s ease;background:#fff;border-radius:12px;margin:0 12px}
+        .accordion-content.active{max-height:500px;margin:6px 12px 10px;border:1px solid #eef2f7}
+        .content-inner{padding:12px 16px;color:#666;line-height:1.5;font-size:13px}
+        .bottom-buttons{position:fixed;bottom:0;left:0;right:0;background:#fff;padding:12px 16px 16px;display:flex;gap:10px;box-shadow:0 -4px 20px rgba(0,0,0,.1);z-index:100}
+        .btn{flex:1;padding:12px 16px;border-radius:12px;font-size:14px;font-weight:600;border:none;cursor:pointer;text-decoration:none;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px}
+        .btn-outline{background:#fff;color:#667eea;border:2px solid #667eea}
+        .btn-primary{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff}
+    </style>
+</head>
+<body>
+    <div class="top-hero">
+        <div class="header">
+            <a href="index.html" class="back-btn"><i class="fas fa-arrow-left"></i></a>
+            <div class="header-title">w空短剧搜索</div>
+            <div style="width:36px"></div>
+        </div>
+        <div class="top-card">
+            <div class="chips-row">
+                <span class="chip primary">T+2 日出日结</span>
+                <span class="chip">拉新8</span>
+            </div>
+            <div class="reward-card" style="box-shadow:none; padding:0; background:#fff;">
+                <div class="reward-items" style="margin:0;">
+                    <div class="reward-item"><div class="reward-icon">¥</div><span class="reward-name">按拉新量结算</span><span class="reward-value">¥8.00</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="ranking-card">
+            <div class="ranking-title"><i class="fas fa-trophy"></i>达人收益排行榜</div>
+            <div class="ranking-list">
+                <div class="ranking-item"><div class="ranking-number">1</div><div class="ranking-avatar" style="background-image:url('tp/微信图片_20250913162419.jpg');"></div><div class="ranking-name">xxxvg</div><div class="ranking-amount">¥2,580</div></div>
+                <div class="ranking-item"><div class="ranking-number">2</div><div class="ranking-avatar" style="background-image:url('tp/微信图片_20250913162419.jpg');"></div><div class="ranking-name">wwwE</div><div class="ranking-amount">¥1,920</div></div>
+                <div class="ranking-item"><div class="ranking-number">3</div><div class="ranking-avatar" style="background-image:url('tp/微信图片_20250913162419.jpg');"></div><div class="ranking-name">xxxQ</div><div class="ranking-amount">¥1,650</div></div>
+                <div class="ranking-item"><div class="ranking-number">4</div><div class="ranking-avatar" style="background-image:url('tp/微信图片_20250913162419.jpg');"></div><div class="ranking-name">wwwB</div><div class="ranking-amount">¥1,380</div></div>
+            </div>
+        </div>
+
+        <div class="accordion-card">
+            <div class="accordion-header" onclick="toggleAccordion(this,'req')">
+                <div class="accordion-icon">⭐</div>
+                <div class="accordion-title">项目要求</div>
+                <i class="fas fa-chevron-down" style="font-size:12px;color:#94a3b8"></i>
+            </div>
+            <div class="accordion-content" id="req"><div class="content-inner">
+                <p>• 必须在指定时间内完成搜索任务</p>
+                <p>• 确保搜索行为真实有效</p>
+                <p>• 遵守平台相关规定与政策</p>
+            </div></div>
+        </div>
+
+        <div class="accordion-card">
+            <div class="accordion-header" onclick="toggleAccordion(this,'intro')">
+                <div class="accordion-icon">ℹ️</div>
+                <div class="accordion-title">项目介绍</div>
+                <i class="fas fa-chevron-down" style="font-size:12px;color:#94a3b8"></i>
+            </div>
+            <div class="accordion-content" id="intro"><div class="content-inner">
+                <p>w空搜索是搜索推广任务，完成关键词搜索、浏览与留痕动作可获得相应收益。</p>
+            </div></div>
+        </div>
+    </div>
+
+    <div class="bottom-buttons">
+        <a class="btn btn-outline" href="my-keywords.html?task=wk"><i class="fas fa-list"></i>查看关键词</a>
+        <a class="btn btn-primary" href="wukong-search-keywords.html"><i class="fas fa-rocket"></i>申请推广</a>
+    </div>
+
+    <script>
+    function toggleAccordion(header,id){ const c=document.getElementById(id); const all=document.querySelectorAll('.accordion-content'); const hs=document.querySelectorAll('.accordion-header'); all.forEach(i=>{ if(i.id!==id) i.classList.remove('active'); }); hs.forEach(h=>{ if(h!==header) h.classList.remove('active'); }); header.classList.toggle('active'); c.classList.toggle('active'); }
+    </script>
+</body>
+</html>

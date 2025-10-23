@@ -1,0 +1,65 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Collect site files to public/
+        run: |
+          rm -rf public
+          mkdir -p public
+          # 只发布这些文件/目录，其余全部忽略
+          rsync -av --delete \
+            --include='index.html' \
+            --include='download.html' \
+            --include='ranking.html' \
+            --include='income.html' \
+            --include='profile.html' \
+            --include='login.html' \
+            --include='mobile-login.html' \
+            --include='quark-search-task.html' \
+            --include='xray-search-task.html' \
+            --include='wukong-search-task.html' \
+            --include='mobile-optimizations.css' \
+            --include='mobile-optimizer.js' \
+            --include='mobile-interactions.js' \
+            --include='emergency-database-fix.js' \
+            --include='app-launcher.js' \
+            --include='realtime.js' \
+            --include='mobile-manifest.json' \
+            --include='icon-512.png' \
+            --include='tp/***' \
+            --include='downloads/***' \
+            --exclude='*' \
+            ./ public/
+          touch public/.nojekyll
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#4f46e5">
+    <title>我的团队</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="mobile-optimizations.css">
+        <script src="emergency-database-fix.js"></script>
+    <style>
+        body {
+            background-color: #f5f7fa;
+            font-family: 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
+            padding-bottom: 60px;
+        }
+        
+        .top-bar {
+            background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: 12px;
+        }
+        
+        .nav-button {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .team-summary {
+            border-radius: 16px;
+            background: linear-gradient(135deg, #ef4444 0%, #f97316 100%);
+            box-shadow: 0 10px 15px -3px rgba(239, 68, 68, 0.2);
+        }
+        
+        .tab-active {
+            color: #4f46e5;
+            font-weight: 500;
+            border-bottom: 2px solid #4f46e5;
+            position: relative;
+        }
+        
+        .team-member {
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        
+        .team-member:active {
+            background-color: #f3f4f6;
+        }
+        
+        .member-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background-color: #6366f1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+            overflow: hidden;
+        }
+        
+        .member-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 50%;
+        }
+        
+        .level-badge {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .level-1 {
+            background-color: #dcfce7;
+            color: #16a34a;
+        }
+        
+        .level-2 {
+            background-color: #e0f2fe;
+            color: #0284c7;
+        }
+        
+        .empty-state {
+            height: 200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #9ca3af;
+        }
+        
+        .invite-card {
+            border-radius: 16px;
+            background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+            box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .invite-card::before {
+            content: '';
+            position: absolute;
+            width: 150px;
+            height: 150px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            top: -75px;
+            right: -75px;
+        }
+        
+        .invite-card::after {
+            content: '';
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            bottom: -50px;
+            left: -50px;
+        }
+        
+        .invite-button {
+            border-radius: 24px;
+            background-color: white;
+            color: #4f46e5;
+            font-weight: 500;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            min-height: 48px;
+        }
+    </style>
+</head>
+<body class="page-transition">
+    <!-- Toast消息提示容器 -->
+    <div class="toast-container">
+        <div class="toast-message" id="toastMessage"></div>
+    </div>
+
+    <!-- 加载指示器 -->
+    <div class="loading-container" id="loadingIndicator">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- 顶部状态栏 -->
+    <div class="top-bar text-white p-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                <button onclick="history.back()" class="nav-button mr-3" role="button">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <div class="flex items-center">
+                    <span class="text-lg font-medium">我的团队</span>
+                </div>
+            </div>
+            <button class="nav-button" role="button">
+                <i class="fas fa-ellipsis-h"></i>
+            </button>
+        </div>
+    </div>
+    
+    <!-- 团队统计卡片 -->
+    <div class="mx-4 mb-6">
+        <div class="team-summary p-6 text-white">
+            <div class="mb-2 text-sm opacity-80">团队总人数</div>
+            <div class="text-3xl font-bold mb-4" id="team-total">0</div>
+            
+            <div class="flex justify-between mt-4">
+                <div class="flex flex-col items-center">
+                    <div class="text-lg font-bold" id="team-l1">0</div>
+                    <span class="text-xs opacity-90 mt-1">一级成员</span>
+                </div>
+                <div class="flex flex-col items-center">
+                    <div class="text-lg font-bold" id="team-income">¥0.00</div>
+                    <span class="text-xs opacity-90 mt-1">团队收益</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 标签页 -->
+    <div class="bg-white px-4 mb-3">
+        <div class="flex border-b" role="tablist">
+            <div class="tab-active px-4 py-3 text-center relative" role="tab">
+                <span>我的团队</span>
+                <div class="tab-indicator"></div>
+            </div>
+            <div class="px-4 py-3 text-center text-gray-500" role="tab">
+                <span>团队收益</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 团队成员列表 -->
+    <div class="bg-white rounded-xl mx-4 mb-4 overflow-hidden">
+        <!-- 空状态提示 -->
+        <div class="empty-state">
+            <i class="fas fa-users text-3xl mb-3"></i>
+            <p class="text-sm">暂无团队成员</p>
+        </div>
+        
+        <!-- 以下为团队成员示例，当有记录时展示 -->
+        <div class="hidden">
+                         <!-- 成员 1 -->
+             <div class="team-member flex items-center p-4 border-b border-gray-100" role="button">
+                 <div class="member-avatar">
+                     <img src="tp/d5b6249d7d47b37ce1a7ffc886ade151.png" alt="用户头像" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                 </div>
+                <div class="ml-3 flex-1">
+                    <div class="flex items-center justify-between">
+                        <div class="font-medium text-gray-800">张三</div>
+                        <span class="level-badge level-1">一级成员</span>
+                    </div>
+                    <div class="flex items-center justify-between mt-1">
+                        <div class="text-gray-500 text-xs">加入时间: 2025-08-25</div>
+                        <div class="text-gray-500 text-xs">贡献收益: ¥15.00</div>
+                    </div>
+                </div>
+            </div>
+            
+                         <!-- 成员 2 -->
+             <div class="team-member flex items-center p-4 border-b border-gray-100" role="button">
+                 <div class="member-avatar">
+                     <img src="tp/d5b6249d7d47b37ce1a7ffc886ade151.png" alt="用户头像" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                 </div>
+                <div class="ml-3 flex-1">
+                    <div class="flex items-center justify-between">
+                        <div class="font-medium text-gray-800">李四</div>
+                        <span class="level-badge level-2">二级成员</span>
+                    </div>
+                    <div class="flex items-center justify-between mt-1">
+                        <div class="text-gray-500 text-xs">加入时间: 2025-08-20</div>
+                        <div class="text-gray-500 text-xs">贡献收益: ¥8.00</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="team-list"></div>
+    </div>
+    
+    <!-- 邀请卡片 -->
+    <div class="mx-4 mb-6">
+        <div class="invite-card p-6 text-white">
+            <div class="text-lg font-bold mb-2 relative z-10">邀请好友加入</div>
+            <div class="text-sm opacity-90 mb-4 relative z-10">邀请好友加入团队，享受团队收益</div>
+            
+            <div class="flex justify-between items-center relative z-10">
+                <div class="text-sm">
+                    <div>邀请码</div>
+                    <div class="font-bold mt-1" id="myInviteCode">生成中...</div>
+                </div>
+                <div class="flex gap-3 items-center">
+                    <button id="copyCodeBtn" class="invite-button px-4 py-3" role="button">复制邀请码</button>
+                    <button id="inviteBtn" class="invite-button px-6 py-3" role="button">邀请好友</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 团队规则 -->
+    <div class="bg-white rounded-xl mx-4 mb-6 p-4">
+        <div class="text-gray-800 font-medium mb-2">团队规则</div>
+        <ul class="text-gray-500 text-sm space-y-2">
+            <li><i class="fas fa-circle text-xs mr-2"></i>直接邀请的好友为一级成员，可获得其收益的10%</li>
+            <li><i class="fas fa-circle text-xs mr-2"></i>一级成员邀请的好友为二级成员，可获得其收益的5%</li>
+            <li><i class="fas fa-circle text-xs mr-2"></i>团队奖励将在下级完成任务后自动结算</li>
+            <li><i class="fas fa-circle text-xs mr-2"></i>团队收益将直接计入个人钱包余额</li>
+        </ul>
+    </div>
+    
+    <script src="mobile-interactions.js"></script>
+    <script>
+        // 统一获取紧急客户端（等待就绪）
+        async function ensureEmergencyClient(){
+            try{
+                let c = (typeof window.getEmergencyClient==='function') ? window.getEmergencyClient() : null;
+                if(!c && typeof window.emergencyInitDatabase==='function'){
+                    await window.emergencyInitDatabase();
+                    c = (typeof window.getEmergencyClient==='function') ? window.getEmergencyClient() : null;
+                }
+                if(!c && window.supabase && typeof window.supabase.from==='function') c = window.supabase;
+                return c;
+            }catch(_){ return null; }
+        }
+        // ===== 入口守卫：仅团长可进入 =====
+        document.addEventListener('DOMContentLoaded', async function(){
+            try{
+                const ok = await enforceLeaderGuard();
+                if(!ok){ return; }
+            }catch(_){ }
+        });
+
+        async function enforceLeaderGuard(){
+            try{
+                const u = JSON.parse(localStorage.getItem('currentUser')||'{}');
+                const uid = u && (u.id || u['用户ID']);
+                if(!uid){ renderBlocked('请先登录后再访问'); return false; }
+                // 1) 本地快速判断：currentUser 来自上一页数据库刷新，优先放行以提升速度
+                let localAllowed = !!(u.is_leader===true || u['是否团长']===true || String(u.role||u['角色']||'').toLowerCase()==='leader');
+                if(localAllowed){
+                    // 后台异步复核：若远端判定为非团长，再回滚为拦截
+                    isLeaderAllowedStrict(uid).then(function(ok){ if(!ok){ renderBlocked('普通学员无法进入，如需开通团长权限请联系管理员'); } });
+                    return true;
+                }
+                // 2) 远端严格校验
+                const allowed = await isLeaderAllowedStrict(uid);
+                if(!allowed){ renderBlocked('普通学员无法进入，如需开通团长权限请联系管理员'); return false; }
+                return true;
+            }catch(_){ return true; }
+        }
+
+        async function isLeaderAllowedStrict(userId){
+            try{
+                const c = await ensureEmergencyClient();
+                if(c){
+                    // users 表优先
+                    try{
+                        const { data } = await c.from('users').select('*').eq('id', userId).limit(1);
+                        if(data && data[0]){
+                            const r=data[0]; const roleOk=String(r.role||r['角色']||'').toLowerCase()==='leader';
+                            if(r.is_leader===true || r['是否团长']===true || roleOk) return true;
+                        }
+                    }catch(_){ }
+                    // leaders_allowlist 作为补充
+                    try{
+                        const { data } = await c.from('leaders_allowlist').select('user_id,status').eq('user_id', userId).limit(1);
+                        if(data && data[0]) return data[0].status==='enabled';
+                    }catch(_){ }
+                }
+            }catch(_){ }
+            return false;
+        }
+
+        function renderBlocked(message){
+            try{
+                // 隐藏主体内容
+                document.querySelectorAll('.mx-4, .bg-white').forEach(el=>{ el.style.display='none'; });
+                const wrap = document.createElement('div');
+                wrap.style.cssText='display:flex;align-items:center;justify-content:center;height:70vh;color:#6b7280;padding:24px;';
+                wrap.innerHTML = `
+                    <div style="text-align:center;max-width:420px;">
+                        <div style="font-size:44px;color:#9ca3af;line-height:1;">🔒</div>
+                        <div style="margin-top:12px;font-weight:700;color:#374151;">无法访问</div>
+                        <div style="margin-top:6px;">${message||'无权限访问该页面'}</div>
+                        <a href="profile.html" style="display:inline-block;margin-top:16px;background:#4f46e5;color:#fff;padding:10px 16px;border-radius:10px;">返回“我的”</a>
+                    </div>`;
+                document.body.appendChild(wrap);
+                window.showToast && window.showToast(message||'无权限访问');
+            }catch(_){ }
+        }
+
+        // 页面加载时隐藏加载指示器
+        document.addEventListener('DOMContentLoaded', function() {
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            if (loadingIndicator) {
+                loadingIndicator.style.display = 'none';
+            }
+        });
+        
+        // 标签切换功能
+        const tabs = document.querySelectorAll('.bg-white .flex.border-b > div');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', function() {
+                // 显示加载指示器
+                window.showLoading();
+                
+                // 移除所有标签的活动状态
+                tabs.forEach(t => {
+                    t.classList.remove('tab-active');
+                    t.classList.add('text-gray-500');
+                });
+                
+                // 为当前点击的标签添加活动状态
+                this.classList.add('tab-active');
+                this.classList.remove('text-gray-500');
+                
+                // 获取标签文本
+                const tabText = this.textContent.trim();
+                
+                // 显示提示信息
+                window.showToast(`已切换到"${tabText}"标签，数据加载中...`);
+                
+                // 模拟加载延迟
+                setTimeout(() => {
+                    window.hideLoading();
+                    // 不再显示"数据加载完成"提示，直接完成切换
+                }, 800);
+            });
+        });
+        
+        // 生成并显示我的邀请码
+        (function initInvite(){
+            try{
+                const u = JSON.parse(localStorage.getItem('currentUser')||'{}');
+                const uid = u.id || u['用户ID'] || 'guest';
+                const code = generateInviteCode(uid);
+                document.getElementById('myInviteCode').textContent = code;
+            }catch(_){ document.getElementById('myInviteCode').textContent='--'; }
+        })();
+
+        // 简化邀请码（用户ID后6位 + 校验位），长度更短
+        function generateInviteCode(userId){
+            const id = String(userId||'');
+            const base = id.slice(-6).padStart(6,'0');
+            // 简单校验位：各位字符码累加 mod 36，映射0-9A-Z
+            let sum=0; for(let i=0;i<base.length;i++){ sum += base.charCodeAt(i); }
+            const chars='0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            const check = chars[sum % 36];
+            return 'R' + base + check; // 8位以内
+        }
+
+        // 复制邀请码
+        document.getElementById('copyCodeBtn').addEventListener('click', function(){
+            try{
+                const code = (document.getElementById('myInviteCode').textContent||'').trim();
+                if(!code){ window.showToast('暂无邀请码'); return; }
+                if(navigator.clipboard){
+                    navigator.clipboard.writeText(code).then(()=> window.showToast('邀请码已复制'));
+                }else{
+                    prompt('复制邀请码', code);
+                }
+            }catch(_){ window.showToast('复制失败，请手动长按复制'); }
+        });
+
+        // 邀请按钮点击事件
+        document.getElementById('inviteBtn').addEventListener('click', function() {
+            // 显示加载指示器
+            window.showLoading();
+            
+            // 显示提示信息
+            window.showToast('正在生成邀请链接...');
+            
+            // 模拟处理延迟
+            setTimeout(() => {
+                window.hideLoading();
+                try{
+                    const code = document.getElementById('myInviteCode').textContent.trim();
+                    const shareUrl = 'https://wctd.xyz/login.html?code=' + encodeURIComponent(code);
+                    if(navigator.clipboard){ navigator.clipboard.writeText(shareUrl); window.showToast('已复制邀请链接，可粘贴分享'); }
+                    else { prompt('复制邀请链接', shareUrl); }
+                }catch(_){ window.showToast('邀请链接已生成，正在打开分享...'); }
+            }, 1000);
+        });
+
+        // 邀请权限校验：仅在严格远端判定为非团长时才隐藏邀请模块
+        (function checkInvitePermission(){
+            try{
+                const u = JSON.parse(localStorage.getItem('currentUser')||'{}');
+                const inviteSection = document.querySelector('.invite-card')?.parentElement;
+                if(!inviteSection) return;
+                const uid = u && (u.id || u['用户ID']);
+                isLeaderAllowedStrict(uid).then(function(ok){
+                    if(!ok && inviteSection){ inviteSection.style.display = 'none'; }
+                }).catch(function(){});
+            }catch(_){ }
+        })();
+
+        function isLeaderAllowed(userId){
+            try{
+                const local = JSON.parse(localStorage.getItem('leaders_allowlist')||'[]');
+                const u = JSON.parse(localStorage.getItem('currentUser')||'{}');
+                const uid = String(userId||'').trim();
+                const uname = String(u.username||u['用户名']||'').trim().toLowerCase();
+                const myCode = generateInviteCode(uid);
+                if((local||[]).some(x=>{
+                    const xu = String(x.user_id||'').trim();
+                    const xn = String(x.username||'').trim().toLowerCase();
+                    const xs = String(x.short_code||'').trim();
+                    return ((xu && xu===uid) || (xn && xn===uname) || (xs && xs===myCode)) && (String(x.status||'enabled')==='enabled');
+                })) return true;
+            }catch(_){ }
+            // 异步刷新缓存（不阻塞）
+            try{
+                if(typeof window.getEmergencyClient==='function'){
+                    const c = window.getEmergencyClient();
+                    if(c){
+                        c.from('leaders_allowlist').select('user_id,status').eq('user_id', userId).limit(1).then(({data})=>{
+                            if(data && data[0]){
+                                const list = JSON.parse(localStorage.getItem('leaders_allowlist')||'[]');
+                                const idx = list.findIndex(x=>x.user_id===userId);
+                                if(idx>=0){ list[idx]=Object.assign(list[idx], data[0]); }
+                                else { list.push(data[0]); }
+                                localStorage.setItem('leaders_allowlist', JSON.stringify(list));
+                            }
+                        });
+                    }
+                }
+            }catch(_){ }
+            return false;
+        }
+
+        // 加载我的团队数据（L1/L2）
+        document.addEventListener('DOMContentLoaded', async function(){
+            try{
+                // 首先索引本地数组为快速缓存
+                try{
+                    const arr = JSON.parse(localStorage.getItem('leaders_allowlist')||'[]');
+                    (arr||[]).forEach(x=>{
+                        try{
+                            const uid=String(x.user_id||'').trim();
+                            const uname=String(x.username||'').trim().toLowerCase();
+                            const sc=String(x.short_code||'').trim();
+                            const st=String(x.status||'enabled');
+                            if(uid) localStorage.setItem('leader:'+uid, st);
+                            if(uname) localStorage.setItem('leader:uname:'+uname, st);
+                            if(sc) localStorage.setItem('leader:scode:'+sc, st);
+                        }catch(_){ }
+                    });
+                }catch(_){ }
+                const ok = await enforceLeaderGuard(); if(!ok) return; loadMyTeamStats();
+            }catch(_){ }
+        });
+
+        async function loadMyTeamStats(){
+            try{
+                window.showLoading && window.showLoading();
+                const u = JSON.parse(localStorage.getItem('currentUser')||'{}');
+                if(!u || !u.id){ window.showToast && window.showToast('请先登录'); return; }
+                const myCode = generateInviteCode(u.id);
+                const body = myCode.slice(1,7);
+                const legacyKey = 'uid_tail_'+body;
+                let rows = [];
+                // 远端数据
+                try{
+                    if(typeof window.getEmergencyClient==='function'){
+                        const c = window.getEmergencyClient();
+                        if(c){
+                            try{ const r1 = await c.from('referrals').select('*').eq('inviter_id', myCode); if(r1 && r1.data) rows = rows.concat(r1.data); }catch(_){ }
+                            try{ const r2 = await c.from('referrals').select('*').eq('inviter_id', legacyKey); if(r2 && r2.data) rows = rows.concat(r2.data); }catch(_){ }
+                        }
+                    }
+                }catch(_){ }
+                // 本地回退
+                try{
+                    const local = JSON.parse(localStorage.getItem('referrals')||'[]');
+                    rows = rows.concat(local.filter(r=> r && (r.inviter_id===myCode || r.inviter_id===legacyKey)));
+                }catch(_){ }
+
+                // 拉取用户名映射（优先使用 referrals 中已保存的 invitee_name）
+                const idList = rows.map(r=> r.invitee_id).filter(Boolean);
+                const usernameMap = await fetchUsernamesMapByIds(idList);
+
+                const level1 = Array.isArray(rows) ? rows.length : 0;
+                // 计算二级（基于受邀者派生短码）
+                let level2 = 0;
+                try{
+                    if(level1>0 && typeof window.getEmergencyClient==='function'){
+                        const c = window.getEmergencyClient();
+                        if(c){
+                            const derivedCodes = rows.map(r=> generateInviteCode(r.invitee_id||''));
+                            const uniq = Array.from(new Set(derivedCodes.filter(Boolean)));
+                            if(uniq.length>0){
+                                // 分批查询避免 URL 过长
+                                const chunkSize = 30; let sum = 0;
+                                for(let i=0;i<uniq.length;i+=chunkSize){
+                                    const chunk = uniq.slice(i, i+chunkSize);
+                                    const { data } = await c.from('referrals').select('id').in('inviter_id', chunk);
+                                    sum += (data||[]).length;
+                                }
+                                level2 = sum;
+                            }
+                        }
+                    }
+                }catch(_){ }
+
+                const total = level1; // 移除二级成员统计
+                document.getElementById('team-total').textContent = String(total);
+                document.getElementById('team-l1').textContent = String(level1);
+                // document.getElementById('team-l2').textContent = String(level2); // 已移除
+
+                // 渲染成员列表（仅展示一级成员；展示用户总收益）
+                const list = document.getElementById('team-list');
+                const empty = document.querySelector('.empty-state');
+                if(level1>0 && list){
+                    if(empty) empty.style.display='none';
+                    list.innerHTML = rows.map(r=>{
+                        const uname = (r.invitee_name && String(r.invitee_name).trim()) || usernameMap.get(r.invitee_id) || '';
+                        const name = uname || ('用户' + String(r.invitee_id||'').slice(-4));
+                        const time = (r.created_at||'').replace('T',' ').slice(0,19);
+                        const avatarText = (uname ? uname[0] : String(r.invitee_id||'').slice(-2));
+                        return '<div class="team-member flex items-center p-4 border-b border-gray-100" role="button">\
+                                    <div class="member-avatar">'+ avatarText +'</div>\
+                                    <div class="ml-3 flex-1">\
+                                        <div class="flex items-center justify-between">\
+                                            <div class="font-medium text-gray-800">'+name+'</div>\
+                                            <span class="level-badge level-1">一级成员</span>\
+                                        </div>\
+                                        <div class="flex items-center justify-between mt-1">\
+                                            <div class="text-gray-500 text-xs">加入时间: '+(time||'--')+'</div>\
+                                            <div class="text-gray-500 text-xs">用户总收益: <span class="user-sum" data-user="'+(r.invitee_id||'')+'">计算中...</span></div>\
+                                        </div>\
+                                    </div>\
+                                </div>';
+                    }).join('');
+                    // 补充：异步拉取每个成员的真实总收益
+                    try{
+                        const c = (typeof window.getEmergencyClient==='function') ? window.getEmergencyClient() : null;
+                        if(c){
+                            const ids = rows.map(r=> r.invitee_id).filter(Boolean);
+                            const uniq = Array.from(new Set(ids));
+                            const chunkSize = 50;
+                            for(let i=0;i<uniq.length;i+=chunkSize){
+                                const chunk = uniq.slice(i, i+chunkSize);
+                                // 统计 earnings 表中该用户的所有 amount 之和（已完成/完成），作为总收益
+                                const { data } = await c.rpc('sum_user_earnings', { user_ids: chunk }).catch(()=>({data:null}));
+                                // 若无 RPC，则降级为前端聚合
+                                if(!data){
+                                    try{
+                                        const { data: earns } = await c.from('earnings').select('user_id, amount, status').in('user_id', chunk);
+                                        const map = new Map();
+                                        (earns||[]).forEach(e=>{
+                                            const st = e.status || e['状态'];
+                                            if(st==='completed' || st==='已完成'){
+                                                const uid=String(e.user_id||'');
+                                                map.set(uid, (map.get(uid)||0)+Number(e.amount||e['金额']||0));
+                                            }
+                                        });
+                                        map.forEach((sum, uid)=>{
+                                            const el = document.querySelector('.user-sum[data-user="'+uid+'"]');
+                                            if(el) el.textContent = '¥'+ Number(sum).toFixed(2);
+                                        });
+                                    }catch(_){ }
+                                }else{
+                                    (data||[]).forEach(row=>{
+                                        const el = document.querySelector('.user-sum[data-user="'+row.user_id+'"]');
+                                        if(el) el.textContent = '¥'+ Number(row.total||0).toFixed(2);
+                                    });
+                                }
+                            }
+                        }
+                    }catch(_){ }
+                }
+            }finally{
+                window.hideLoading && window.hideLoading();
+            }
+        }
+
+        // 批量获取用户名映射
+        async function fetchUsernamesMapByIds(ids){
+            const map = new Map();
+            try{
+                if(!ids || ids.length===0) return map;
+                const c = (typeof window.getEmergencyClient==='function') ? window.getEmergencyClient() : null;
+                if(!c) return map;
+                const uniq = Array.from(new Set(ids));
+                const chunkSize = 50;
+                for(let i=0;i<uniq.length;i+=chunkSize){
+                    const chunk = uniq.slice(i, i+chunkSize);
+                    try{
+                        const { data } = await c.from('users').select('id, username, 用户名').in('id', chunk);
+                        (data||[]).forEach(u=>{ const n = u.username || u['用户名'] || ''; if(n) map.set(u.id, n); });
+                    }catch(_){ }
+                }
+            }catch(_){ }
+            return map;
+        }
+    </script>
+</body>
+</html>

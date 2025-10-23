@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>申请推广关键词 - x雷浏览器搜索</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background:#f6f7fb; min-height:100vh; color:#333; overflow-x:hidden; }
+        .header { display:flex; align-items:center; justify-content:space-between; padding:15px 20px; background:#fff; border-bottom:1px solid #f0f2f5; position:sticky; top:0; z-index:100; }
+        .back-btn { width:40px; height:40px; border-radius:50%; background: rgba(102,126,234,0.1); color:#667eea; display:flex; align-items:center; justify-content:center; text-decoration:none; font-size:18px; font-weight:bold; transition: all .3s ease; }
+        .back-btn:hover { background: rgba(102,126,234,0.2); transform: translateX(-2px); }
+        .header-title { font-size:18px; font-weight:600; color:#333; flex:1; text-align:center; margin:0 15px; }
+        .main-content { padding:16px; max-width:640px; margin:0 auto; }
+        .intro-card { background:#fff; border-radius:12px; padding:16px; margin-bottom:16px; display:flex; align-items:center; gap:14px; border:1px solid #eef2f7; }
+        .intro-icon { font-size:28px; color:#8b5cf6; }
+        .intro-text h3 { font-size:20px; color:#333; margin-bottom:8px; }
+        .intro-text p { color:#666; font-size:14px; line-height:1.5; }
+        .form-card { background:#fff; border-radius:12px; padding:16px; border:1px solid #eef2f7; }
+        .form-group { margin-bottom:16px; }
+        .form-label { display:block; margin-bottom:8px; font-weight:600; color:#333; font-size:15px; }
+        .required { color:#e74c3c; margin-left:4px; }
+        .form-input, .form-textarea { width:100%; padding:14px 16px; border:2px solid rgba(102,126,234,0.2); border-radius:12px; font-size:15px; background:#fff; transition: all .2s ease; color:#333; font-family: inherit; }
+        .form-input:focus, .form-textarea:focus { outline:none; border-color:#667eea; box-shadow: 0 0 0 4px rgba(102,126,234,0.08); }
+        .form-textarea { min-height:100px; resize: vertical; line-height:1.5; }
+        .submit-btn { width:100%; padding:14px; background:#ff7a45; color:#fff; border:none; border-radius:12px; font-size:18px; font-weight:700; cursor:pointer; transition: all .2s ease; margin-top:6px; -webkit-tap-highlight-color: rgba(0,0,0,0); outline:0; }
+        .submit-btn:hover { filter: brightness(0.98); }
+        .submit-btn:focus, .submit-btn:active { outline:0; box-shadow:none; }
+        .submit-btn:disabled { opacity:.7; cursor:not-allowed; transform:none; }
+        .hint { color:#64748b; font-size:12px; margin-top:6px; }
+        /* 选择题样式（图一风格） */
+        .option-group { display:flex; gap:10px; flex-wrap:wrap; }
+        .option-pill { padding:10px 14px; border-radius:9999px; border:2px solid rgba(102,126,234,0.2); background:#fff; color:#374151; font-weight:700; font-size:14px; cursor:pointer; user-select:none; transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background-color .18s ease, color .18s ease; position:relative; overflow:hidden; -webkit-tap-highlight-color: rgba(0,0,0,0); outline:0; }
+        .option-pill:hover { transform: translateY(-1px); box-shadow: 0 6px 14px rgba(99,102,241,.12); }
+        .option-pill:active { transform: scale(.96); outline:0; }
+        .option-pill:focus, .option-pill:focus-visible { outline:0; box-shadow: 0 0 0 0 rgba(0,0,0,0); }
+        .option-pill.active { border-color:#ff7a45; background:#fff7ed; color:#b45309; box-shadow: 0 8px 18px rgba(255,122,69,.18); }
+        .option-pill .ripple { position:absolute; border-radius:50%; transform:scale(0); animation:ripple .5s ease-out; background: rgba(255,122,69,.25); pointer-events:none; }
+        @keyframes ripple { to { transform: scale(6); opacity: 0; } }
+        .hidden-select { display:none; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="xray-search-task.html" class="back-btn">←</a>
+        <div class="header-title">申请推广关键词（x雷浏览器搜索）</div>
+        <div style="width:40px;height:40px;"></div>
+    </div>
+
+    <div class="main-content">
+        <div class="intro-card">
+            <i class="fas fa-rocket intro-icon"></i>
+            <div class="intro-text">
+                <h3>填写推广信息</h3>
+                <p>为x雷浏览器搜索提交您的推广申请与关键词，审核通过后即可开始推广。</p>
+            </div>
+        </div>
+
+        <form id="xrayForm" class="form-card">
+            <div class="form-group">
+                <label class="form-label">推广经验<span class="required">*</span></label>
+                <div class="option-group" data-target="experience">
+                    <div class="option-pill" data-value="正在学习中">正在学习中</div>
+                    <div class="option-pill" data-value="我很有经验">我很有经验</div>
+                </div>
+                <select id="experience" class="form-input hidden-select">
+                    <option value="">请选择</option>
+                    <option value="正在学习中">正在学习中</option>
+                    <option value="我很有经验">我很有经验</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">推广平台<span class="required">*</span></label>
+                <div class="option-group" data-target="channel">
+                    <div class="option-pill" data-value="抖音平台">抖音平台</div>
+                    <div class="option-pill" data-value="微信朋友圈">微信朋友圈</div>
+                    <div class="option-pill" data-value="快手平台">快手平台</div>
+                    <div class="option-pill" data-value="QQ群/空间">QQ群/空间</div>
+                </div>
+                <select id="channel" class="form-input hidden-select">
+                    <option value="">请选择</option>
+                    <option value="抖音平台">抖音平台</option>
+                    <option value="微信朋友圈">微信朋友圈</option>
+                    <option value="快手平台">快手平台</option>
+                    <option value="QQ群/空间">QQ群/空间</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">你要推广的内容<span class="required">*</span></label>
+                <div class="option-group" data-target="category">
+                    <div class="option-pill" data-value="影视">影视</div>
+                    <div class="option-pill" data-value="动漫">动漫</div>
+                </div>
+                <select id="category" class="form-input hidden-select">
+                    <option value="">请选择</option>
+                    <option value="影视">影视</option>
+                    <option value="动漫">动漫</option>
+                </select>
+            </div>
+
+            
+
+            <div class="form-group">
+                <label class="form-label">补充说明（可选）</label>
+                <textarea id="note" class="form-textarea" placeholder="请补充您的推广计划或渠道情况，便于加速审核"></textarea>
+            </div>
+
+            <button type="submit" id="submitBtn" class="submit-btn">提交申请</button>
+        </form>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+    (function(){
+        const SUPABASE_URL = 'https://ybrveusbwjusnrzgfnok.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlicnZldXNid2p1c25yemdmbm9rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY0ODU1NjIsImV4cCI6MjA3MjA2MTU2Mn0.JKPSUli-q9wRuDagE6kwltLk9XgfygE8yznm-Ca82Qk';
+        let supabaseClient = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initSupabase();
+            ensureUser();
+            initPillsUI();
+            bindSubmit();
+        });
+
+        function initSupabase(){
+            try{
+                if (typeof window.supabase !== 'undefined') {
+                    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                }
+            }catch(e){ console.warn('Supabase 初始化失败', e); }
+        }
+
+        function ensureUser(){
+            try{
+                const u = localStorage.getItem('currentUser');
+                if (!u) localStorage.setItem('currentUser', JSON.stringify({ id:'555', username:'555' }));
+            }catch(_){ localStorage.setItem('currentUser', JSON.stringify({ id:'555', username:'555' })); }
+        }
+
+        function initPillsUI(){
+            try{
+                document.querySelectorAll('.option-group').forEach(group=>{
+                    const target = group.getAttribute('data-target');
+                    const select = document.getElementById(target);
+                    const pills = group.querySelectorAll('.option-pill');
+                    const activate = (val)=>{
+                        pills.forEach(p=> p.classList.toggle('active', p.getAttribute('data-value')===val));
+                        if(select) select.value = val;
+                    };
+                    pills.forEach(p=> p.addEventListener('click', (e)=>{
+                        // ripple
+                        try{
+                            const r = document.createElement('span');
+                            r.className = 'ripple';
+                            const rect = p.getBoundingClientRect();
+                            const size = Math.max(rect.width, rect.height);
+                            r.style.width = r.style.height = size + 'px';
+                            r.style.left = (e.clientX - rect.left - size/2) + 'px';
+                            r.style.top = (e.clientY - rect.top - size/2) + 'px';
+                            p.appendChild(r);
+                            setTimeout(()=> r.remove(), 520);
+                        }catch(_){ }
+                        activate(p.getAttribute('data-value'));
+                    }));
+                    // 初始化：若select已有值用select，否则默认第一个
+                    const initVal = (select && select.value) ? select.value : (pills[0] && pills[0].getAttribute('data-value'));
+                    if(initVal) activate(initVal);
+                });
+            }catch(_){ }
+        }
+
+        function bindSubmit(){
+            const form = document.getElementById('xrayForm');
+            const btn = document.getElementById('submitBtn');
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const data = collect();
+                if (!validate(data)) return;
+                btn.disabled = true; btn.textContent = '提交中…';
+                try{
+                    await saveApplication(data);
+                    toast('申请提交成功', 'success');
+                    setTimeout(()=>{ window.location.href='application-success.html'; }, 800);
+                }catch(err){
+                    console.error(err);
+                    toast('提交失败，请重试', 'error');
+                    btn.disabled = false; btn.textContent = '提交申请';
+                }
+            });
+        }
+
+        function collect(){
+            const currentUser = JSON.parse(localStorage.getItem('currentUser')||'{"id":"555","username":"555"}');
+            const kwEl = document.getElementById('keyword');
+            return {
+                id: 'XR' + Date.now().toString().slice(-10),
+                userId: currentUser.id,
+                username: currentUser.username,
+                experience: document.getElementById('experience').value.trim(),
+                channel: document.getElementById('channel').value.trim(),
+                category: document.getElementById('category').value.trim(),
+                applied_keyword: kwEl && kwEl.value ? kwEl.value.trim() : '',
+                note: document.getElementById('note').value.trim(),
+                status: 'pending',
+                task_type: 'x雷浏览器搜索任务',
+                submitTime: new Date().toISOString(),
+                created_at: new Date().toISOString()
+            };
+        }
+
+        function validate(d){
+            if(!d.experience){ toast('请选择推广经验', 'error'); return false; }
+            if(!d.channel){ toast('请选择推广平台', 'error'); return false; }
+            if(!d.category){ toast('请选择内容类型', 'error'); return false; }
+            // 关键词输入已移除
+            return true;
+        }
+
+        async function saveApplication(d){
+            // Save to DB if available
+            try{
+                if (supabaseClient){
+                    const dbData = {
+                        id: d.id,
+                        user_id: d.userId,
+                        username: d.username,
+                        keywords: '', // 关键词字段留空（已移除输入）
+                        experience: d.experience,
+                        promotion_channel: d.channel,
+                        task_type: d.task_type,
+                        status: d.status,
+                        created_at: d.created_at,
+                        updated_at: d.created_at
+                    };
+                    const { error } = await supabaseClient.from('keyword_applications').insert([dbData]);
+                    if (error) console.warn('数据库保存失败，回退到本地', error);
+                }
+            }catch(e){ console.warn('数据库异常，回退到本地', e); }
+
+            // Always persist to localStorage as fallback/sync buffer
+            try{
+                const userKey = 'keywords_' + d.userId;
+                const list = JSON.parse(localStorage.getItem(userKey)||'[]');
+                list.unshift(d);
+                localStorage.setItem(userKey, JSON.stringify(list));
+
+                const globalKey = 'promotionApplications';
+                const gList = JSON.parse(localStorage.getItem(globalKey)||'[]');
+                gList.unshift(d);
+                localStorage.setItem(globalKey, JSON.stringify(gList));
+            }catch(e){ console.warn('本地保存失败', e); }
+        }
+
+        function toast(msg, type='info'){
+            const el = document.createElement('div');
+            const color = type==='success' ? '#10b981' : type==='error' ? '#ef4444' : '#3b82f6';
+            el.style.cssText = 'position:fixed;top:100px;left:50%;transform:translateX(-50%);background:'+color+';color:#fff;padding:12px 24px;border-radius:12px;font-size:14px;font-weight:500;z-index:10000;box-shadow:0 8px 32px rgba(0,0,0,.2);opacity:0;transition:opacity .3s;';
+            el.textContent = msg;
+            document.body.appendChild(el);
+            requestAnimationFrame(()=>{ el.style.opacity='1'; });
+            setTimeout(()=>{ el.style.opacity='0'; setTimeout(()=>el.remove(),300); }, 2000);
+        }
+    })();
+    </script>
+</body>
+</html>
+
+
+
+

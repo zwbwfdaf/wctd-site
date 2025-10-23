@@ -1048,11 +1048,21 @@
         
         // 打开任务
         function openTask(url, taskId) {
-            if (url && url !== '#') {
-                window.location.href = url;
-            } else {
-                showToast('任务开发中，敬请期待！');
-            }
+            if (url && url !== '#') { window.location.href = url; return; }
+            // 若未配置 url，按任务ID兜底跳转
+            try{
+                switch(String(taskId)){
+                    case '1':
+                        window.location.href='quark-search-task.html'; return;
+                    case '2':
+                        window.location.href='wukong-search-task.html'; return;
+                    case '4':
+                        window.location.href='xray-search-task.html'; return;
+                    case '3':
+                        window.location.href='quark-cloud-drive-task.html'; return;
+                }
+            }catch(_){ }
+            showToast('任务入口暂不可用，请稍后重试');
         }
         
         // 显示Toast消息
@@ -1205,7 +1215,7 @@
                 { title:'KK搜索',        url:'quark-search-task.html',   iconImg:'tp/微信图片_20250913162419.jpg' },
                 { title:'x雷浏览器搜索', url:'xray-search-task.html',    iconImg:'tp/2749C5F09D24C60CB377B64D4F1FD00F.jpg' },
                 { title:'w空短剧搜索（必须回填）',   url:'wukong-search-task.html',  iconImg:'tp/F3673981D160E851966CAE341C0B8350.jpg' },
-                { title:'KK网盘',        url:'#',                        icon:'fas fa-cloud' }
+                { title:'KK网盘',        url:'quark-cloud-drive-task.html',                        icon:'fas fa-cloud' }
             ];
             const track=document.getElementById('projectTrack');
             const dots=document.getElementById('projectDots');

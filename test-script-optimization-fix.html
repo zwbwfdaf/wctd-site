@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>脚本优化修复验证工具</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .test-container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .test-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .test-status {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            margin: 5px;
+            font-weight: 500;
+        }
+        
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .status-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .test-log {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin: 10px 0;
+        }
+        
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        
+        .btn:hover {
+            background: #0056b3;
+        }
+        
+        .btn-success {
+            background: #28a745;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: #007bff;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="test-header">
+            <h1>🔧 脚本优化修复验证工具</h1>
+            <p>测试Supabase数据库连接和脚本加载优化效果</p>
+            <div id="overallStatus"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📋 测试进度</h3>
+            <div class="progress-bar">
+                <div id="progressFill" class="progress-fill"></div>
+            </div>
+            <div id="progressText">准备开始测试...</div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔍 脚本加载状态检查</h3>
+            <div id="scriptStatus"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔗 数据库连接测试</h3>
+            <div id="dbStatus"></div>
+            <button id="testDbBtn" class="btn">测试数据库连接</button>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 功能测试</h3>
+            <div id="functionStatus"></div>
+            <button id="testFunctionsBtn" class="btn">测试核心功能</button>
+        </div>
+
+        <div class="test-section">
+            <h3>📝 详细日志</h3>
+            <button id="clearLogBtn" class="btn btn-danger">清除日志</button>
+            <div id="testLog" class="test-log"></div>
+        </div>
+    </div>
+
+    <!-- 加载修复后的脚本 -->
+    <script src="supabase-loader.js"></script>
+    <script src="database.js"></script>
+
+    <script>
+        class FixVerificationTool {
+            constructor() {
+                this.tests = [];
+                this.currentTest = 0;
+                this.log = document.getElementById('testLog');
+                this.setupEventListeners();
+                this.startVerification();
+            }
+
+            setupEventListeners() {
+                document.getElementById('testDbBtn').addEventListener('click', () => this.testDatabase());
+                document.getElementById('testFunctionsBtn').addEventListener('click', () => this.testFunctions());
+                document.getElementById('clearLogBtn').addEventListener('click', () => this.clearLog());
+            }
+
+            log(message, type = 'info') {
+                const timestamp = new Date().toLocaleTimeString();
+                const logEntry = `[${timestamp}] ${message}`;
+                this.logElement.textContent += logEntry + '\n';
+                this.logElement.scrollTop = this.logElement.scrollHeight;
+                
+                console.log(logEntry);
+            }
+
+            get logElement() {
+                return this.log;
+            }
+
+            clearLog() {
+                this.logElement.textContent = '';
+            }
+
+            updateProgress(current, total) {
+                const percentage = Math.round((current / total) * 100);
+                document.getElementById('progressFill').style.width = percentage + '%';
+                document.getElementById('progressText').textContent = `测试进度: ${current}/${total} (${percentage}%)`;
+            }
+
+            setStatus(elementId, message, type) {
+                const element = document.getElementById(elementId);
+                element.innerHTML = `<div class="test-status status-${type}">${message}</div>`;
+            }
+
+            async startVerification() {
+                this.log('🚀 开始脚本优化修复验证...', 'info');
+                
+                // 测试1: 脚本加载检查
+                await this.checkScriptLoading();
+                
+                // 测试2: 自动数据库连接测试
+                await this.testDatabase();
+                
+                // 测试3: 功能测试
+                await this.testFunctions();
+                
+                this.generateFinalReport();
+            }
+
+            async checkScriptLoading() {
+                this.log('🔍 检查脚本加载状态...', 'info');
+                this.updateProgress(1, 4);
+                
+                let issues = [];
+                let successes = [];
+                
+                // 检查supabase-loader.js
+                if (typeof window.ensureSupabaseLoaded === 'function') {
+                    successes.push('✅ supabase-loader.js 加载成功');
+                } else {
+                    issues.push('❌ supabase-loader.js 未正确加载');
+                }
+                
+                // 检查database.js
+                if (typeof window.initSupabase === 'function') {
+                    successes.push('✅ database.js 加载成功');
+                } else {
+                    issues.push('❌ database.js 未正确加载');
+                }
+                
+                // 检查已删除的文件是否确实不存在
+                if (typeof window.supabaseJs === 'undefined') {
+                    successes.push('✅ supabase-wrapper.js 已成功移除');
+                } else {
+                    issues.push('⚠️ supabase-wrapper.js 可能仍然存在');
+                }
+                
+                const statusHtml = successes.concat(issues).map(msg => 
+                    `<div class="test-status ${msg.startsWith('✅') ? 'status-success' : 
+                      msg.startsWith('⚠️') ? 'status-warning' : 'status-error'}">${msg}</div>`
+                ).join('');
+                
+                document.getElementById('scriptStatus').innerHTML = statusHtml;
+                
+                this.log(`脚本检查完成: ${successes.length} 成功, ${issues.length} 问题`, 
+                    issues.length === 0 ? 'success' : 'warning');
+            }
+
+            async testDatabase() {
+                this.log('🔗 开始数据库连接测试...', 'info');
+                this.updateProgress(2, 4);
+                
+                try {
+                    // 等待Supabase加载
+                    if (typeof window.ensureSupabaseLoaded === 'function') {
+                        this.log('⏳ 等待Supabase SDK加载...', 'info');
+                        await window.ensureSupabaseLoaded();
+                        this.log('✅ Supabase SDK加载完成', 'success');
+                    }
+                    
+                    // 检查数据库初始化
+                    if (typeof window.initSupabase === 'function') {
+                        this.log('⏳ 初始化数据库连接...', 'info');
+                        await window.initSupabase();
+                        
+                        if (window.isDatabaseReady && window.isDatabaseReady()) {
+                            this.log('✅ 数据库初始化成功', 'success');
+                            this.setStatus('dbStatus', '✅ 数据库连接正常', 'success');
+                        } else {
+                            throw new Error('数据库未正确初始化');
+                        }
+                    } else {
+                        throw new Error('initSupabase 函数不可用');
+                    }
+                    
+                } catch (error) {
+                    this.log(`❌ 数据库连接测试失败: ${error.message}`, 'error');
+                    this.setStatus('dbStatus', `❌ 数据库连接失败: ${error.message}`, 'error');
+                }
+            }
+
+            async testFunctions() {
+                this.log('📊 开始功能测试...', 'info');
+                this.updateProgress(3, 4);
+                
+                let passedTests = 0;
+                let totalTests = 4;
+                
+                // 测试1: 检查核心函数
+                const coreFunctions = ['registerUser', 'loginUser', 'getUserById', 'updateUserPoints'];
+                for (const func of coreFunctions) {
+                    if (typeof window[func] === 'function') {
+                        this.log(`✅ ${func} 函数可用`, 'success');
+                        passedTests++;
+                    } else {
+                        this.log(`❌ ${func} 函数不可用`, 'error');
+                    }
+                }
+                
+                const statusMessage = `功能测试完成: ${passedTests}/${totalTests} 通过`;
+                const statusType = passedTests === totalTests ? 'success' : 
+                                 passedTests > totalTests / 2 ? 'warning' : 'error';
+                                 
+                this.setStatus('functionStatus', statusMessage, statusType);
+                this.log(statusMessage, statusType);
+            }
+
+            generateFinalReport() {
+                this.updateProgress(4, 4);
+                this.log('📋 生成最终报告...', 'info');
+                
+                const dbStatus = document.getElementById('dbStatus').textContent.includes('✅');
+                const scriptStatus = !document.getElementById('scriptStatus').textContent.includes('❌');
+                const functionStatus = document.getElementById('functionStatus').textContent.includes('✅');
+                
+                const overallSuccess = dbStatus && scriptStatus && functionStatus;
+                
+                let reportMessage;
+                let reportType;
+                
+                if (overallSuccess) {
+                    reportMessage = '🎉 修复验证成功！所有测试通过';
+                    reportType = 'success';
+                } else {
+                    reportMessage = '⚠️ 修复验证部分完成，存在一些问题';
+                    reportType = 'warning';
+                }
+                
+                this.setStatus('overallStatus', reportMessage, reportType);
+                this.log('='.repeat(50), 'info');
+                this.log(reportMessage, reportType);
+                this.log('='.repeat(50), 'info');
+                
+                // 提供修复建议
+                if (!overallSuccess) {
+                    this.log('🔧 修复建议:', 'info');
+                    if (!dbStatus) {
+                        this.log('- 检查Supabase配置和网络连接', 'warning');
+                    }
+                    if (!scriptStatus) {
+                        this.log('- 检查脚本文件是否正确加载', 'warning');
+                    }
+                    if (!functionStatus) {
+                        this.log('- 检查数据库函数定义', 'warning');
+                    }
+                }
+            }
+        }
+
+        // 页面加载完成后启动验证
+        document.addEventListener('DOMContentLoaded', function() {
+            new FixVerificationTool();
+        });
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

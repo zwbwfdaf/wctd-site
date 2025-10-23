@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>回填记录</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Helvetica Neue',Arial,sans-serif;background:#f6f7fb;min-height:100vh;color:#111827}
+        .header{position:sticky;top:0;z-index:10;display:flex;align-items:center;gap:8px;padding:12px 14px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff}
+        .back{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.2);text-decoration:none;color:#fff}
+        .title{font-size:16px;font-weight:700;}
+        .container{max-width:900px;margin:12px auto;padding:0 12px}
+        .card{background:#fff;border:1px solid #eef2f7;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.06)}
+        table{width:100%;border-collapse:collapse}
+        thead th{background:#f3f4f6;color:#374151;font-weight:700;padding:10px;border-bottom:1px solid #e5e7eb}
+        tbody td{padding:10px;border-bottom:1px solid #eef2f7;vertical-align:top}
+        .muted{color:#6b7280}
+        .empty{padding:24px;text-align:center;color:#6b7280}
+        .row{display:flex;gap:8px;align-items:center}
+        .pill{border:1px solid #e5e7eb;border-radius:9999px;padding:4px 8px;background:#f8fafc;color:#374151;font-size:12px}
+        .link{max-width:360px;word-break:break-all}
+        .toolbar{display:flex;align-items:center;gap:8px;padding:10px}
+        .btn{border-radius:10px;padding:8px 12px;border:1px solid #d1d5db;background:#fff;color:#374151;cursor:pointer}
+        /* 导出日期弹窗 */
+        .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:1000}
+        .modal-content{background:#fff;border-radius:12px;max-width:420px;width:92%;box-shadow:0 12px 40px rgba(0,0,0,.25);overflow:hidden}
+        .modal-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #eee;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff}
+        .modal-body{padding:14px}
+        .modal-footer{display:flex;gap:8px;justify-content:flex-end;padding:12px 14px;border-top:1px solid #eee}
+        .input{width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:10px}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a class="back" href="javascript:history.back()"><i class="fas fa-arrow-left"></i></a>
+        <div class="title">我的回填记录</div>
+        <div style="flex:1"></div>
+    </div>
+    <div class="container">
+        <div class="card">
+            <div class="toolbar">
+                <span class="muted">申请ID:</span>
+                <span id="appIdText" class="pill">-</span>
+                <div style="flex:1"></div>
+                <button class="btn" onclick="reloadRecords()"><i class="fas fa-sync"></i> 刷新</button>
+                <button class="btn" onclick="openExportModal()"><i class="fas fa-file-export"></i> 导出</button>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width:140px">时间</th>
+                        <th>关键词</th>
+                        <th style="width:120px">平台</th>
+                        <th style="width:120px">方式</th>
+                        <th>链接</th>
+                        <th style="width:120px">昵称</th>
+                    </tr>
+                </thead>
+                <tbody id="recordsBody">
+                    <tr><td colspan="6" class="empty">加载中...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 导出弹窗 -->
+    <div id="exportModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div style="font-weight:700">导出回填记录</div>
+                <button class="btn" style="border:none;background:transparent;color:#fff" onclick="closeExportModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom:10px;color:#374151">请选择要导出的日期（留空则导出全部）：</div>
+                <input id="exportDate" class="input" type="date">
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeExportModal()">取消</button>
+                <button class="btn" onclick="exportSelectedDate()"><i class="fas fa-download"></i> 导出</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function(){
+        const qs = new URLSearchParams(location.search);
+        const appId = qs.get('id') || '';
+        document.getElementById('appIdText').textContent = appId || '-';
+        function esc(s){ return String(s==null?'':s).replace(/[&<>]/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;' }[m])); }
+        function fmt(t){ try{ const d = new Date(t); if(!isNaN(d)) return d.toLocaleString('zh-CN'); }catch(_){ } return t||'-'; }
+        function readFromLocal(){
+            const body = document.getElementById('recordsBody');
+            let records = [];
+            try{
+                const currentUser = JSON.parse(localStorage.getItem('currentUser')||'{}');
+                const userKey = 'keywords_'+(currentUser.id||'555');
+                const list = JSON.parse(localStorage.getItem(userKey)||'[]');
+                const it = list.find(x=> String(x.id||'')===String(appId));
+                if(it){
+                    if(Array.isArray(it.user_feedback)) records = it.user_feedback.slice();
+                    else if(it.user_feedback) records = [it.user_feedback];
+                }
+            }catch(_){ }
+            if(!records || records.length===0){
+                try{
+                    const gl = JSON.parse(localStorage.getItem('promotionApplications')||'[]');
+                    const it = gl.find(x=> String(x.id||'')===String(appId));
+                    if(it){
+                        if(Array.isArray(it.user_feedback)) records = it.user_feedback.slice();
+                        else if(it.user_feedback) records = [it.user_feedback];
+                    }
+                }catch(_){ }
+            }
+            if(!records || records.length===0){
+                body.innerHTML = '<tr><td colspan="6" class="empty">暂无回填记录</td></tr>';
+                window.__recordsCache = [];
+                return;
+            }
+            window.__recordsCache = records.slice();
+            const rows = records.map(r=>{
+                return '<tr>'+
+                    '<td>'+esc(fmt(r.time||r.created_at||'-'))+'</td>'+
+                    '<td>'+esc(r.keyword||'-')+'</td>'+
+                    '<td>'+esc(r.platform||'-')+'</td>'+
+                    '<td>'+esc(r.method||'-')+'</td>'+
+                    '<td class="link">'+esc(r.link||'-')+'</td>'+
+                    '<td>'+esc(r.nickname||'-')+'</td>'+
+                '</tr>';
+            }).join('');
+            body.innerHTML = rows;
+        }
+        window.reloadRecords = readFromLocal;
+        readFromLocal();
+
+        // 导出逻辑
+        window.openExportModal = function(){
+            document.getElementById('exportModal').style.display='flex';
+        }
+        window.closeExportModal = function(){
+            document.getElementById('exportModal').style.display='none';
+        }
+        function pad(n){ return n<10?('0'+n):(''+n); }
+        function ymd(d){ return d.getFullYear()+ '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()); }
+        function pickByDate(records, ymdStr){
+            if(!ymdStr) return records.slice();
+            return (records||[]).filter(r=>{
+                const t = r.time || r.created_at; if(!t) return false;
+                try{ const d=new Date(t); if(isNaN(d)) return false; return ymd(d)===ymdStr; }catch(_){ return false; }
+            });
+        }
+        window.exportSelectedDate = function(){
+            try{
+                const dateStr = (document.getElementById('exportDate')?.value||'').trim();
+                const list = Array.isArray(window.__recordsCache) ? window.__recordsCache : [];
+                const data = pickByDate(list, dateStr);
+                if(!data || data.length===0){ alert('所选日期没有记录'); return; }
+                // 以Excel兼容HTML表格导出
+                const headers = ['时间','关键词','平台','方式','链接','昵称'];
+                const trh = '<tr>'+headers.map(h=> '<th style="border:1px solid #999;padding:6px 8px;background:#f2f2f2">'+h+'</th>').join('')+'</tr>';
+                const trs = data.map(r=> (
+                    '<tr>'+
+                    '<td style="border:1px solid #999;padding:6px 8px">'+esc(fmt(r.time||r.created_at||''))+'</td>'+
+                    '<td style="border:1px solid #999;padding:6px 8px">'+esc(r.keyword||'')+'</td>'+
+                    '<td style="border:1px solid #999;padding:6px 8px">'+esc(r.platform||'')+'</td>'+
+                    '<td style="border:1px solid #999;padding:6px 8px">'+esc(r.method||'')+'</td>'+
+                    '<td style="border:1px solid #999;padding:6px 8px">'+esc(r.link||'')+'</td>'+
+                    '<td style="border:1px solid #999;padding:6px 8px">'+esc(r.nickname||'')+'</td>'+
+                    '</tr>'
+                )).join('');
+                const html = '<html><head><meta charset="utf-8" /></head><body><table>'+trh+trs+'</table></body></html>';
+                const blob = new Blob(["\ufeff"+html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+                const a = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+                a.href = url;
+                const suffix = dateStr ? dateStr.replace(/-/g,'') : 'all';
+                a.download = '回填记录_'+(appId||'')+'_'+suffix+'.xls';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                closeExportModal();
+            }catch(e){ alert('导出失败，请重试'); console.error(e); }
+        }
+    })();
+    </script>
+</body>
+</html>

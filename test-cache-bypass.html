@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>缓存绕过测试</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 20px; background: #f8f9fa; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .log { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 15px; margin: 10px 0; font-family: monospace; max-height: 300px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔍 缓存绕过测试工具</h1>
+    <p>此工具用于测试修复文件是否已正确部署，绕过浏览器和CDN缓存</p>
+    
+    <div id="testResults"></div>
+    <div id="testLog" class="log"></div>
+
+    <script>
+        function log(message) {
+            const logDiv = document.getElementById('testLog');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${timestamp}] ${message}<br>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message);
+        }
+
+        function showStatus(message, type) {
+            const resultsDiv = document.getElementById('testResults');
+            resultsDiv.innerHTML += `<div class="status ${type}">${message}</div>`;
+        }
+
+        // 测试紧急修复文件是否存在
+        async function testEmergencyFile() {
+            log('🔍 测试 emergency-database-fix.js 是否存在...');
+            
+            try {
+                // 添加时间戳绕过缓存
+                const timestamp = new Date().getTime();
+                const response = await fetch(`emergency-database-fix.js?v=${timestamp}&cache=bypass`, {
+                    method: 'HEAD',
+                    cache: 'no-cache',
+                    headers: {
+                        'Cache-Control': 'no-cache',
+                        'Pragma': 'no-cache'
+                    }
+                });
+                
+                if (response.ok) {
+                    log('✅ emergency-database-fix.js 文件存在');
+                    showStatus('✅ 紧急修复文件已部署', 'success');
+                    return true;
+                } else {
+                    log(`❌ emergency-database-fix.js 不存在 (状态: ${response.status})`);
+                    showStatus('❌ 紧急修复文件未找到', 'error');
+                    return false;
+                }
+            } catch (error) {
+                log(`❌ 测试失败: ${error.message}`);
+                showStatus('❌ 无法检测紧急修复文件', 'error');
+                return false;
+            }
+        }
+
+        // 测试旧文件是否已删除
+        async function testOldFiles() {
+            log('🔍 检查旧文件是否已删除...');
+            
+            const oldFiles = ['database.js', 'supabase-loader.js', 'supabase-config.js', 'supabase-wrapper.js'];
+            let deletedCount = 0;
+            
+            for (const file of oldFiles) {
+                try {
+                    const timestamp = new Date().getTime();
+                    const response = await fetch(`${file}?v=${timestamp}`, {
+                        method: 'HEAD',
+                        cache: 'no-cache'
+                    });
+                    
+                    if (response.ok) {
+                        log(`⚠️ ${file} 仍然存在（应该删除）`);
+                        showStatus(`⚠️ 旧文件 ${file} 仍然存在`, 'warning');
+                    } else {
+                        log(`✅ ${file} 已删除`);
+                        deletedCount++;
+                    }
+                } catch (error) {
+                    log(`✅ ${file} 已删除或不可访问`);
+                    deletedCount++;
+                }
+            }
+            
+            if (deletedCount === oldFiles.length) {
+                showStatus('✅ 所有旧文件已正确删除', 'success');
+            }
+        }
+
+        // 尝试动态加载紧急修复
+        async function loadEmergencyFix() {
+            log('🚨 尝试动态加载紧急修复...');
+            
+            try {
+                const timestamp = new Date().getTime();
+                const script = document.createElement('script');
+                script.src = `emergency-database-fix.js?v=${timestamp}&cache=bypass`;
+                script.onload = () => {
+                    log('✅ 紧急修复脚本加载成功');
+                    
+                    if (typeof window.emergencyInitDatabase === 'function') {
+                        log('✅ 紧急修复函数可用');
+                        showStatus('✅ 紧急修复系统激活', 'success');
+                        
+                        // 尝试初始化
+                        window.emergencyInitDatabase().then(() => {
+                            log('✅ 数据库初始化成功');
+                            showStatus('✅ 数据库连接已恢复', 'success');
+                        }).catch(error => {
+                            log(`❌ 数据库初始化失败: ${error.message}`);
+                            showStatus('❌ 数据库仍然无法连接', 'error');
+                        });
+                    } else {
+                        log('❌ 紧急修复函数不可用');
+                        showStatus('❌ 紧急修复未正确加载', 'error');
+                    }
+                };
+                script.onerror = () => {
+                    log('❌ 紧急修复脚本加载失败');
+                    showStatus('❌ 无法加载紧急修复', 'error');
+                };
+                
+                document.head.appendChild(script);
+            } catch (error) {
+                log(`❌ 动态加载失败: ${error.message}`);
+                showStatus('❌ 动态加载失败', 'error');
+            }
+        }
+
+        // 检查缓存状态
+        function checkCacheHeaders() {
+            log('📋 检查当前页面缓存状态...');
+            log(`Cache-Control: ${document.head.querySelector('meta[http-equiv="Cache-Control"]')?.content || '未设置'}`);
+            log(`当前时间: ${new Date().toISOString()}`);
+            log(`页面URL: ${location.href}`);
+        }
+
+        // 开始测试
+        async function runTests() {
+            log('🚀 开始缓存绕过测试...');
+            checkCacheHeaders();
+            
+            await testEmergencyFile();
+            await testOldFiles();
+            await loadEmergencyFix();
+            
+            log('🏁 测试完成');
+        }
+
+        // 页面加载完成后自动开始测试
+        document.addEventListener('DOMContentLoaded', runTests);
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

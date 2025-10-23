@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>紧急修复验证</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 20px; background: #f8f9fa; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin: 10px 0; }
+        .status { padding: 8px 12px; border-radius: 4px; margin: 5px 0; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .log { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; padding: 10px; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 14px; white-space: pre-wrap; }
+        button { background: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🚨 紧急数据库修复验证</h1>
+        <p>测试新的紧急修复系统是否正常工作</p>
+    </div>
+
+    <div class="card">
+        <h3>📊 实时状态</h3>
+        <div id="statusDisplay"></div>
+        <button onclick="checkStatus()">刷新状态</button>
+        <button onclick="forceInit()">强制初始化</button>
+    </div>
+
+    <div class="card">
+        <h3>📋 测试日志</h3>
+        <button onclick="clearLog()">清除日志</button>
+        <div id="testLog" class="log"></div>
+    </div>
+
+    <!-- 加载紧急修复脚本 -->
+    <script src="emergency-database-fix.js"></script>
+    
+    <script>
+        let logElement;
+        
+        function log(message) {
+            if (!logElement) logElement = document.getElementById('testLog');
+            const timestamp = new Date().toLocaleTimeString();
+            logElement.textContent += `[${timestamp}] ${message}\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+            console.log(message);
+        }
+
+        function clearLog() {
+            if (logElement) logElement.textContent = '';
+        }
+
+        function updateStatus(status, message, type = 'info') {
+            const statusDiv = document.getElementById('statusDisplay');
+            const statusClass = type === 'success' ? 'success' : type === 'error' ? 'error' : type === 'warning' ? 'warning' : 'info';
+            
+            statusDiv.innerHTML += `<div class="status ${statusClass}">${status}: ${message}</div>`;
+        }
+
+        function clearStatus() {
+            document.getElementById('statusDisplay').innerHTML = '';
+        }
+
+        async function checkStatus() {
+            clearStatus();
+            log('🔍 检查紧急修复状态...');
+            
+            // 检查关键函数是否存在
+            const functions = [
+                'emergencyInitDatabase',
+                'getEmergencyClient', 
+                'isEmergencyReady',
+                'registerUser',
+                'loginUser',
+                'getUserById',
+                'updateUserPoints'
+            ];
+            
+            for (const func of functions) {
+                if (typeof window[func] === 'function') {
+                    updateStatus(func, '✅ 可用', 'success');
+                    log(`✅ ${func} 函数已加载`);
+                } else {
+                    updateStatus(func, '❌ 不可用', 'error');
+                    log(`❌ ${func} 函数未找到`);
+                }
+            }
+            
+            // 检查是否已初始化
+            if (typeof window.isEmergencyReady === 'function') {
+                const ready = window.isEmergencyReady();
+                updateStatus('数据库状态', ready ? '✅ 已就绪' : '⏳ 未就绪', ready ? 'success' : 'warning');
+                log(`数据库就绪状态: ${ready}`);
+            }
+            
+            // 检查全局变量
+            updateStatus('window.supabase', typeof window.supabase !== 'undefined' ? '✅ 存在' : '❌ 不存在', typeof window.supabase !== 'undefined' ? 'success' : 'error');
+            updateStatus('window.supabaseClient', typeof window.supabaseClient !== 'undefined' ? '✅ 存在' : '❌ 不存在', typeof window.supabaseClient !== 'undefined' ? 'success' : 'error');
+            updateStatus('window.emergencyDBReady', window.emergencyDBReady === true ? '✅ 就绪' : '❌ 未就绪', window.emergencyDBReady === true ? 'success' : 'error');
+        }
+
+        async function forceInit() {
+            log('🚨 强制初始化数据库...');
+            clearStatus();
+            updateStatus('初始化状态', '⏳ 正在进行...', 'info');
+            
+            try {
+                if (typeof window.emergencyInitDatabase === 'function') {
+                    await window.emergencyInitDatabase();
+                    updateStatus('初始化结果', '✅ 成功完成', 'success');
+                    log('✅ 强制初始化成功');
+                    
+                    // 重新检查状态
+                    setTimeout(checkStatus, 1000);
+                } else {
+                    updateStatus('初始化结果', '❌ 函数不存在', 'error');
+                    log('❌ emergencyInitDatabase 函数不存在');
+                }
+            } catch (error) {
+                updateStatus('初始化结果', `❌ 失败: ${error.message}`, 'error');
+                log(`❌ 强制初始化失败: ${error.message}`);
+            }
+        }
+
+        // 监听控制台消息
+        const originalLog = console.log;
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            if (args[0] && typeof args[0] === 'string' && logElement) {
+                const timestamp = new Date().toLocaleTimeString();
+                logElement.textContent += `[${timestamp}] CONSOLE: ${args.join(' ')}\n`;
+                logElement.scrollTop = logElement.scrollHeight;
+            }
+        };
+
+        // 页面加载完成后初始检查
+        document.addEventListener('DOMContentLoaded', function() {
+            log('🚀 紧急修复验证工具启动');
+            setTimeout(checkStatus, 2000); // 给紧急修复一些时间来初始化
+        });
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

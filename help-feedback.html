@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#4f46e5">
+    <title>帮助与反馈</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="mobile-optimizations.css">
+    <style>
+        body {
+            background-color: #f5f7fa;
+            font-family: 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
+        }
+        
+        .top-bar {
+            background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: 12px;
+        }
+        
+        .nav-button {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .tab-active {
+            color: #4f46e5;
+            font-weight: 500;
+            border-bottom: 2px solid #4f46e5;
+            position: relative;
+        }
+        
+        .faq-item {
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+        
+        .faq-header {
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+        }
+        
+        .faq-header:active {
+            background-color: #f3f4f6;
+        }
+        
+        .faq-content {
+            padding: 0 16px;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease, padding 0.3s ease;
+        }
+        
+        .faq-content.open {
+            padding: 0 16px 16px 16px;
+            max-height: 300px;
+        }
+        
+        .feedback-card {
+            border-radius: 16px;
+            background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+            box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .feedback-card::before {
+            content: '';
+            position: absolute;
+            width: 150px;
+            height: 150px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            top: -75px;
+            right: -75px;
+        }
+        
+        .feedback-card::after {
+            content: '';
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            bottom: -50px;
+            left: -50px;
+        }
+        
+        .feedback-button {
+            border-radius: 24px;
+            background-color: white;
+            color: #4f46e5;
+            font-weight: 500;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            min-height: 48px;
+        }
+        
+        .contact-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        
+        .phone-icon {
+            background-color: #e0f2fe;
+            color: #0284c7;
+        }
+        
+        .email-icon {
+            background-color: #dcfce7;
+            color: #16a34a;
+        }
+        
+        .wechat-icon {
+            background-color: #fef3c7;
+            color: #d97706;
+        }
+    </style>
+</head>
+<body class="page-transition">
+    <!-- Toast消息提示容器 -->
+    <div class="toast-container">
+        <div class="toast-message" id="toastMessage"></div>
+    </div>
+
+    <!-- 加载指示器 -->
+    <div class="loading-container" id="loadingIndicator">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- 顶部状态栏 -->
+    <div class="top-bar text-white p-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                <button onclick="history.back()" class="nav-button mr-3" role="button">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <div class="flex items-center">
+                    <span class="text-lg font-medium">帮助与反馈</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 标签页 -->
+    <div class="bg-white px-4 mb-3">
+        <div class="flex border-b" role="tablist">
+            <div class="tab-active px-4 py-3 text-center relative" role="tab">
+                <span>常见问题</span>
+                <div class="tab-indicator"></div>
+            </div>
+            <div class="px-4 py-3 text-center text-gray-500" role="tab">
+                <span>意见反馈</span>
+            </div>
+            <div class="px-4 py-3 text-center text-gray-500" role="tab">
+                <span>联系我们</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 常见问题区域 -->
+    <div id="faqSection">
+        <div class="bg-white rounded-xl mx-4 mb-4 overflow-hidden">
+            <!-- 问题1 -->
+            <div class="faq-item border-b border-gray-100">
+                <div class="faq-header" role="button">
+                    <div class="font-medium text-gray-800">如何获取推广任务？</div>
+                    <i class="fas fa-chevron-down text-gray-400 transform transition-transform"></i>
+                </div>
+                <div class="faq-content">
+                    <div class="text-gray-600 text-sm">
+                        您可以在首页找到各种推广任务，点击任务卡片即可查看详情并领取任务。领取任务后，按照任务要求完成相应操作，提交后等待审核即可获得奖励。
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 问题2 -->
+            <div class="faq-item border-b border-gray-100">
+                <div class="faq-header" role="button">
+                    <div class="font-medium text-gray-800">任务收益什么时候到账？</div>
+                    <i class="fas fa-chevron-down text-gray-400 transform transition-transform"></i>
+                </div>
+                <div class="faq-content">
+                    <div class="text-gray-600 text-sm">
+                        任务收益将在审核通过后自动到账，一般审核时间为1-2个工作日。您可以在"收益记录"页面查看详细的收益情况。
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 问题3 -->
+            <div class="faq-item border-b border-gray-100">
+                <div class="faq-header" role="button">
+                    <div class="font-medium text-gray-800">如何提现？</div>
+                    <i class="fas fa-chevron-down text-gray-400 transform transition-transform"></i>
+                </div>
+                <div class="faq-content">
+                    <div class="text-gray-600 text-sm">
+                        在"我的钱包"页面点击"提现"按钮，按照提示输入提现金额和收款账户信息即可。提现金额需满足最低10元的要求，提现将在1-3个工作日内到账。
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 问题4 -->
+            <div class="faq-item border-b border-gray-100">
+                <div class="faq-header" role="button">
+                    <div class="font-medium text-gray-800">如何邀请好友加入团队？</div>
+                    <i class="fas fa-chevron-down text-gray-400 transform transition-transform"></i>
+                </div>
+                <div class="faq-content">
+                    <div class="text-gray-600 text-sm">
+                        在"我的团队"页面找到您的专属邀请码，将邀请码分享给好友，好友注册时输入您的邀请码即可成为您的团队成员。您可以获得团队成员完成任务收益的一定比例作为奖励。
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 问题5 -->
+            <div class="faq-item">
+                <div class="faq-header" role="button">
+                    <div class="font-medium text-gray-800">任务被拒绝怎么办？</div>
+                    <i class="fas fa-chevron-down text-gray-400 transform transition-transform"></i>
+                </div>
+                <div class="faq-content">
+                    <div class="text-gray-600 text-sm">
+                        如果您的任务被拒绝，可以在"我的任务"页面查看拒绝原因，根据原因修改后重新提交。如有疑问，可以通过"意见反馈"或"联系我们"与客服沟通解决。
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 意见反馈区域 -->
+    <div id="feedbackSection" class="hidden">
+        <div class="mx-4 mb-6">
+            <div class="feedback-card p-6 text-white">
+                <div class="text-lg font-bold mb-2 relative z-10">提交您的宝贵意见</div>
+                <div class="text-sm opacity-90 mb-4 relative z-10">我们非常重视您的反馈，帮助我们不断改进</div>
+                
+                <button id="submitFeedbackBtn" class="feedback-button w-full px-6 py-3" role="button">
+                    提交反馈
+                </button>
+            </div>
+        </div>
+        
+        <!-- 反馈表单 -->
+        <div class="bg-white rounded-xl mx-4 mb-6 p-4">
+            <div class="text-gray-800 font-medium mb-3">请选择反馈类型</div>
+            
+            <div class="space-y-2 mb-4">
+                <div class="flex items-center">
+                    <input type="radio" id="typeBug" name="feedbackType" class="mr-2">
+                    <label for="typeBug" class="text-gray-700">功能异常</label>
+                </div>
+                <div class="flex items-center">
+                    <input type="radio" id="typeSuggestion" name="feedbackType" class="mr-2">
+                    <label for="typeSuggestion" class="text-gray-700">优化建议</label>
+                </div>
+                <div class="flex items-center">
+                    <input type="radio" id="typeOther" name="feedbackType" class="mr-2">
+                    <label for="typeOther" class="text-gray-700">其他问题</label>
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <label class="text-gray-800 font-medium mb-2 block">问题描述</label>
+                <textarea class="w-full border border-gray-300 rounded-lg p-3 min-h-[120px]" placeholder="请详细描述您遇到的问题或建议..."></textarea>
+            </div>
+            
+            <div class="mb-4">
+                <label class="text-gray-800 font-medium mb-2 block">联系方式（选填）</label>
+                <input type="text" class="w-full border border-gray-300 rounded-lg p-3" placeholder="手机号/邮箱">
+            </div>
+        </div>
+    </div>
+    
+    <!-- 联系我们区域 -->
+    <div id="contactSection" class="hidden">
+        <div class="bg-white rounded-xl mx-4 mb-6 overflow-hidden">
+            <!-- 客服电话 -->
+            <div class="flex items-center p-4 border-b border-gray-100">
+                <div class="contact-icon phone-icon">
+                    <i class="fas fa-phone-alt"></i>
+                </div>
+                <div class="ml-3 flex-1">
+                    <div class="font-medium text-gray-800">客服电话</div>
+                    <div class="text-gray-500 text-sm mt-1">19859254734</div>
+                </div>
+                <a href="tel:19859254734" class="px-3 py-1 border border-indigo-500 text-indigo-500 rounded-full text-sm" role="button">
+                    拨打
+                </a>
+            </div>
+            
+            <!-- 客服邮箱 -->
+            <div class="flex items-center p-4 border-b border-gray-100">
+                <div class="contact-icon email-icon">
+                    <i class="fas fa-envelope"></i>
+                </div>
+                <div class="ml-3 flex-1">
+                    <div class="font-medium text-gray-800">客服邮箱</div>
+                    <div class="text-gray-500 text-sm mt-1">zwq200394@qq.com</div>
+                </div>
+                <a href="mailto:zwq200394@qq.com" class="px-3 py-1 border border-indigo-500 text-indigo-500 rounded-full text-sm" role="button">
+                    发送
+                </a>
+            </div>
+            
+            <!-- 微信公众号 -->
+            <div class="flex items-center p-4">
+                <div class="contact-icon wechat-icon">
+                    <i class="fab fa-weixin"></i>
+                </div>
+                <div class="ml-3 flex-1">
+                    <div class="font-medium text-gray-800">微信公众号</div>
+                    <div class="text-gray-500 text-sm mt-1">文创邦</div>
+                </div>
+                <button class="px-3 py-1 border border-indigo-500 text-indigo-500 rounded-full text-sm" role="button">
+                    复制
+                </button>
+            </div>
+        </div>
+        
+        <!-- 工作时间 -->
+        <div class="bg-white rounded-xl mx-4 mb-6 p-4">
+            <div class="text-gray-800 font-medium mb-2">工作时间</div>
+            <div class="text-gray-600 text-sm">周一至周五: 09:00 - 18:00</div>
+            <div class="text-gray-600 text-sm">周六至周日: 10:00 - 16:00</div>
+            <div class="text-gray-500 text-xs mt-2">（节假日可能调整，请以实际公告为准）</div>
+        </div>
+    </div>
+    
+    <script src="mobile-interactions.js"></script>
+    <script>
+        // 页面加载时隐藏加载指示器
+        document.addEventListener('DOMContentLoaded', function() {
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            if (loadingIndicator) {
+                loadingIndicator.style.display = 'none';
+            }
+        });
+        
+        // FAQ折叠效果
+        const faqHeaders = document.querySelectorAll('.faq-header');
+        faqHeaders.forEach(header => {
+            header.addEventListener('click', function() {
+                // 显示触感反馈
+                window.showToast('展开/收起详情');
+                
+                const content = this.nextElementSibling;
+                const icon = this.querySelector('i');
+                
+                // 切换内容显示/隐藏
+                content.classList.toggle('open');
+                
+                // 切换图标旋转
+                if (content.classList.contains('open')) {
+                    icon.style.transform = 'rotate(180deg)';
+                } else {
+                    icon.style.transform = 'rotate(0)';
+                }
+            });
+        });
+        
+        // 标签切换功能
+        const tabs = document.querySelectorAll('.bg-white .flex.border-b > div');
+        const sections = [
+            document.getElementById('faqSection'),
+            document.getElementById('feedbackSection'),
+            document.getElementById('contactSection')
+        ];
+        
+        tabs.forEach((tab, index) => {
+            tab.addEventListener('click', function() {
+                // 显示加载指示器
+                window.showLoading();
+                
+                // 移除所有标签的活动状态
+                tabs.forEach(t => {
+                    t.classList.remove('tab-active');
+                    t.classList.add('text-gray-500');
+                });
+                
+                // 为当前点击的标签添加活动状态
+                this.classList.add('tab-active');
+                this.classList.remove('text-gray-500');
+                
+                // 隐藏所有内容区域
+                sections.forEach(section => {
+                    section.classList.add('hidden');
+                });
+                
+                // 显示对应的内容区域
+                sections[index].classList.remove('hidden');
+                
+                // 隐藏加载指示器
+                setTimeout(() => {
+                    window.hideLoading();
+                    window.showToast('页面切换成功');
+                }, 300);
+            });
+        });
+        
+        // 提交反馈按钮点击事件
+        document.getElementById('submitFeedbackBtn').addEventListener('click', function() {
+            // 显示加载指示器
+            window.showLoading();
+            
+            // 显示提示信息
+            window.showToast('正在提交反馈...');
+            
+            // 模拟提交延迟
+            setTimeout(() => {
+                window.hideLoading();
+                window.showToast('反馈提交成功，感谢您的宝贵意见！');
+            }, 1000);
+        });
+        
+        // 联系方式按钮点击事件
+        const contactButtons = document.querySelectorAll('#contactSection button, #contactSection a');
+        contactButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const text = this.textContent.trim();
+                window.showToast(`正在执行: ${text}`);
+            });
+        });
+    </script>
+</body>
+</html>

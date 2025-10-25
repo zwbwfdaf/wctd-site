@@ -13,13 +13,42 @@
     <link rel="preconnect" href="https://ybrveusbwjusnrzgfnok.supabase.co">
     <link rel="dns-prefetch" href="https://ybrveusbwjusnrzgfnok.supabase.co">
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://fastly.jsdelivr.net" crossorigin>
+    <link rel="preconnect" href="https://gcore.jsdelivr.net" crossorigin>
     <link rel="stylesheet" href="mobile-optimizations.css">
+    <link rel="stylesheet" href="theme.css">
     <!-- 紧急数据库修复器 - 解决组件加载失败问题 -->
-    <script src="emergency-database-fix.js"></script>
-    <script src="app-launcher.js"></script>
-    <script src="realtime.js"></script>
+    <script defer src="emergency-database-fix.js"></script>
+    <script defer src="app-launcher.js"></script>
+    <script defer src="realtime.js"></script>
     <script defer src="mobile-optimizer.js"></script>
     <script defer src="mobile-interactions.js"></script>
+    <script>
+        // 轻量级静态资源 CDN 加速（失败自动回退本地）
+        (function(){
+            try{
+                var cdnHosts=['https://fastly.jsdelivr.net','https://gcore.jsdelivr.net','https://cdn.jsdelivr.net'];
+                var repo='gh/zwbwfdaf/wctd-site@main/';
+                var base=cdnHosts[0]+'/'+repo;
+                window.STATIC_CDN_BASE=base;
+                document.addEventListener('DOMContentLoaded',function(){
+                    var imgs=document.querySelectorAll('img[src^="tp/"]');
+                    imgs.forEach(function(img){
+                        var local=img.getAttribute('src');
+                        var cdn=base+local;
+                        img.setAttribute('data-src-local', local);
+                        // 仅当尚未替换过时才替换
+                        if(!/^https?:\/\//.test(local)){
+                            img.src=cdn;
+                            img.decoding='async';
+                            img.loading='lazy';
+                            img.onerror=function(){ try{ img.src=img.getAttribute('data-src-local'); }catch(_){} };
+                        }
+                    });
+                });
+            }catch(_){ }
+        })();
+    </script>
     <style>
         * {
             margin: 0;
@@ -137,6 +166,7 @@
         .announcement-header { display:flex; align-items:center; justify-content:space-between; padding: 16px 18px; background: linear-gradient(135deg,#5b7cfa,#8b5cf6); color:#fff; font-weight: 900; letter-spacing:.3px; }
         .announcement-close { background: transparent; border: 0; color:#fff; font-size:20px; cursor:pointer; }
         .announcement-content { max-height: 70vh; overflow: auto; padding: 0 0 14px 0; background: radial-gradient(1200px 300px at 50% -50%, rgba(99,102,241,.12), transparent), #f8fafc; }
+        .announcement-content img { max-width: 100%; height: auto; border-radius: 12px; display: block; margin: 8px 0; }
         .announcement-toolbar { display:flex; gap:10px; align-items:center; padding: 10px 16px; border-bottom:1px solid #eef2f7; background:#ffffff; position:sticky; top:0; z-index:1; }
         .announcement-toolbar select, .announcement-toolbar label { font-size:12px; color:#374151; }
         .announcement-item { margin: 12px 12px 0; padding: 12px 14px; border: 1px solid #eef2f7; border-radius: 14px; cursor:pointer; background:#fff; box-shadow:0 2px 10px rgba(15,23,42,.05); transition: transform .15s ease, box-shadow .15s ease; display:grid; grid-template-columns: 40px 1fr; gap:12px; }
@@ -667,52 +697,139 @@
             try { renderLangSelector(); hydrateHomepageAnnouncementFromAdminSettings(); } catch(_) {}
             // 首屏弹窗公告
             try{ maybeShowPopupAnnouncement(); }catch(_){ }
+            // 预热公告缓存，点开更快
+            try{ if(typeof refreshAnnouncementsInBackground==='function'){ refreshAnnouncementsInBackground(); } }catch(_){ }
         });
         
-        // ===== 公告列表逻辑（DB优先，失败回落本地） =====
+        // ===== 公告列表逻辑（缓存优先 + 增量刷新 + 限量首屏） =====
         const ANNOUNCEMENT_READ_KEY = 'wctd_ann_read_ids';
+        const ANNOUNCEMENT_CACHE_KEY = 'wctd_ann_cache_v1';
         function getReadIds(){ try { return JSON.parse(localStorage.getItem(ANNOUNCEMENT_READ_KEY) || '[]'); } catch(_) { return []; } }
         function setReadIds(ids){ try { localStorage.setItem(ANNOUNCEMENT_READ_KEY, JSON.stringify(ids)); } catch(_) {} }
         
-        async function fetchAnnouncements(){
-            // 先尝试通过紧急客户端
-            try {
-                if (typeof ensureClient === 'function') { await ensureClient(); }
-            } catch(_) {}
-            const client = (typeof getEmergencyClient === 'function') ? getEmergencyClient() : (window.supabase || null);
-            if (client && client.from) {
-                try {
-                    const { data, error } = await client
-                        .from('announcements')
-                        .select('*')
-                        .order('created_at', { ascending: false })
-                        .limit(50);
-                    if (!error && Array.isArray(data)) {
-                        return data.map(a => {
+        function normalizeAnnouncements(rows){
                             const reMeta = new RegExp('<'+'!--\\s*ANN_META:\\s*(\\{[\\s\\S]*?\\})\\s*--'+'>');
-                            let meta = {};
-                            try { const m = String(a.content||'').match(reMeta); if (m) meta = JSON.parse(m[1]); } catch(_) {}
-                            const clean = String(a.content||'').replace(reMeta, '').trim();
-                            return {
-                                id: a.id || String(a.created_at),
-                                title: a.title || '平台公告',
-                                content: clean,
-                                created_at: a.created_at || new Date().toISOString(),
-                                pinned: !!meta.pinned,
-                                tags: Array.isArray(meta.tags)? meta.tags: [],
-                                lang: meta.lang || 'zh-CN'
-                            };
-                        });
-                    }
-                } catch(_) {}
+            return rows.map(a => {
+                let meta = {}; try{ const m=String(a.content||'').match(reMeta); if(m) meta=JSON.parse(m[1]); }catch(_){ }
+                const clean = String(a.content||'').replace(reMeta,'').trim();
+                return { id: a.id||String(a.created_at), title: a.title||'平台公告', content: clean, created_at: a.created_at||new Date().toISOString(), pinned: !!meta.pinned, tags: Array.isArray(meta.tags)? meta.tags: [], lang: meta.lang||'zh-CN' };
+            });
+        }
+
+        async function fetchAnnouncements(){
+            console.log('📢 开始获取公告数据...');
+            // 1) 先尝试网络获取最新数据
+            const fresh = await fetchAnnouncementsFromNetwork();
+            if(fresh && fresh.length){
+                console.log('✅ 网络获取成功，缓存数据');
+                // 缓存时只保存必要字段，减少存储空间
+                try{ 
+                    const compressed = fresh.slice(0,20).map(a => ({
+                        id: a.id,
+                        title: a.title,
+                        content: (a.content||'').slice(0, 500), // 限制内容长度
+                        created_at: a.created_at,
+                        pinned: a.pinned,
+                        lang: a.lang
+                    }));
+                    localStorage.setItem(ANNOUNCEMENT_CACHE_KEY, JSON.stringify(compressed)); 
+                }catch(e){ 
+                    console.warn('⚠️ 缓存失败，清理旧缓存:', e.message);
+                    // 清理可能的旧缓存
+                    try{ 
+                        localStorage.removeItem(ANNOUNCEMENT_CACHE_KEY);
+                        localStorage.removeItem('announcements_local');
+                        localStorage.removeItem('admin:announce_drafts');
+                    }catch(_){ }
+                }
+                return fresh;
             }
-            // 回落：使用本地示例数据
-            const fallback = [
+            // 2) 网络失败，尝试缓存
+            try{
+                const cached = JSON.parse(localStorage.getItem(ANNOUNCEMENT_CACHE_KEY)||'[]');
+                if(Array.isArray(cached) && cached.length){
+                    console.log('📦 使用缓存数据:', cached.length, '条');
+                    return cached;
+                }
+            }catch(_){ }
+            // 3) 最后使用后备数据
+            console.log('🔄 使用后备数据');
+            return getFallbackAnnouncements();
+        }
+
+        async function fetchAnnouncementsFromNetwork(){
+            console.log('🔍 开始网络获取公告数据...');
+            
+            // 确保初始化紧急数据库客户端
+            try{
+                if(typeof emergencyInitDatabase === 'function'){
+                    await emergencyInitDatabase();
+                    console.log('✅ 紧急数据库客户端已就绪');
+                }
+            }catch(e){
+                console.warn('⚠️ 紧急数据库初始化失败:', e.message || e);
+            }
+            
+            // 多种客户端尝试，确保与后台用同一个连接
+            const clients = [
+                (typeof getEmergencyClient === 'function') ? getEmergencyClient() : null,
+                window.supabase || null,
+                window.supabaseClient || null
+            ].filter(Boolean);
+            
+            console.log('🔧 可用客户端数量:', clients.length);
+            
+            for(let i = 0; i < clients.length; i++){
+                const client = clients[i];
+                if(client && client.from){
+                    try{
+                        console.log(`🔍 尝试客户端 ${i+1}/${clients.length} 从 announcements 表获取数据...`);
+                        const { data, error } = await client.from('announcements').select('*').order('created_at', { ascending:false }).limit(50);
+                        if(!error && Array.isArray(data)){
+                            console.log('✅ 成功获取公告数据:', data.length, '条');
+                            if(data.length > 0){
+                                console.log('📝 第一条公告:', data[0]);
+                            }
+                            return normalizeAnnouncements(data);
+                        }else if(error){
+                            console.warn(`⚠️ 客户端 ${i+1} 获取公告失败:`, error.message || error);
+                        }else{
+                            console.warn(`⚠️ 客户端 ${i+1} 返回空数据`);
+                        }
+                    }catch(e){
+                        console.warn(`❌ 客户端 ${i+1} 获取公告异常:`, e.message || e);
+                    }
+                }else{
+                    console.warn(`⚠️ 客户端 ${i+1} 无效或缺少 from 方法`);
+                }
+            }
+            console.log('🔄 所有客户端都失败，返回空数组');
+            return [];
+        }
+
+        async function refreshAnnouncementsInBackground(){
+            try{
+                const fresh = await fetchAnnouncementsFromNetwork();
+                if(fresh && fresh.length){
+                    localStorage.setItem(ANNOUNCEMENT_CACHE_KEY, JSON.stringify(fresh.slice(0,50)));
+                    console.log('📝 已更新公告缓存:', fresh.length, '条');
+                    // 若公告弹窗已打开，尝试轻量更新列表（不强制重渲染）
+                    const subEl = document.getElementById('announcementSub');
+                    if(subEl && fresh[0]) subEl.textContent = fresh[0].title||'平台公告';
+                }else{
+                    console.log('📭 后台刷新未获取到公告数据');
+                }
+            }catch(e){
+                console.warn('❌ 后台刷新公告失败:', e.message || e);
+            }
+        }
+
+        function getFallbackAnnouncements(){
+            return [
                 { id: '2025-09-30', title: '2025年09月30日平台公告与结算通知', content: '结算说明：本期任务已按规则结算，请前往收益页查看。', created_at: '2025-09-30T00:01:01Z', pinned:false, tags:[], lang:'zh-CN' },
                 { id: '2025-09-29', title: '2025年09月29日平台公告与结算通知', content: '常规结算与优化说明。', created_at: '2025-09-29T00:01:01Z', pinned:false, tags:[], lang:'zh-CN' },
                 { id: '2025-09-28', title: '重要通知', content: '为积极响应相关政策，请合规参与推广，严禁违规。', created_at: '2025-09-28T09:30:21Z', pinned:false, tags:[], lang:'zh-CN' }
             ];
-            return fallback;
         }
 
         // 从管理员设置渲染首页公告条（若有本地保存的标题/内容）
@@ -807,42 +924,9 @@
         function formatDateTime(ts){ try { return new Date(ts).toLocaleString('zh-CN'); } catch(_) { return ts; } }
         
         async function openAnnouncementsList(){
-            // 置顶：后台草稿 + 后台公告（合并去重）
-            const drafts = (function(){ try{ return JSON.parse(localStorage.getItem('admin:announce_drafts')||'[]'); }catch(_){ return []; } })();
-            const preferredLang = localStorage.getItem('admin:ann_lang') || 'zh-CN';
-            const now = Date.now();
-            const activeDrafts = drafts.filter(d=>{
-                const pub = d.publish_at ? new Date(d.publish_at).getTime() : 0;
-                const exp = d.expire_at ? new Date(d.expire_at).getTime() : Infinity;
-                // 语言优先：若草稿设置语言，必须等于首选语言；未设置语言则默认通过
-                const matchLang = d.lang ? (d.lang===preferredLang) : true;
-                return now >= pub && now < exp && matchLang;
-            }).sort((a,b)=>{
-                const pa=(parseInt(b.priority||0,10)||0) - (parseInt(a.priority||0,10)||0);
-                if(pa!==0) return pa;
-                const ap = a.publish_at ? new Date(a.publish_at).getTime() : 0;
-                const bp = b.publish_at ? new Date(b.publish_at).getTime() : 0;
-                return bp - ap; // 最近优先
-            });
-            const topN = parseInt(localStorage.getItem('admin:ann_top_n')||'3',10)||3;
-            const topList = activeDrafts.slice(0, topN).map(d=>({ id: d.id, title: d.title, content: simpleMarkdownToHtml(d.content||d.title||''), created_at: d.publish_at || new Date().toISOString(), pinned: true, tags: d.tags||[] }));
-            const dbAll = await fetchAnnouncements();
-            // 语言过滤 + 置顶优先
-            const preferredLangDb = getPreferredLang();
-            const dbList = dbAll.filter(a => !a.lang || a.lang===preferredLangDb);
-            const list = [...topList, ...dbList.filter(a=> !topList.find(t=> String(t.title)===String(a.title)))].sort((a,b)=>{
-                if((b.pinned?1:0)!==(a.pinned?1:0)) return (b.pinned?1:0)-(a.pinned?0:0);
-                return new Date(b.created_at) - new Date(a.created_at);
-            });
-            const readIds = new Set(getReadIds());
-            const hasUnread = list.some(a => !readIds.has(String(a.id)));
-            const dotEl = document.getElementById('announcementDot'); if(dotEl) dotEl.style.display = hasUnread ? 'inline-block' : 'none';
-            const newEl = document.getElementById('announcementNew'); if(newEl) newEl.style.display = hasUnread ? 'inline-block' : 'none';
-            if (list[0]) {
-                document.getElementById('announcementSub').textContent = list[0].title;
-            }
+            console.log('📢 点击公告中心');
             
-            // 构建弹窗
+            // 先展示弹窗骨架
             let overlay = document.getElementById('ann-overlay');
             if (!overlay) {
                 overlay = document.createElement('div');
@@ -854,12 +938,6 @@
                             <span>公告中心</span>
                             <button class="announcement-close" id="ann-close">×</button>
                         </div>
-                        <div class="announcement-toolbar">
-                            <label><input type="checkbox" id="ann-only-pinned"> 仅看置顶</label>
-                            <select id="ann-tag-filter">
-                                <option value="">全部标签</option>
-                            </select>
-                        </div>
                         <div class="announcement-content" id="ann-list"></div>
                         <div class="announcement-detail" id="ann-detail"></div>
                         <div class="announcement-back" id="ann-back"><button id="ann-back-btn">返回列表</button></div>
@@ -868,80 +946,58 @@
                 function closeOverlay(){ overlay.classList.remove('show'); setTimeout(()=>{ overlay.style.display='none'; document.body.classList.remove('modal-open'); }, 150); }
                 overlay.addEventListener('click', e => { if (e.target === overlay){ closeOverlay(); } });
                 document.getElementById('ann-close').addEventListener('click', closeOverlay);
-                document.getElementById('ann-back-btn').addEventListener('click', () => showList());
             }
             
-            function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-            function stripHtml(html){ const el=document.createElement('div'); el.innerHTML=html||''; return (el.textContent||'').trim(); }
-            function buildExcerpt(item){ const raw=item.content||''; const txt=stripHtml(raw); return escapeHtml(txt.slice(0, 80) + (txt.length>80?'…':'')); }
-
-            function showList(){
-                const listEl = document.getElementById('ann-list');
-                const detailEl = document.getElementById('ann-detail');
-                const backEl = document.getElementById('ann-back');
-                listEl.style.display = 'block';
-                detailEl.style.display = 'none';
-                backEl.style.display = 'none';
-                const onlyPinned = document.getElementById('ann-only-pinned').checked;
-                const tagSel = document.getElementById('ann-tag-filter').value || '';
-                const filtered = list.filter(a => (!onlyPinned || a.pinned) && (!tagSel || (a.tags||[]).includes(tagSel)));
-                listEl.innerHTML = filtered.map(a => `
-                    <div class="announcement-item ${a.pinned?'pinned':''}" data-id="${a.id}">
-                        <div class="ann-icon">📢</div>
+            const listEl = overlay.querySelector('#ann-list');
+            if(listEl){
+                listEl.innerHTML = '<div style="padding:16px;color:#64748b;text-align:center;">正在获取公告...</div>';
+            }
+            
+            overlay.style.display = 'flex';
+            requestAnimationFrame(()=>{ overlay.classList.add('show'); document.body.classList.add('modal-open'); });
+            
+            // 立即获取数据并渲染
+            try{
+                console.log('🎯 获取公告数据...');
+                const announcements = await fetchAnnouncements();
+                console.log('📋 获取到公告:', announcements.length, '条');
+                
+                if(!listEl) return;
+                
+                if(announcements.length === 0){
+                    listEl.innerHTML = '<div style="padding:20px;text-align:center;color:#64748b;">暂无公告</div>';
+                    return;
+                }
+                
+                // 直接渲染
+                function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+                
+                listEl.innerHTML = announcements.slice(0, 10).map(a => `
+                    <div class="announcement-item" style="margin:12px;padding:12px 14px;border:1px solid #eef2f7;border-radius:14px;cursor:pointer;background:#fff;box-shadow:0 2px 10px rgba(15,23,42,.05);display:grid;grid-template-columns:40px 1fr;gap:12px;">
+                        <div style="width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-size:18px;">📢</div>
                         <div>
-                            <div class="title">
-                                ${!readIds.has(String(a.id)) ? '<span class=\'announcement-unread\'></span>' : ''}
-                                ${a.pinned ? '<span class="ann-badge">置顶</span>' : ''}
-                                ${escapeHtml(a.title||'')}
+                            <div style="font-size:16px;font-weight:900;color:#0f172a;margin-bottom:6px;">
+                                ${a.pinned ? '<span style="font-size:11px;padding:2px 6px;border-radius:999px;background:linear-gradient(135deg,#f59e0b,#f97316);color:#fff;margin-right:8px;">置顶</span>' : ''}
+                                ${escapeHtml(a.title||'无标题')}
                             </div>
-                            <div class="meta">
-                                <span>${formatDateTime(a.created_at)}</span>
-                                ${ (a.tags&&a.tags.length) ? ('<span>'+a.tags.slice(0,3).map(t=>'\n<span class=\'ann-tag\'>'+escapeHtml(t)+'</span>').join('')+'</span>') : ''}
+                            <div style="font-size:12px;color:#64748b;margin-bottom:8px;">
+                                ${formatDateTime(a.created_at)}
                             </div>
-                            <div class="excerpt">${buildExcerpt(a)}</div>
+                            <div style="font-size:13px;color:#475569;line-height:1.65;">
+                                ${escapeHtml((a.content||'').replace(/<[^>]*>/g, '').slice(0, 80) + ((a.content||'').length>80?'…':''))}
+                            </div>
                         </div>
                     </div>
                 `).join('');
-                // 填充标签选项
-                const allTags = Array.from(new Set(list.flatMap(a => a.tags||[])));
-                const tagSelEl = document.getElementById('ann-tag-filter');
-                tagSelEl.innerHTML = '<option value="">全部标签</option>' + allTags.map(t=>`<option value="${t}">${t}</option>`).join('');
-                tagSelEl.value = tagSel;
-                // 事件
-                document.getElementById('ann-only-pinned').onchange = showList;
-                tagSelEl.onchange = showList;
-                listEl.querySelectorAll('.announcement-item').forEach(el => {
-                    el.addEventListener('click', () => {
-                        const id = el.getAttribute('data-id');
-                        const item = list.find(x => String(x.id) === String(id));
-                        if (!item) return;
-                        readIds.add(String(id));
-                        setReadIds(Array.from(readIds));
-                        document.getElementById('announcementDot').style.display = list.some(a => !readIds.has(String(a.id))) ? 'inline-block' : 'none';
-                        showDetail(item);
-                    });
-                });
+                
+                console.log('✅ 公告列表渲染完成');
+                
+            }catch(e){
+                console.error('❌ 获取公告失败:', e);
+                if(listEl){
+                    listEl.innerHTML = '<div style="padding:20px;text-align:center;color:#ef4444;">获取公告失败，请刷新重试</div>';
+                }
             }
-            
-            function showDetail(item){
-                const listEl = document.getElementById('ann-list');
-                const detailEl = document.getElementById('ann-detail');
-                const backEl = document.getElementById('ann-back');
-                listEl.style.display = 'none';
-                detailEl.style.display = 'block';
-                backEl.style.display = 'block';
-                detailEl.innerHTML = `
-                    <div style="font-size:16px;font-weight:700;color:#111827;">${item.title}</div>
-                    <div style="font-size:12px;color:#6b7280;margin-top:6px;">${formatDateTime(item.created_at)}</div>
-                    <div style="margin-top:12px;">${item.content || '<div style=\'color:#6b7280\'>暂无详情</div>'}</div>
-                `;
-            }
-            
-            // 打开弹窗并显示列表（下拉抽屉动画）
-            overlay.style.display = 'flex';
-            document.body.classList.add('modal-open');
-            requestAnimationFrame(()=> overlay.classList.add('show'));
-            showList();
         }
 
         function simpleMarkdownToHtml(text){

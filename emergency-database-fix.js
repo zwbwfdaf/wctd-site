@@ -246,37 +246,90 @@ async function registerUser(username, password) {
     }
     
     try {
-        const { data: existingUsers, error: fetchError } = await supabaseClient
-            .from('users')
-            .select('id')
-            .eq('用户名', username)
-            .limit(1)
-            .single();
-        
-        if (fetchError && !fetchError.message.includes('Row not found')) {
-            throw new Error('检查用户名失败：' + fetchError.message);
+        // 1) 先查重（同时兼容中英列名）
+        let existingUsers = null;
+        let fetchError = null;
+        try {
+            const { data, error } = await supabaseClient
+                .from('users')
+                .select('id')
+                .eq('username', username)
+                .limit(1)
+                .maybeSingle();
+            existingUsers = data || null;
+            fetchError = error || null;
+        } catch (e) { fetchError = e; }
+
+        // 如果提示列不存在，回退到中文列名
+        if ((fetchError && String(fetchError.message||'').includes('column')) || fetchError?.code === '42703') {
+            const { data, error } = await supabaseClient
+                .from('users')
+                .select('id')
+                .eq('用户名', username)
+                .limit(1)
+                .maybeSingle();
+            existingUsers = data || null;
+            fetchError = error || null;
         }
-        
+
+        if (fetchError && !String(fetchError.message||'').includes('Row not found')) {
+            throw new Error('检查用户名失败：' + (fetchError.message || fetchError));
+        }
         if (existingUsers) {
             throw new Error('用户名已存在');
         }
-        
-        const { data, error } = await supabaseClient
-            .from('users')
-            .insert([{
-                用户名: username,
-                密码: password,
-                积分: 0,
-                created_at: new Date().toISOString()
-            }])
-            .select()
-            .single();
-        
-        if (error) {
-            throw new Error('注册失败：' + error.message);
+
+        // 2) 插入时尝试英文字段名，失败再尝试中文字段名
+        // 生成 UUID 作为主键，避免 not-null 约束失败
+        const newId = crypto.randomUUID ? crypto.randomUUID() : generateUUIDv4();
+        const payloadEn = { id: newId, username: username, password: password };
+        const payloadZh = { id: newId, 用户名: username, 密码: password };
+
+        let inserted = null;
+        let insertErr = null;
+        try {
+            // 最小返回，避免 406/表示层冲突
+            const { error } = await supabaseClient
+                .from('users')
+                .insert(payloadEn);
+            insertErr = error || null;
+        } catch (e) { insertErr = e; }
+
+        // 如果英文字段插入失败，且明确是列不存在才尝试中文列
+        if (insertErr && (String(insertErr.message||'').includes('column "username"') || String(insertErr.message||'').includes('column "password"') || insertErr?.code === '42703')) {
+            try {
+                const { error } = await supabaseClient
+                    .from('users')
+                    .insert(payloadZh);
+                insertErr = error || null;
+                if (!insertErr) {
+                    const { data: zhUser } = await supabaseClient
+                        .from('users')
+                        .select('*')
+                        .eq('用户名', username)
+                        .limit(1)
+                        .maybeSingle();
+                    inserted = zhUser || null;
+                }
+            } catch (e2) { insertErr = e2; }
         }
-        
-        return data;
+
+        if (insertErr) {
+            throw new Error('注册失败：' + (insertErr.message || insertErr));
+        }
+
+        // 英文字段插入成功后再查询一次，拿到用户信息
+        if (!inserted) {
+            const { data: enUser } = await supabaseClient
+                .from('users')
+                .select('*')
+                .eq('username', username)
+                .limit(1)
+                .maybeSingle();
+            inserted = enUser || null;
+        }
+
+        return inserted;
     } catch (error) {
         console.error('注册错误：', error);
         throw error;
@@ -289,22 +342,40 @@ async function loginUser(username, password) {
     }
     
     try {
-        const { data, error } = await supabaseClient
-            .from('users')
-            .select('*')
-            .eq('用户名', username)
-            .eq('密码', password)
-            .single();
-        
-        if (error && error.message.includes('Row not found')) {
+        // 优先英文字段，失败回退中文字段
+        let queryRes = null;
+        let err = null;
+        try {
+            const { data, error } = await supabaseClient
+                .from('users')
+                .select('*')
+                .eq('username', username)
+                .eq('password', password)
+                .limit(1);
+            queryRes = { data, error };
+            err = error || null;
+        } catch (e) { err = e; }
+
+        if (err && (String(err.message||'').includes('column') || err.code === '42703')) {
+            const { data, error } = await supabaseClient
+                .from('users')
+                .select('*')
+                .eq('用户名', username)
+                .eq('密码', password)
+                .limit(1);
+            queryRes = { data, error };
+            err = error || null;
+        }
+
+        if (err && String(err.message||'').includes('Row not found')) {
             throw new Error('用户名或密码错误');
         }
-        
-        if (error) {
-            throw new Error('查询用户失败：' + error.message);
+        if (err) {
+            throw new Error('查询用户失败：' + (err.message || err));
         }
-        
-        return data;
+
+        const rows = queryRes?.data || [];
+        return rows && rows.length ? rows[0] : null;
     } catch (error) {
         console.error('登录错误：', error);
         throw error;
@@ -464,8 +535,19 @@ function createAnnouncementElements(config) {
         line-height: 1.6;
         font-size: 14px;
         background: #fff;
+        max-height: 65vh;
+        overflow: auto;
     `;
     body.innerHTML = config.message;
+    try{
+        Array.from(body.querySelectorAll('img')).forEach(function(img){
+            img.style.maxWidth = '100%';
+            img.style.height = 'auto';
+            img.style.borderRadius = '10px';
+            img.style.display = 'block';
+            img.style.margin = '8px 0';
+        });
+    }catch(_){ }
 
     const footer = document.createElement('div');
     footer.style.cssText = `
@@ -538,6 +620,7 @@ function createAnnouncementElements(config) {
         try { sessionStorage.setItem(ANNOUNCEMENT_SESSION_ACK_KEY, '1'); } catch(_) {}
         overlay.style.display = 'none';
         document.removeEventListener('keydown', onEsc);
+        try{ document.body.style.overflow = ''; }catch(_){ }
     }
 
     function onEsc(e) { if (e.key === 'Escape') { closeModal(true); } }
@@ -547,7 +630,7 @@ function createAnnouncementElements(config) {
     btnOk.addEventListener('click', () => closeModal(true));
     overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(true); });
 
-    return { overlay, open: () => { overlay.style.display = 'flex'; document.addEventListener('keydown', onEsc); } };
+    return { overlay, open: () => { overlay.style.display = 'flex'; try{ document.body.style.overflow = 'hidden'; }catch(_){ } document.addEventListener('keydown', onEsc); } };
 }
 
 function setupDailyAnnouncement() {

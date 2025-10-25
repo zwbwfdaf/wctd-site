@@ -10,6 +10,7 @@
     <!-- 紧急数据库修复器 -->
     <script src="emergency-database-fix.js"></script>
     <!-- 移除外部CDN依赖，使用内联样式确保在受限网络环境下可访问 -->
+    <link rel="stylesheet" href="theme.css">
     <style>
         :root {
             --primary-color: #ff7a45;
@@ -905,6 +906,26 @@
             document.getElementById('register-success').style.display = 'none';
             document.getElementById('forgot-password-error').style.display = 'none';
             document.getElementById('forgot-password-success').style.display = 'none';
+        }
+
+        // 简单的消息展示助手（注册/登录通用）
+        function showError(scope, message) {
+            const errorEl = scope === 'register' ? document.getElementById('register-error') : document.getElementById('login-error');
+            const successEl = scope === 'register' ? document.getElementById('register-success') : document.getElementById('login-success');
+            if (successEl) successEl.style.display = 'none';
+            if (errorEl) {
+                errorEl.innerHTML = `<i class="fas fa-exclamation-triangle mr-2"></i>${message}`;
+                errorEl.style.display = 'block';
+            }
+        }
+        function showSuccess(scope, message) {
+            const errorEl = scope === 'register' ? document.getElementById('register-error') : document.getElementById('login-error');
+            const successEl = scope === 'register' ? document.getElementById('register-success') : document.getElementById('login-success');
+            if (errorEl) errorEl.style.display = 'none';
+            if (successEl) {
+                successEl.innerHTML = `<i class="fas fa-check-circle mr-2"></i>${message}`;
+                successEl.style.display = 'block';
+            }
         }
 
         // 注册表单提交

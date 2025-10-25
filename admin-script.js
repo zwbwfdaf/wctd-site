@@ -1094,6 +1094,39 @@ async function ensureAnnouncementsSupabaseReady(){
     }catch(e){ console.warn('ensureAnnouncementsSupabaseReady', e); throw e; }
 }
 
+// 自动创建公告存储桶与访问策略（使用 exec_sql）
+async function ensureAnnouncementsBucketAndPolicy(){
+    try{
+        await ensureAnnouncementsSupabaseReady();
+        const sql = `
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM storage.buckets WHERE id='announcements') THEN
+        PERFORM storage.create_bucket('announcements', public => true);
+    END IF;
+END $$;
+
+ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS ann_read   ON storage.objects;
+CREATE POLICY ann_read   ON storage.objects FOR SELECT TO anon USING (bucket_id = 'announcements');
+DROP POLICY IF EXISTS ann_insert ON storage.objects;
+CREATE POLICY ann_insert ON storage.objects FOR INSERT TO anon WITH CHECK (bucket_id = 'announcements');
+DROP POLICY IF EXISTS ann_update ON storage.objects;
+CREATE POLICY ann_update ON storage.objects FOR UPDATE TO anon USING (bucket_id = 'announcements');
+DROP POLICY IF EXISTS ann_delete ON storage.objects;
+CREATE POLICY ann_delete ON storage.objects FOR DELETE TO anon USING (bucket_id = 'announcements');`;
+        try{ const { error } = await supabase.rpc('exec_sql', { sql_query: sql }); if(error){ console.warn('ensureAnnouncementsBucketAndPolicy rpc error:', error.message||error); } }catch(e){ console.warn('ensureAnnouncementsBucketAndPolicy rpc ex:', e && e.message); }
+    }catch(_){ }
+}
+
+async function runAnnouncementSetupSql(){
+    try{
+        await ensureAnnouncementsBucketAndPolicy();
+        if(typeof showNotification==='function') try{ showNotification('已尝试创建公告存储桶与策略，请重试上传', 'success'); }catch(_){ }
+    }catch(e){ if(typeof showNotification==='function') try{ showNotification('一键修复失败: '+(e.message||e), 'error'); }catch(_){ } }
+}
+if(typeof window!=='undefined'){ window.runAnnouncementSetupSql = runAnnouncementSetupSql; }
+
 async function ensureAnnouncementsTableReady(){
     try{
         await ensureAnnouncementsSupabaseReady();
@@ -1192,8 +1225,7 @@ function openAnnouncementModal(ann){
                                 e.preventDefault();
                                 const file = it.getAsFile();
                                 if(file){
-                                    const url = await uploadAnnouncementImage(file);
-                                    if(url) insertImageIntoAnnContent(url);
+                                    try{ await insertAndUploadAnnImage(file); }catch(_){ }
                                 }
                             }
                         }
@@ -1218,45 +1250,113 @@ async function handleAnnImageSelected(e){
     try{
         const file = (e && e.target && e.target.files && e.target.files[0]) ? e.target.files[0] : null;
         if(!file) return;
-        const url = await uploadAnnouncementImage(file);
-        if(url) insertImageIntoAnnContent(url);
+        await insertAndUploadAnnImage(file);
         try{ e.target.value = ''; }catch(_){ }
     }catch(err){ showNotification && showNotification('上传失败: '+err.message, 'error'); }
 }
 
+// 先插入压缩预览，再后台上传成功后替换为公网URL
+async function insertAndUploadAnnImage(file){
+    try{
+        const cEl = document.getElementById('annContent'); if(!cEl) return;
+        const { dataUrl } = await compressImageForEmbed(file, { maxWidth: 1400, maxHeight: 1400, targetBytes: 500*1024 });
+        if(!dataUrl){
+            // 退化为直接等待上传
+            const url = await uploadAnnouncementImage(file);
+            if(url) insertImageIntoAnnContent(url);
+            return;
+        }
+        const before = cEl.value || '';
+        const toInsert = `\n<p><img src="${dataUrl}" alt="image" style="max-width:100%;border-radius:8px;"/></p>`;
+        cEl.value = before + toInsert;
+        try{ showNotification && showNotification('已插入预览，后台上传中…', 'info'); }catch(_){ }
+        // 后台上传并替换
+        uploadAnnouncementImage(file).then(function(url){
+            if(url && /^https?:\/\//i.test(String(url))){
+                try{ cEl.value = cEl.value.replace(dataUrl, url); }catch(_){ }
+            }
+        }).catch(function(err){ try{ showNotification && showNotification('上传失败: '+(err && err.message || err), 'error'); }catch(_){ } });
+    }catch(_){ }
+}
+
+// 图片压缩与兜底：将图片压缩到合理尺寸并返回可用于上传的 Blob 和用于编辑器插入的 dataURL
+async function compressImageForEmbed(file, options){
+    const opts = Object.assign({ maxWidth: 1280, maxHeight: 1280, targetBytes: 600*1024 }, options||{});
+    try{
+        const dataUrl = await new Promise((resolve, reject)=>{
+            const r = new FileReader();
+            r.onload = ()=> resolve(String(r.result||''));
+            r.onerror = ()=> resolve('');
+            r.readAsDataURL(file);
+        });
+        if(!dataUrl){ return { dataUrl: '', uploadBlob: file }; }
+        const img = await new Promise((resolve)=>{ const im=new Image(); im.onload=()=>resolve(im); im.onerror=()=>resolve(null); im.src=dataUrl; });
+        if(!img){ return { dataUrl, uploadBlob: file }; }
+        const w = img.naturalWidth || img.width || 0;
+        const h = img.naturalHeight || img.height || 0;
+        if((file.size||0) <= opts.targetBytes && w<=opts.maxWidth && h<=opts.maxHeight){
+            return { dataUrl, uploadBlob: file };
+        }
+        const scale = Math.min(1, opts.maxWidth/Math.max(1,w), opts.maxHeight/Math.max(1,h));
+        const cw = Math.max(1, Math.round(w*scale));
+        const ch = Math.max(1, Math.round(h*scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = cw; canvas.height = ch;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, cw, ch);
+        let quality = 0.9;
+        let blob = await new Promise(res=> canvas.toBlob(res, 'image/jpeg', quality));
+        // 逐步降低质量以达到目标体积
+        while(blob && blob.size > opts.targetBytes && quality > 0.45){
+            quality -= 0.1;
+            // 保底 0.5 左右
+            blob = await new Promise(res=> canvas.toBlob(res, 'image/jpeg', Math.max(quality, 0.5)));
+        }
+        let outDataUrl = '';
+        try{ outDataUrl = canvas.toDataURL('image/jpeg', Math.max(quality, 0.5)); }catch(_){ outDataUrl = dataUrl; }
+        return { dataUrl: outDataUrl||dataUrl, uploadBlob: blob || file };
+    }catch(_){ return { dataUrl: '', uploadBlob: file }; }
+}
+
 async function uploadAnnouncementImage(file){
     await ensureAnnouncementsSupabaseReady();
-    // 确保至少存在一个公开桶（优先 announcements）
-    try{
-        const sql = `DO $$ BEGIN
-            PERFORM 1 FROM storage.buckets WHERE name='announcements';
-            IF NOT FOUND THEN
-                INSERT INTO storage.buckets (id, name, public) VALUES ('announcements','announcements', true);
-            END IF;
-        END $$;`;
-        try{ await supabase.rpc('exec_sql', { sql_query: sql }); }catch(_){ }
-    }catch(_){ }
-    // 多桶候选 + 失败回退到base64
-    const buckets = ['announcements','public-assets','assets','public'];
+    // 不再在前端尝试创建桶/策略，避免 401/权限错误刷屏；仅尝试固定桶并失败后回退到 base64。
+    const buckets = ['announcements'];
+    // 压缩以减少内容体积，并将压缩后的 Blob 用于上传
+    const { dataUrl: fallbackDataUrl, uploadBlob } = await compressImageForEmbed(file, { maxWidth: 1400, maxHeight: 1400, targetBytes: 500*1024 });
     const y = new Date().getFullYear();
     const m = String(new Date().getMonth()+1).padStart(2,'0');
     const rand = Math.random().toString(36).slice(2,8);
     const safeName = (file.name||'image').replace(/[^a-zA-Z0-9._-]/g,'_');
     const path = `images/${y}/${m}/${Date.now()}_${rand}_${safeName}`;
+    let lastErrorMessage = '';
     for(const b of buckets){
         try{
-            const up = await supabase.storage.from(b).upload(path, file, { upsert: true, contentType: file.type||'application/octet-stream' });
+            if(!supabase || !supabase.storage || !supabase.storage.from){ throw new Error('storage_unavailable'); }
+            const up = await supabase.storage.from(b).upload(path, uploadBlob||file, { upsert: true, contentType: (uploadBlob&&uploadBlob.type)||file.type||'application/octet-stream' });
             if(up && !up.error){
                 const { data } = supabase.storage.from(b).getPublicUrl(path);
                 if(data && data.publicUrl){ return data.publicUrl; }
+            }else if(up && up.error){
+                lastErrorMessage = String(up.error.message||up.error);
             }
-        }catch(_){ }
+        }catch(e){ lastErrorMessage = String(e && e.message || e || 'upload_failed'); }
     }
-    // 兜底：base64嵌入
+    // 兜底：base64嵌入，并提示（使用 FileReader 避免大文件导致的堆栈溢出）
     try{
-        const buf = await file.arrayBuffer();
-        const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
-        return `data:${file.type||'image/png'};base64,${b64}`;
+        const dataUrl = fallbackDataUrl || await new Promise((resolve, reject)=>{
+            try{
+                const reader = new FileReader();
+                reader.onload = ()=> resolve(reader.result);
+                reader.onerror = ()=> reject(reader.error||new Error('read_failed'));
+                reader.readAsDataURL(file);
+            }catch(err){ reject(err); }
+        });
+        if(typeof showNotification==='function'){
+            const msg = lastErrorMessage ? `云端上传失败(${lastErrorMessage})，已嵌入到内容` : '云端上传失败，已嵌入到内容';
+            try{ showNotification(msg, 'warning'); }catch(_){ }
+        }
+        return String(dataUrl||'');
     }catch(e){ throw e; }
 }
 

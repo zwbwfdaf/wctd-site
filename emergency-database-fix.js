@@ -246,9 +246,11 @@ async function registerUser(username, password) {
     }
     
     try {
-        // 1) 先查重（同时兼容中英列名）
+        // 1) 先查重（优先英文字段名）
         let existingUsers = null;
         let fetchError = null;
+        
+        // 优先尝试英文字段名
         try {
             const { data, error } = await supabaseClient
                 .from('users')
@@ -256,20 +258,25 @@ async function registerUser(username, password) {
                 .eq('username', username)
                 .limit(1)
                 .maybeSingle();
-            existingUsers = data || null;
-            fetchError = error || null;
-        } catch (e) { fetchError = e; }
-
-        // 如果提示列不存在，回退到中文列名
-        if ((fetchError && String(fetchError.message||'').includes('column')) || fetchError?.code === '42703') {
-            const { data, error } = await supabaseClient
-                .from('users')
-                .select('id')
-                .eq('用户名', username)
-                .limit(1)
-                .maybeSingle();
-            existingUsers = data || null;
-            fetchError = error || null;
+            
+            if (!error || String(error.message||'').includes('Row not found')) {
+                existingUsers = data || null;
+                fetchError = error || null;
+            } else if (String(error.message||'').includes('column') || error?.code === '42703') {
+                // 英文列不存在，尝试中文列
+                const { data: zhData, error: zhError } = await supabaseClient
+                    .from('users')
+                    .select('id')
+                    .eq('用户名', username)
+                    .limit(1)
+                    .maybeSingle();
+                existingUsers = zhData || null;
+                fetchError = zhError || null;
+            } else {
+                fetchError = error;
+            }
+        } catch (e) { 
+            fetchError = e; 
         }
 
         if (fetchError && !String(fetchError.message||'').includes('Row not found')) {

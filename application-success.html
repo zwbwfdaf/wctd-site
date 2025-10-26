@@ -230,7 +230,7 @@
         </p>
         
         <div class="button-group">
-            <a href="my-keywords.html" class="btn btn-primary">
+            <a href="my-keywords.html" class="btn btn-primary" id="viewApplicationBtn">
                 📋 查看我的申请
             </a>
             <a href="index.html" class="btn btn-secondary">
@@ -252,6 +252,9 @@
             
             // 记录申请成功事件
             logApplicationSuccess();
+            
+            // 🔧 根据URL参数设置正确的跳转链接
+            setupCorrectLinks();
         });
 
         function playSuccessAnimation() {
@@ -285,6 +288,24 @@
         function showChatSupport() {
             alert('如有疑问，请联系客服！');
         }
+        
+        // 🔧 新增：根据来源任务设置正确的跳转链接
+        function setupCorrectLinks() {
+            try {
+                // 从URL获取task参数
+                const urlParams = new URLSearchParams(window.location.search);
+                const task = urlParams.get('task');
+                
+                // 更新"查看我的申请"按钮的链接
+                const viewBtn = document.getElementById('viewApplicationBtn');
+                if (viewBtn && task) {
+                    viewBtn.href = `my-keywords.html?task=${task}`;
+                    console.log(`✅ 已设置跳转链接: my-keywords.html?task=${task}`);
+                }
+            } catch (error) {
+                console.warn('设置跳转链接失败:', error);
+            }
+        }
 
         // 防止用户后退到表单页面后重复提交
         window.addEventListener('pageshow', function(event) {
@@ -298,7 +319,12 @@
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Enter') {
                 // 回车键快速查看申请
-                window.location.href = 'my-keywords.html';
+                const viewBtn = document.getElementById('viewApplicationBtn');
+                if (viewBtn) {
+                    window.location.href = viewBtn.href;
+                } else {
+                    window.location.href = 'my-keywords.html';
+                }
             } else if (e.key === 'Escape') {
                 // ESC键返回首页
                 window.location.href = 'index.html';

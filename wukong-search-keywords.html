@@ -145,7 +145,7 @@
         }
         function initSupabase(){ try{ if(window.supabase){ supabaseClient = window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY); } }catch(_){ } }
         function ensureUser(){ try{ const u=localStorage.getItem('currentUser'); if(!u) localStorage.setItem('currentUser', JSON.stringify({id:'555',username:'555'})); }catch(_){ localStorage.setItem('currentUser', JSON.stringify({id:'555',username:'555'})); } }
-        function bindSubmit(){ const form=document.getElementById('wkForm'); const btn=document.getElementById('submitBtn'); form.addEventListener('submit', async (e)=>{ e.preventDefault(); const d=collect(); if(!validate(d)) return; btn.disabled=true; btn.textContent='提交中…'; try{ await save(d); alert('申请提交成功'); setTimeout(()=>{ window.location.href='my-keywords.html?task=wk'; }, 800); }catch(err){ console.error(err); alert('提交失败，请重试'); btn.disabled=false; btn.textContent='提交申请'; } }); }
+        function bindSubmit(){ const form=document.getElementById('wkForm'); const btn=document.getElementById('submitBtn'); form.addEventListener('submit', async (e)=>{ e.preventDefault(); const d=collect(); if(!validate(d)) return; btn.disabled=true; btn.textContent='提交中…'; try{ await save(d); alert('申请提交成功'); setTimeout(()=>{ window.location.href='application-success.html?task=wk'; }, 800); }catch(err){ console.error(err); alert('提交失败，请重试'); btn.disabled=false; btn.textContent='提交申请'; } }); }
         function collect(){
             const u = JSON.parse(localStorage.getItem('currentUser')||'{"id":"555","username":"555"}');
             const feedbackText = (document.getElementById('feedback')?.value||'').trim();

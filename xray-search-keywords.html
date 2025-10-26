@@ -184,7 +184,7 @@
                 try{
                     await saveApplication(data);
                     toast('申请提交成功', 'success');
-                    setTimeout(()=>{ window.location.href='application-success.html'; }, 800);
+                    setTimeout(()=>{ window.location.href='application-success.html?task=xray'; }, 800);
                 }catch(err){
                     console.error(err);
                     toast('提交失败，请重试', 'error');

@@ -915,6 +915,7 @@
                                 experience: app.experience,
                                 channel: app.promotion_channel,
                                 category: app.task_type || '关键词推广',
+                                task_type: app.task_type, // 🔧 确保保留task_type
                                 keywords: app.keywords,
                                 status: app.status,
                                 assigned_keywords: app.assigned_keywords,
@@ -943,6 +944,10 @@
                 if (keywords.length === 0) {
                     console.log('🔄 从localStorage加载关键词数据...');
                     keywords = getUserKeywords(appState.currentUser.id);
+                    
+                    // 🔧 修复旧数据：根据ID前缀自动识别任务类型
+                    keywords = fixOldKeywordsTaskType(keywords);
+                    
                     // 依据任务来源过滤：
                     // - xray 视图：只展示明确为 x雷 的记录
                     // - kk 视图：展示 KK 或无 task_type 的旧记录
@@ -953,7 +958,7 @@
                     } else if (appState.sourceTask === 'kkdisk') {
                         keywords = keywords.filter(k => k.task_type === 'KK网盘任务');
                     } else {
-                        keywords = keywords.filter(k => k.task_type === 'KK搜索任务');
+                        keywords = keywords.filter(k => k.task_type === 'KK搜索任务' || !k.task_type);
                     }
                     dataSource = 'localStorage';
                 }
@@ -971,6 +976,48 @@
                 console.error('加载关键词失败:', error);
                 showError('加载关键词数据失败，请刷新重试');
             }
+        }
+        
+        // 🔧 新增：修复旧数据的task_type字段
+        function fixOldKeywordsTaskType(keywords) {
+            let updated = false;
+            const fixed = keywords.map(kw => {
+                // 如果已经有task_type，不需要修复
+                if (kw.task_type) return kw;
+                
+                // 根据ID前缀判断任务类型
+                const id = kw.id || '';
+                let task_type = 'KK搜索任务'; // 默认值
+                
+                if (id.startsWith('XR')) {
+                    task_type = 'x雷浏览器搜索任务';
+                    updated = true;
+                    console.log(`🔧 修复记录 ${id} 的任务类型为: x雷浏览器搜索任务`);
+                } else if (id.startsWith('WK')) {
+                    task_type = '悟空搜索任务';
+                    updated = true;
+                    console.log(`🔧 修复记录 ${id} 的任务类型为: 悟空搜索任务`);
+                } else if (id.startsWith('KKD')) {
+                    task_type = 'KK网盘任务';
+                    updated = true;
+                    console.log(`🔧 修复记录 ${id} 的任务类型为: KK网盘任务`);
+                }
+                
+                return { ...kw, task_type };
+            });
+            
+            // 如果有更新，保存回localStorage
+            if (updated && appState.currentUser) {
+                try {
+                    const userKey = 'keywords_' + appState.currentUser.id;
+                    localStorage.setItem(userKey, JSON.stringify(fixed));
+                    console.log('✅ 已保存修复后的数据到localStorage');
+                } catch (e) {
+                    console.warn('保存修复数据失败:', e);
+                }
+            }
+            
+            return fixed;
         }
         
         // 🔧 新增：将数据库数据同步到localStorage作为备份

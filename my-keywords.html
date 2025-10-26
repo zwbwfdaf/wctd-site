@@ -1114,7 +1114,7 @@
             const statusIcon = getStatusIcon(status);
             
             const channelText = getChannelText(keyword.channel);
-            const categoryText = getCategoryText(keyword.category);
+            const taskTypeText = getTaskTypeText(keyword.task_type);
             const experienceText = getExperienceText(keyword.experience);
             
             return `
@@ -1153,8 +1153,8 @@
                                 <span class="tag-value">${channelText}</span>
                             </div>
                             <div class="info-tag">
-                                <span class="tag-label">类型:</span>
-                                <span class="tag-value">${categoryText}</span>
+                                <span class="tag-label">任务:</span>
+                                <span class="tag-value">${taskTypeText}</span>
                             </div>
                         </div>
                         
@@ -1356,6 +1356,28 @@
                 return experience;
             }
             return '未设置';
+        }
+        
+        // 🔧 新增：获取任务类型文本 - 简化显示
+        function getTaskTypeText(taskType) {
+            if (!taskType) return 'KK搜索';
+            
+            // 将完整的任务类型名称简化为短名称
+            const typeMap = {
+                'x雷浏览器搜索任务': 'x雷浏览器',
+                'X雷浏览器搜索任务': 'x雷浏览器',
+                '悟空搜索任务': '悟空搜索',
+                'KK搜索任务': 'KK搜索',
+                'KK网盘任务': 'KK网盘'
+            };
+            
+            // 如果在映射表中找到，返回简化名称
+            if (typeMap[taskType]) {
+                return typeMap[taskType];
+            }
+            
+            // 否则返回原始值
+            return taskType;
         }
         
         // 获取头像文字

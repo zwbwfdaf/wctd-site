@@ -1513,7 +1513,14 @@
                 navigator.vibrate(100);
             }
             // 根据当前视图跳转到对应任务的申请页
-            const target = (appState.sourceTask === 'xray') ? 'xray-search-keywords.html' : 'quark-search-keywords.html';
+            let target = 'quark-search-keywords.html'; // 默认KK搜索
+            if (appState.sourceTask === 'xray') {
+                target = 'xray-search-keywords.html';
+            } else if (appState.sourceTask === 'wk') {
+                target = 'wukong-search-keywords.html';
+            } else if (appState.sourceTask === 'kkdisk') {
+                target = 'quark-cloud-drive-task.html';
+            }
             window.location.href = target;
         }
         

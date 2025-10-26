@@ -358,18 +358,43 @@ async function openApproveModal(applicationId) {
         const app = (apps || []).find(a => String(a.id) === String(applicationId)) || {};
         const setText = (id, v) => { const el=document.getElementById(id); if(el) el.textContent = v||'-'; };
         const setVal = (id, v) => { const el=document.getElementById(id); if(el) el.value = v||''; };
+        
         setVal('approveApplicationId', applicationId);
         setText('approveUserName', app.username || '未知用户');
-        // 展示KK网盘的自定义字段
-        try { setText('approveTaskType', app.task_type || '-'); } catch(_){ }
-        try { setText('approveQuarkUid', app.quark_uid || '-'); } catch(_){ }
-        try { setText('approveQuarkPhone', app.quark_phone || '-'); } catch(_){ }
-        try { setText('approveRealName', app.real_name || '-'); } catch(_){ }
-        try { setText('approveChannel', (typeof getChannelText==='function')? getChannelText(app.promotion_channel) : (app.promotion_channel||'-')); } catch(_){ }
-        try {
-            const imgHolder=document.getElementById('approveBindImg');
-            if(imgHolder){ imgHolder.innerHTML = app.bind_screenshot ? `<a href="${app.bind_screenshot}" target="_blank">查看截图</a>` : '-'; }
-        }catch(_){ }
+        
+        // 判断任务类型：KK网盘 vs 搜索任务
+        const isKKDriveTask = app.task_type === 'kk-cloud-drive' || 
+                              (app.keywords && (app.keywords.includes('kk网盘') || app.keywords.includes('KK网盘')));
+        
+        // 获取字段组
+        const kkDriveFields = document.querySelectorAll('.kk-drive-field');
+        const searchTaskFields = document.querySelectorAll('.search-task-field');
+        
+        if (isKKDriveTask) {
+            // KK网盘：显示用户详细信息字段，隐藏关键词分配
+            kkDriveFields.forEach(el => el.style.display = 'flex');
+            searchTaskFields.forEach(el => el.style.display = 'none');
+            
+            // 填充KK网盘数据
+            try { setText('approveTaskType', app.task_type || '-'); } catch(_){ }
+            try { setText('approveQuarkUid', app.quark_uid || '-'); } catch(_){ }
+            try { setText('approveQuarkPhone', app.quark_phone || '-'); } catch(_){ }
+            try { setText('approveRealName', app.real_name || '-'); } catch(_){ }
+            try { setText('approveChannel', (typeof getChannelText==='function')? getChannelText(app.promotion_channel) : (app.promotion_channel||'-')); } catch(_){ }
+            try {
+                const imgHolder=document.getElementById('approveBindImg');
+                if(imgHolder){ imgHolder.innerHTML = app.bind_screenshot ? `<a href="${app.bind_screenshot}" target="_blank">查看截图</a>` : '-'; }
+            }catch(_){ }
+        } else {
+            // 搜索任务：隐藏KK网盘字段，显示关键词分配
+            kkDriveFields.forEach(el => el.style.display = 'none');
+            searchTaskFields.forEach(el => el.style.display = 'block');
+            
+            // 填充搜索任务数据
+            setText('approveRequestedKeywords', app.keywords || '-');
+            setVal('approveAssignKeywords', ''); // 清空之前的分配
+        }
+        
         setVal('approveNote', '');
         showModal('approveModal');
     } catch (e) { console.warn('openApproveModal', e); }
@@ -389,21 +414,46 @@ async function confirmApproval() {
     try {
         const id = document.getElementById('approveApplicationId')?.value;
         const note = document.getElementById('approveNote')?.value?.trim();
+        const assignedKeywords = document.getElementById('approveAssignKeywords')?.value?.trim();
+        
         if (!id) { showNotification('缺少申请ID','error'); return; }
+        
+        // 检查搜索任务是否已分配关键词
+        const searchTaskFields = document.querySelectorAll('.search-task-field');
+        const isSearchTask = searchTaskFields.length > 0 && searchTaskFields[0].style.display !== 'none';
+        
+        if (isSearchTask && !assignedKeywords) {
+            showNotification('请输入要分配的关键词','error');
+            return;
+        }
+        
         let ok = false;
+        const updateData = { 
+            status: 'approved', 
+            approve_note: note, 
+            updated_at: new Date().toISOString()
+        };
+        
+        // 如果是搜索任务，添加分配的关键词
+        if (isSearchTask && assignedKeywords) {
+            updateData.assigned_keywords = assignedKeywords;
+        }
+        
         try {
             await ensureSupabaseReady();
             const { error } = await supabase.from('keyword_applications')
-                .update({ status: 'approved', approve_note: note, updated_at: new Date().toISOString() })
+                .update(updateData)
                 .eq('id', id);
             if (!error) ok = true; else console.warn('approve db error', error);
         } catch (e) { console.warn('approve db ex', e); }
+        
         if (!ok && typeof updateApplicationInLocalStorage === 'function') {
-            updateApplicationInLocalStorage(id, { status:'approved', approve_note: note, updated_at: new Date().toISOString() });
+            updateApplicationInLocalStorage(id, updateData);
             ok = true;
         }
+        
         if (ok) {
-            showNotification('已通过','success');
+            showNotification(isSearchTask ? '已通过并分配关键词' : '已通过','success');
             closeModal('approveModal');
             try { await loadKKDiskManagementData(); } catch(_){ }
         } else {

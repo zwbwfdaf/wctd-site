@@ -1870,14 +1870,29 @@
                             <label>申请用户:</label>
                             <span id="approveUserName">-</span>
                         </div>
-                        <div class="info-item"><label>任务类型:</label><span id="approveTaskType">-</span></div>
-                        <div class="info-item"><label>夸克uid:</label><span id="approveQuarkUid">-</span></div>
-                        <div class="info-item"><label>夸克手机号:</label><span id="approveQuarkPhone">-</span></div>
-                        <div class="info-item"><label>姓名:</label><span id="approveRealName">-</span></div>
-                        <div class="info-item"><label>推广渠道:</label><span id="approveChannel">-</span></div>
-                        <div class="info-item"><label>绑定截图:</label><span id="approveBindImg">-</span></div>
+                        <!-- KK网盘专属字段 -->
+                        <div class="info-item kk-drive-field"><label>任务类型:</label><span id="approveTaskType">-</span></div>
+                        <div class="info-item kk-drive-field"><label>夸克uid:</label><span id="approveQuarkUid">-</span></div>
+                        <div class="info-item kk-drive-field"><label>夸克手机号:</label><span id="approveQuarkPhone">-</span></div>
+                        <div class="info-item kk-drive-field"><label>姓名:</label><span id="approveRealName">-</span></div>
+                        <div class="info-item kk-drive-field"><label>推广渠道:</label><span id="approveChannel">-</span></div>
+                        <div class="info-item kk-drive-field"><label>绑定截图:</label><span id="approveBindImg">-</span></div>
+                        
+                        <!-- 搜索任务专属：申请的关键词 -->
+                        <div class="info-item search-task-field" style="display:none;">
+                            <label>申请关键词:</label>
+                            <span id="approveRequestedKeywords">-</span>
+                        </div>
                     </div>
-                    <!-- KK网盘无需分配关键词，直接通过 -->
+                    
+                    <!-- 搜索任务专属：分配关键词输入框 -->
+                    <div class="form-group search-task-field" style="display:none;">
+                        <label for="approveAssignKeywords">分配关键词 <span style="color:red;">*</span>:</label>
+                        <input type="text" id="approveAssignKeywords" placeholder="请输入要分配给用户的关键词，多个用逗号分隔">
+                        <small style="color:#6b7280;">例如：关键词1,关键词2,关键词3</small>
+                    </div>
+                    
+                    <!-- 备注说明 -->
                     <div class="form-group">
                         <label for="approveNote">备注说明 (可选):</label>
                         <textarea id="approveNote" rows="2" placeholder="审核通过的备注说明..."></textarea>

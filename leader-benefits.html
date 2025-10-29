@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>等级权益</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="emergency-database-fix.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #6366f1;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: var(--bg-color);
+            color: var(--text-primary);
+            padding-bottom: 60px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #ffd700, #ffed4e);
+            color: #854d0e;
+            padding: 16px 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-title {
+            font-size: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .back-btn {
+            background: rgba(133, 77, 14, 0.2);
+            border: none;
+            color: #854d0e;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* 当前等级卡片 */
+        .current-level {
+            background: linear-gradient(135deg, #ffd700, #ffed4e);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 24px rgba(255, 215, 0, 0.3);
+            color: #854d0e;
+            text-align: center;
+        }
+
+        .level-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+        }
+
+        .level-name {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .level-subtitle {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        /* 升级进度 */
+        .upgrade-progress {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .progress-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .progress-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            font-size: 14px;
+        }
+
+        .progress-current {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        .progress-target {
+            color: var(--text-secondary);
+        }
+
+        .progress-bar {
+            height: 24px;
+            background: var(--bg-color);
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-color), #8b5cf6);
+            border-radius: 12px;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .progress-tip {
+            margin-top: 12px;
+            padding: 12px;
+            background: rgba(99, 102, 241, 0.1);
+            border-radius: 8px;
+            font-size: 14px;
+            color: var(--primary-color);
+        }
+
+        /* 我的权益 */
+        .my-benefits {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .benefits-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+        }
+
+        .benefit-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: var(--bg-color);
+            border-radius: 8px;
+        }
+
+        .benefit-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--success-color), #059669);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .benefit-text {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        /* 等级体系 */
+        .level-system {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .system-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .level-card {
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            transition: all 0.3s;
+        }
+
+        .level-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+        }
+
+        .level-card.current {
+            border-color: var(--primary-color);
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(139, 92, 246, 0.05));
+        }
+
+        .level-card.locked {
+            opacity: 0.6;
+        }
+
+        .level-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .level-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .level-badge i {
+            font-size: 24px;
+        }
+
+        .level-status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-current {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .status-achieved {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success-color);
+        }
+
+        .status-locked {
+            background: rgba(100, 116, 139, 0.1);
+            color: var(--text-secondary);
+        }
+
+        .level-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .detail-item {
+            padding: 12px;
+            background: var(--bg-color);
+            border-radius: 8px;
+        }
+
+        .detail-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .detail-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .level-benefits {
+            border-top: 1px solid var(--border-color);
+            padding-top: 16px;
+        }
+
+        .level-benefits h4 {
+            font-size: 14px;
+            margin-bottom: 12px;
+            color: var(--text-secondary);
+        }
+
+        .benefit-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .benefit-tag {
+            padding: 6px 12px;
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success-color);
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        /* 等级徽章颜色 */
+        .bronze { color: #cd7f32; }
+        .silver { color: #c0c0c0; }
+        .gold { color: #ffd700; }
+        .platinum { color: #e5e4e2; }
+        .diamond { color: #b9f2ff; }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .level-details {
+                grid-template-columns: 1fr;
+            }
+
+            .benefits-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="header-title">
+                <i class="fas fa-crown"></i>
+                <span>等级权益</span>
+            </div>
+            <button class="back-btn" onclick="window.history.back()">
+                <i class="fas fa-arrow-left"></i>
+                返回
+            </button>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- 当前等级 -->
+        <div class="current-level">
+            <div class="level-icon">👑</div>
+            <div class="level-name" id="currentLevelName">黄金团长</div>
+            <div class="level-subtitle">LV3 · 尊贵身份</div>
+        </div>
+
+        <!-- 升级进度 -->
+        <div class="upgrade-progress">
+            <div class="progress-title">
+                <i class="fas fa-chart-line"></i>
+                升级进度
+            </div>
+            <div class="progress-stats">
+                <span class="progress-current" id="currentMembers">当前团队：48人</span>
+                <span class="progress-target" id="targetMembers">下一级需要：50人</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width: 96%;">96%</div>
+            </div>
+            <div class="progress-tip">
+                <i class="fas fa-lightbulb"></i>
+                还差 2 人即可升级到铂金团长！继续加油！
+            </div>
+        </div>
+
+        <!-- 我的权益 -->
+        <div class="my-benefits">
+            <div class="benefits-title">
+                <i class="fas fa-gift"></i>
+                我的权益
+            </div>
+            <div class="benefits-grid" id="myBenefits">
+                <div class="benefit-item">
+                    <div class="benefit-icon">
+                        <i class="fas fa-check"></i>
+                    </div>
+                    <div class="benefit-text">二级分佣</div>
+                </div>
+                <div class="benefit-item">
+                    <div class="benefit-icon">
+                        <i class="fas fa-check"></i>
+                    </div>
+                    <div class="benefit-text">专属客服</div>
+                </div>
+                <div class="benefit-item">
+                    <div class="benefit-icon">
+                        <i class="fas fa-check"></i>
+                    </div>
+                    <div class="benefit-text">优先审核</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 等级体系 -->
+        <div class="level-system">
+            <div class="system-title">完整等级体系</div>
+
+            <!-- 青铜团长 -->
+            <div class="level-card">
+                <div class="level-header">
+                    <div class="level-badge bronze">
+                        <span style="font-size: 24px;">🥉</span>
+                        <span>青铜团长 LV1</span>
+                    </div>
+                    <div class="level-status status-achieved">已达成</div>
+                </div>
+                <div class="level-details">
+                    <div class="detail-item">
+                        <div class="detail-label">升级条件</div>
+                        <div class="detail-value">0 人</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">一级佣金</div>
+                        <div class="detail-value">5%</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">二级佣金</div>
+                        <div class="detail-value">-</div>
+                    </div>
+                </div>
+                <div class="level-benefits">
+                    <h4>权益特权</h4>
+                    <div class="benefit-tags">
+                        <span class="benefit-tag">基础权限</span>
+                        <span class="benefit-tag">邀请成员</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 白银团长 -->
+            <div class="level-card">
+                <div class="level-header">
+                    <div class="level-badge silver">
+                        <span style="font-size: 24px;">🥈</span>
+                        <span>白银团长 LV2</span>
+                    </div>
+                    <div class="level-status status-achieved">已达成</div>
+                </div>
+                <div class="level-details">
+                    <div class="detail-item">
+                        <div class="detail-label">升级条件</div>
+                        <div class="detail-value">10 人</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">一级佣金</div>
+                        <div class="detail-value">8%</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">二级佣金</div>
+                        <div class="detail-value">3%</div>
+                    </div>
+                </div>
+                <div class="level-benefits">
+                    <h4>权益特权</h4>
+                    <div class="benefit-tags">
+                        <span class="benefit-tag">二级分佣</span>
+                        <span class="benefit-tag">数据统计</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 黄金团长 -->
+            <div class="level-card current">
+                <div class="level-header">
+                    <div class="level-badge gold">
+                        <span style="font-size: 24px;">👑</span>
+                        <span>黄金团长 LV3</span>
+                    </div>
+                    <div class="level-status status-current">当前等级</div>
+                </div>
+                <div class="level-details">
+                    <div class="detail-item">
+                        <div class="detail-label">升级条件</div>
+                        <div class="detail-value">50 人</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">一级佣金</div>
+                        <div class="detail-value">10%</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">二级佣金</div>
+                        <div class="detail-value">5%</div>
+                    </div>
+                </div>
+                <div class="level-benefits">
+                    <h4>权益特权</h4>
+                    <div class="benefit-tags">
+                        <span class="benefit-tag">二级分佣</span>
+                        <span class="benefit-tag">专属客服</span>
+                        <span class="benefit-tag">优先审核</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 铂金团长 -->
+            <div class="level-card locked">
+                <div class="level-header">
+                    <div class="level-badge platinum">
+                        <span style="font-size: 24px;">💎</span>
+                        <span>铂金团长 LV4</span>
+                    </div>
+                    <div class="level-status status-locked">未解锁</div>
+                </div>
+                <div class="level-details">
+                    <div class="detail-item">
+                        <div class="detail-label">升级条件</div>
+                        <div class="detail-value">100 人</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">一级佣金</div>
+                        <div class="detail-value">12%</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">二级佣金</div>
+                        <div class="detail-value">6%</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">三级佣金</div>
+                        <div class="detail-value">2%</div>
+                    </div>
+                </div>
+                <div class="level-benefits">
+                    <h4>权益特权</h4>
+                    <div class="benefit-tags">
+                        <span class="benefit-tag">三级分佣</span>
+                        <span class="benefit-tag">专属客服</span>
+                        <span class="benefit-tag">优先审核</span>
+                        <span class="benefit-tag">专属标识</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 钻石团长 -->
+            <div class="level-card locked">
+                <div class="level-header">
+                    <div class="level-badge diamond">
+                        <span style="font-size: 24px;">⭐</span>
+                        <span>钻石团长 LV5</span>
+                    </div>
+                    <div class="level-status status-locked">未解锁</div>
+                </div>
+                <div class="level-details">
+                    <div class="detail-item">
+                        <div class="detail-label">升级条件</div>
+                        <div class="detail-value">200 人</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">一级佣金</div>
+                        <div class="detail-value">15%</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">二级佣金</div>
+                        <div class="detail-value">8%</div>
+                    </div>
+                    <div class="detail-item">
+                        <div class="detail-label">三级佣金</div>
+                        <div class="detail-value">3%</div>
+                    </div>
+                </div>
+                <div class="level-benefits">
+                    <h4>权益特权</h4>
+                    <div class="benefit-tags">
+                        <span class="benefit-tag">三级分佣</span>
+                        <span class="benefit-tag">全部特权</span>
+                        <span class="benefit-tag">专属礼包</span>
+                        <span class="benefit-tag">优先推荐</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 等级配置（与管理后台同步）
+        const LEVEL_CONFIG = [
+            {
+                id: 'bronze',
+                name: '青铜团长',
+                level: 'LV1',
+                icon: '🥉',
+                minMembers: 0,
+                commission_l1: 5,
+                commission_l2: 0,
+                commission_l3: 0,
+                benefits: ['基础权限', '邀请成员'],
+                color: '#cd7f32'
+            },
+            {
+                id: 'silver',
+                name: '白银团长',
+                level: 'LV2',
+                icon: '🥈',
+                minMembers: 10,
+                commission_l1: 8,
+                commission_l2: 3,
+                commission_l3: 0,
+                benefits: ['二级分佣', '数据统计'],
+                color: '#c0c0c0'
+            },
+            {
+                id: 'gold',
+                name: '黄金团长',
+                level: 'LV3',
+                icon: '👑',
+                minMembers: 50,
+                commission_l1: 10,
+                commission_l2: 5,
+                commission_l3: 0,
+                benefits: ['二级分佣', '专属客服', '优先审核'],
+                color: '#ffd700'
+            },
+            {
+                id: 'platinum',
+                name: '铂金团长',
+                level: 'LV4',
+                icon: '💎',
+                minMembers: 100,
+                commission_l1: 12,
+                commission_l2: 6,
+                commission_l3: 2,
+                benefits: ['三级分佣', '专属客服', '优先审核', '专属标识'],
+                color: '#e5e4e2'
+            },
+            {
+                id: 'diamond',
+                name: '钻石团长',
+                level: 'LV5',
+                icon: '⭐',
+                minMembers: 200,
+                commission_l1: 15,
+                commission_l2: 8,
+                commission_l3: 3,
+                benefits: ['三级分佣', '全部特权', '专属礼包', '优先推荐'],
+                color: '#b9f2ff'
+            }
+        ];
+
+        // 统一获取数据库客户端
+        async function ensureEmergencyClient() {
+            try {
+                let c = (typeof window.getEmergencyClient === 'function') ? window.getEmergencyClient() : null;
+                if (!c && typeof window.emergencyInitDatabase === 'function') {
+                    await window.emergencyInitDatabase();
+                    c = (typeof window.getEmergencyClient === 'function') ? window.getEmergencyClient() : null;
+                }
+                if (!c && window.supabase && typeof window.supabase.from === 'function') c = window.supabase;
+                return c;
+            } catch (_) { return null; }
+        }
+
+        // 生成邀请码（与my-team.html保持一致）
+        function generateInviteCode(userId) {
+            const id = String(userId || '');
+            const base = id.slice(-6).padStart(6, '0');
+            let sum = 0;
+            for (let i = 0; i < base.length; i++) { sum += base.charCodeAt(i); }
+            const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            const check = chars[sum % 36];
+            return 'R' + base + check;
+        }
+
+        // 根据团队人数获取当前等级
+        function getCurrentLevel(memberCount) {
+            for (let i = LEVEL_CONFIG.length - 1; i >= 0; i--) {
+                if (memberCount >= LEVEL_CONFIG[i].minMembers) {
+                    return LEVEL_CONFIG[i];
+                }
+            }
+            return LEVEL_CONFIG[0]; // 默认青铜
+        }
+
+        // 获取下一个等级
+        function getNextLevel(currentLevel) {
+            const currentIndex = LEVEL_CONFIG.findIndex(l => l.id === currentLevel.id);
+            if (currentIndex < LEVEL_CONFIG.length - 1) {
+                return LEVEL_CONFIG[currentIndex + 1];
+            }
+            return null; // 已是最高等级
+        }
+
+        // 加载用户真实数据
+        async function loadLevelData() {
+            try {
+                // 获取当前用户
+                const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+                if (!currentUser || !currentUser.id) {
+                    alert('请先登录');
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                const userId = currentUser.id || currentUser['用户ID'];
+                const myCode = generateInviteCode(userId);
+                const body = myCode.slice(1, 7);
+                const legacyKey = 'uid_tail_' + body;
+
+                // 获取数据库客户端
+                const client = await ensureEmergencyClient();
+                let memberCount = 0;
+
+                if (client) {
+                    try {
+                        // 查询一级成员数量（referrals表）
+                        const { data: referrals1 } = await client.from('referrals')
+                            .select('id')
+                            .eq('inviter_id', myCode);
+                        
+                        const { data: referrals2 } = await client.from('referrals')
+                            .select('id')
+                            .eq('inviter_id', legacyKey);
+                        
+                        memberCount = (referrals1 ? referrals1.length : 0) + 
+                                     (referrals2 ? referrals2.length : 0);
+                    } catch (error) {
+                        console.error('获取团队成员失败:', error);
+                    }
+                }
+
+                // 本地回退
+                if (memberCount === 0) {
+                    try {
+                        const localReferrals = JSON.parse(localStorage.getItem('referrals') || '[]');
+                        memberCount = localReferrals.filter(r => 
+                            r && (r.inviter_id === myCode || r.inviter_id === legacyKey)
+                        ).length;
+                    } catch (_) { }
+                }
+
+                // 计算当前等级
+                const currentLevel = getCurrentLevel(memberCount);
+                const nextLevel = getNextLevel(currentLevel);
+
+                // 更新顶部当前等级卡片
+                document.getElementById('currentLevelName').textContent = currentLevel.name;
+                document.querySelector('.level-icon').textContent = currentLevel.icon;
+                document.querySelector('.level-subtitle').textContent = 
+                    `${currentLevel.level} · 尊贵身份`;
+                document.querySelector('.current-level').style.background = 
+                    `linear-gradient(135deg, ${currentLevel.color}, ${adjustColor(currentLevel.color, 20)})`;
+
+                // 更新升级进度
+                if (nextLevel) {
+                    const progress = Math.round((memberCount / nextLevel.minMembers) * 100);
+                    const remaining = nextLevel.minMembers - memberCount;
+                    
+                    document.getElementById('progressFill').style.width = Math.min(progress, 100) + '%';
+                    document.getElementById('progressFill').textContent = Math.min(progress, 100) + '%';
+                    document.getElementById('currentMembers').textContent = `当前团队：${memberCount}人`;
+                    document.getElementById('targetMembers').textContent = `下一级需要：${nextLevel.minMembers}人`;
+                    
+                    document.querySelector('.progress-tip').innerHTML = `
+                        <i class="fas fa-lightbulb"></i>
+                        还差 ${remaining} 人即可升级到${nextLevel.name}！继续加油！
+                    `;
+                } else {
+                    // 已是最高等级
+                    document.querySelector('.upgrade-progress').innerHTML = `
+                        <div class="progress-title">
+                            <i class="fas fa-trophy"></i>
+                            恭喜！您已达到最高等级
+                        </div>
+                        <div class="progress-tip" style="background: linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,237,78,0.2)); color: #854d0e;">
+                            <i class="fas fa-star"></i>
+                            您已经是${currentLevel.name}，享受最高等级的所有特权！
+                        </div>
+                    `;
+                }
+
+                // 更新我的权益
+                updateMyBenefits(currentLevel);
+
+                // 更新等级卡片状态
+                updateLevelCards(currentLevel, memberCount);
+
+            } catch (error) {
+                console.error('加载等级数据失败:', error);
+                // 显示默认数据
+                showDefaultData();
+            }
+        }
+
+        // 更新我的权益
+        function updateMyBenefits(level) {
+            const benefitsHtml = level.benefits.map(benefit => `
+                <div class="benefit-item">
+                    <div class="benefit-icon">
+                        <i class="fas fa-check"></i>
+                    </div>
+                    <div class="benefit-text">${benefit}</div>
+                </div>
+            `).join('');
+            
+            document.getElementById('myBenefits').innerHTML = benefitsHtml;
+        }
+
+        // 更新等级卡片状态
+        function updateLevelCards(currentLevel, memberCount) {
+            const cards = document.querySelectorAll('.level-card');
+            cards.forEach((card, index) => {
+                const levelConfig = LEVEL_CONFIG[index];
+                
+                // 移除所有状态类
+                card.classList.remove('current', 'locked');
+                
+                // 设置状态
+                if (levelConfig.id === currentLevel.id) {
+                    card.classList.add('current');
+                    card.querySelector('.level-status').className = 'level-status status-current';
+                    card.querySelector('.level-status').textContent = '当前等级';
+                } else if (memberCount >= levelConfig.minMembers) {
+                    card.querySelector('.level-status').className = 'level-status status-achieved';
+                    card.querySelector('.level-status').textContent = '已达成';
+                } else {
+                    card.classList.add('locked');
+                    card.querySelector('.level-status').className = 'level-status status-locked';
+                    card.querySelector('.level-status').textContent = '未解锁';
+                }
+            });
+        }
+
+        // 颜色调整工具函数
+        function adjustColor(color, percent) {
+            const num = parseInt(color.replace('#', ''), 16);
+            const amt = Math.round(2.55 * percent);
+            const R = (num >> 16) + amt;
+            const G = (num >> 8 & 0x00FF) + amt;
+            const B = (num & 0x0000FF) + amt;
+            return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
+                (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
+                (B < 255 ? B < 1 ? 0 : B : 255))
+                .toString(16).slice(1);
+        }
+
+        // 显示默认数据（离线模式）
+        function showDefaultData() {
+            console.log('使用默认数据');
+        }
+
+        // 页面加载时执行
+        document.addEventListener('DOMContentLoaded', loadLevelData);
+    </script>
+</body>
+</html>
+

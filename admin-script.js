@@ -243,7 +243,12 @@ async function startApp() {
         console.log('🎉 后台管理系统初始化完成');
         
         // 额外：初始化团长数据（以便刷新后立即显示本地镜像）
-        try{ loadLeadersAllowlist(); loadLeadersForAdmin(); }catch(_){ }
+        try{ 
+            await ensureLeadersReadable();  // 🔧 确保RLS权限配置正确
+            loadLeaderOverviewData();       // 加载数据概览
+            loadLeadersAllowlist();         // 加载团长列表
+            loadLeadersForAdmin();          // 加载邀请数据统计
+        }catch(_){ }
         
     } catch (error) {
         console.error('❌ 初始化失败:', error);
@@ -354,8 +359,43 @@ function getApprovalActions(app) {
 // ===== 审核操作（通过/拒绝） =====
 async function openApproveModal(applicationId) {
     try {
-        const apps = (typeof loadKeywordApplicationsFromLocalStorage === 'function') ? loadKeywordApplicationsFromLocalStorage() : [];
-        const app = (apps || []).find(a => String(a.id) === String(applicationId)) || {};
+        // 优先从缓存读取（包含合并后的数据）
+        let apps = window.__kdMgmtCache || window.__kkMgmtCache || window.__xrMgmtCache || window.__wkMgmtCache || [];
+        let app = (apps || []).find(a => String(a.id) === String(applicationId));
+        
+        // 如果缓存中找不到，从localStorage读取
+        if (!app) {
+            apps = (typeof loadKeywordApplicationsFromLocalStorage === 'function') ? loadKeywordApplicationsFromLocalStorage() : [];
+            app = (apps || []).find(a => String(a.id) === String(applicationId));
+        }
+        
+        // 如果还是找不到，尝试从数据库查询
+        if (!app) {
+            try {
+                await ensureSupabaseReady();
+                const { data, error } = await supabase
+                    .from('keyword_applications')
+                    .select('*')
+                    .eq('id', applicationId)
+                    .single();
+                if (!error && data) {
+                    app = data;
+                    // 尝试从localStorage合并KK网盘专属字段
+                    const locals = (typeof loadKeywordApplicationsFromLocalStorage === 'function') ? loadKeywordApplicationsFromLocalStorage() : [];
+                    const localApp = (locals || []).find(a => String(a.id) === String(applicationId));
+                    if (localApp) {
+                        app.quark_uid = app.quark_uid || localApp.quark_uid || null;
+                        app.quark_phone = app.quark_phone || localApp.quark_phone || null;
+                        app.real_name = app.real_name || localApp.real_name || null;
+                        app.bind_screenshot = app.bind_screenshot || localApp.bind_screenshot || null;
+                    }
+                }
+            } catch (e) {
+                console.warn('从数据库查询申请失败:', e);
+            }
+        }
+        
+        app = app || {};
         const setText = (id, v) => { const el=document.getElementById(id); if(el) el.textContent = v||'-'; };
         const setVal = (id, v) => { const el=document.getElementById(id); if(el) el.value = v||''; };
         
@@ -364,6 +404,8 @@ async function openApproveModal(applicationId) {
         
         // 判断任务类型：KK网盘 vs 搜索任务
         const isKKDriveTask = app.task_type === 'kk-cloud-drive' || 
+                              app.task_type === 'KK网盘任务' ||
+                              app.task_type === 'KK网盘' ||
                               (app.keywords && (app.keywords.includes('kk网盘') || app.keywords.includes('KK网盘')));
         
         // 获取字段组
@@ -380,10 +422,25 @@ async function openApproveModal(applicationId) {
             try { setText('approveQuarkUid', app.quark_uid || '-'); } catch(_){ }
             try { setText('approveQuarkPhone', app.quark_phone || '-'); } catch(_){ }
             try { setText('approveRealName', app.real_name || '-'); } catch(_){ }
-            try { setText('approveChannel', (typeof getChannelText==='function')? getChannelText(app.promotion_channel) : (app.promotion_channel||'-')); } catch(_){ }
+            try { setText('approveChannel', (typeof getChannelText==='function')? getChannelText(app.promotion_channel || app.channel) : (app.promotion_channel || app.channel || '-')); } catch(_){ }
             try {
                 const imgHolder=document.getElementById('approveBindImg');
-                if(imgHolder){ imgHolder.innerHTML = app.bind_screenshot ? `<a href="${app.bind_screenshot}" target="_blank">查看截图</a>` : '-'; }
+                if(imgHolder){ 
+                    if (app.bind_screenshot) {
+                        // 显示可点击的缩略图
+                        imgHolder.innerHTML = `
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <img src="${app.bind_screenshot}" 
+                                     style="max-width:100px;max-height:100px;border:1px solid #ddd;border-radius:4px;cursor:pointer;" 
+                                     onclick="window.open('${app.bind_screenshot}', '_blank')"
+                                     title="点击查看大图">
+                                <span style="color:#6b7280;font-size:12px;">点击图片查看大图</span>
+                            </div>
+                        `;
+                    } else {
+                        imgHolder.innerHTML = '-';
+                    }
+                }
             }catch(_){ }
         } else {
             // 搜索任务：隐藏KK网盘字段，显示关键词分配
@@ -1036,7 +1093,11 @@ function showPage(pageId) {
             loadSystemSettings();
             break;
         case 'leaders':
-            try{ loadLeadersAllowlist(); loadLeadersForAdmin(); }catch(_){ }
+            try{ 
+                loadLeaderOverviewData();  // 加载数据概览
+                loadLeadersAllowlist();     // 加载团长列表
+                loadLeadersForAdmin();      // 加载邀请数据统计
+            }catch(_){ }
             break;
         case 'announcements':
             try{ loadAnnouncementsData(); }catch(_){ }
@@ -2735,54 +2796,158 @@ async function triggerLeadersTableCreate(){
     }catch(e){ showNotification('创建表失败: '+e.message,'error'); }
 }
 
+/**
+ * 加载团长列表 - 全新重写版
+ * 直接从数据库读取，简单可靠
+ */
 async function loadLeadersAllowlist(){
+    console.log('🔄 [团长列表] 开始加载...');
     const tbody = document.querySelector('#leadersAllowlistTable tbody');
-    if(!tbody) return;
-    try{
-        // 确保 leaders_allowlist 表存在且匿名可读
-        try{ await ensureLeadersReadable(); }catch(_){ }
-        // 第一优先：本地镜像，保证刷新后立即可见
-        let rows=[];
-        try{ rows = JSON.parse(localStorage.getItem('leaders_allowlist')||'[]'); }catch(_){ rows=[]; }
-        // 并行尝试远端，成功则与本地合并并回写本地
-        try{
+    if(!tbody) {
+        console.error('❌ [团长列表] 未找到表格元素');
+        return;
+    }
+    
+    // 显示加载中
+    tbody.innerHTML = '<tr><td colspan="9" class="loading">正在加载...</td></tr>';
+    
+    try {
+        // 1. 确保Supabase准备好
             await ensureSupabaseReady();
-            const { data, error } = await supabase.from('leaders_allowlist').select('*');
-            if(!error && Array.isArray(data) && data.length){
-                const map=new Map();
-                rows.forEach(r=> map.set(r.user_id, r));
-                data.forEach(r=> map.set(r.user_id, r));
-                rows = Array.from(map.values());
-                localStorage.setItem('leaders_allowlist', JSON.stringify(rows));
+        console.log('✅ [团长列表] Supabase已准备');
+        
+        // 2. 确保表和RLS策略配置正确
+        try {
+            await ensureLeadersReadable();
+            console.log('✅ [团长列表] RLS策略已配置');
+        } catch(e) {
+            console.warn('⚠️ [团长列表] RLS策略配置失败:', e);
+        }
+        
+        // 3. 直接从数据库读取（不使用缓存）
+        console.log('📡 [团长列表] 正在查询数据库...');
+        const { data, error } = await supabase
+            .from('leaders_allowlist')
+            .select('*')
+            .order('created_at', { ascending: false });
+        
+        if (error) {
+            console.error('❌ [团长列表] 数据库查询失败:', error);
+            tbody.innerHTML = '<tr><td colspan="9" class="loading">查询失败: ' + error.message + '</td></tr>';
+            return;
+        }
+        
+        console.log('✅ [团长列表] 查询成功，获取到', data ? data.length : 0, '个团长');
+        console.log('📊 [团长列表] 数据详情:', data);
+        
+        // 4. 查询团队人数
+        const teamCounts = new Map();
+        if (data && data.length > 0) {
+            try {
+                const { data: referrals, error: refError } = await supabase
+                    .from('referrals')
+                    .select('inviter_id, is_activated');
+                
+                if (!refError && referrals) {
+                    referrals.forEach(r => {
+                        if (r.is_activated === true) {
+                            const inviter = r.inviter_id;
+                            teamCounts.set(inviter, (teamCounts.get(inviter) || 0) + 1);
+                        }
+                    });
+                    
+                    // 尝试匹配短码
+                    data.forEach(leader => {
+                        const shortCode = leader.short_code;
+                        if (shortCode && teamCounts.has(shortCode)) {
+                            leader.team_count = teamCounts.get(shortCode);
+                        } else {
+                            leader.team_count = 0;
+                        }
+                    });
+                    
+                    console.log('✅ [团长列表] 团队人数统计完成');
+                }
+            } catch(e) {
+                console.warn('⚠️ [团长列表] 团队人数统计失败:', e);
             }
-        }catch(_){ }
-        if(!rows.length){ tbody.innerHTML='<tr><td colspan="7" class="loading">暂无数据</td></tr>'; return; }
-        // 指标
-        try{
-            const total = rows.length; const enabled = rows.filter(x=>x.status==='enabled').length; const disabled = total-enabled;
-            const set=(id,val)=>{ const el=document.getElementById(id); if(el) el.textContent=String(val); };
-            set('lmTotal', total); set('lmEnabled', enabled); set('lmDisabled', disabled);
-        }catch(_){ }
-        tbody.innerHTML = rows.map((r,idx)=>{
-            const statusText = r.status==='enabled' ? '启用' : '禁用';
-            const statusCls = r.status==='enabled' ? 'leader-status on' : 'leader-status off';
+        }
+        
+        // 5. 更新本地缓存
+        if (data && data.length > 0) {
+            localStorage.setItem('leaders_allowlist', JSON.stringify(data));
+            console.log('💾 [团长列表] 已更新本地缓存');
+        }
+        
+        // 6. 无数据处理
+        if (!data || data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="9" class="loading">暂无团长数据</td></tr>';
+            console.log('ℹ️ [团长列表] 无数据');
+            return;
+        }
+        
+        // 6. 更新统计指标
+        const total = data.length;
+        const enabled = data.filter(x => x.status === 'enabled').length;
+        const disabled = total - enabled;
+        
+        const setVal = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.textContent = String(val);
+                console.log(`📊 [团长列表] 更新指标 ${id} = ${val}`);
+            }
+        };
+        
+        setVal('lmTotal', total);
+        setVal('lmEnabled', enabled);
+        setVal('lmDisabled', disabled);
+        
+        // 7. 渲染表格
+        tbody.innerHTML = data.map((r, idx) => {
+            const statusText = r.status === 'enabled' ? '启用' : '禁用';
+            const statusCls = r.status === 'enabled' ? 'leader-status on' : 'leader-status off';
+            const createdAt = (r.created_at || '').replace('T', ' ').slice(0, 19);
+            
+            // 计算等级
+            const teamCount = r.team_count || 0;
+            const level = getLeaderLevel(teamCount);
+            const levelBadge = `<span class="level-badge">${level.icon} ${level.name}</span>`;
+            
             return `<tr>
-                <td>${idx+1}</td>
-                <td>${r.user_id||'-'}</td>
-                <td>${r.username||'-'}</td>
-                <td>${r.short_code||'-'}</td>
-                <td>${(r.created_at||'').replace('T',' ').slice(0,19)}</td>
+                <td>${idx + 1}</td>
+                <td>${r.user_id || '-'}</td>
+                <td>${r.username || '-'}</td>
+                <td>${r.short_code || '-'}</td>
+                <td><strong style="color:#6366f1;">${teamCount}</strong></td>
+                <td>${levelBadge}</td>
+                <td>${createdAt}</td>
                 <td><span class="${statusCls}">${statusText}</span></td>
                 <td>
-                    <button class="btn btn-sm" onclick="toggleLeaderStatus('${r.user_id||''}','${r.status||''}')">${r.status==='enabled'?'禁用':'启用'}</button>
-                    <button class="btn btn-sm btn-error" onclick="removeLeader('${r.user_id||''}')">移除</button>
+                    <button class="btn btn-sm" onclick="toggleLeaderStatus('${r.user_id || ''}', '${r.status || ''}')">${r.status === 'enabled' ? '禁用' : '启用'}</button>
+                    <button class="btn btn-sm btn-error" onclick="removeLeader('${r.user_id || ''}')">移除</button>
                 </td>
             </tr>`;
         }).join('');
-    }catch(e){ console.warn('loadLeadersAllowlist', e); }
+        
+        console.log('✅ [团长列表] 表格渲染完成，共', total, '行');
+        
+    } catch(e) {
+        console.error('❌ [团长列表] 加载失败:', e);
+        tbody.innerHTML = '<tr><td colspan="9" class="loading">加载失败: ' + e.message + '</td></tr>';
+    }
 }
 
-// 保障：创建 leaders_allowlist 表，并允许匿名读取（供前台校验权限）
+// 根据团队人数获取等级
+function getLeaderLevel(memberCount) {
+    if (memberCount >= 200) return { id: 'diamond', name: '钻石团长', icon: '⭐' };
+    if (memberCount >= 100) return { id: 'platinum', name: '铂金团长', icon: '💎' };
+    if (memberCount >= 50) return { id: 'gold', name: '黄金团长', icon: '👑' };
+    if (memberCount >= 10) return { id: 'silver', name: '白银团长', icon: '🥈' };
+    return { id: 'bronze', name: '青铜团长', icon: '🥉' };
+}
+
+// 保障：创建 leaders_allowlist 表，并允许匿名读取、插入、更新、删除（供管理后台使用）
 async function ensureLeadersReadable(){
     try{
         await ensureSupabaseReady();
@@ -2806,9 +2971,21 @@ async function ensureLeadersReadable(){
                     ALTER TABLE public.leaders_allowlist ENABLE ROW LEVEL SECURITY;
                 EXCEPTION WHEN undefined_table THEN
                 END;
-                -- 放开匿名读取
+                -- 允许匿名读取
                 DROP POLICY IF EXISTS leaders_select ON public.leaders_allowlist;
                 CREATE POLICY leaders_select ON public.leaders_allowlist FOR SELECT TO anon USING (true);
+                
+                -- 允许匿名插入（管理后台添加团长）
+                DROP POLICY IF EXISTS leaders_insert ON public.leaders_allowlist;
+                CREATE POLICY leaders_insert ON public.leaders_allowlist FOR INSERT TO anon WITH CHECK (true);
+                
+                -- 允许匿名更新（管理后台修改状态）
+                DROP POLICY IF EXISTS leaders_update ON public.leaders_allowlist;
+                CREATE POLICY leaders_update ON public.leaders_allowlist FOR UPDATE TO anon USING (true) WITH CHECK (true);
+                
+                -- 允许匿名删除（管理后台移除团长）
+                DROP POLICY IF EXISTS leaders_delete ON public.leaders_allowlist;
+                CREATE POLICY leaders_delete ON public.leaders_allowlist FOR DELETE TO anon USING (true);
             END $$;`;
         try{ await supabase.rpc('exec_sql', { sql_query: sql }); }catch(e){ console.warn('ensureLeadersReadable rpc', e); }
     }catch(e){ console.warn('ensureLeadersReadable', e && e.message); }
@@ -2901,36 +3078,126 @@ async function findUserByInput(val){
     return null;
 }
 
+/**
+ * 切换团长状态 - 全新重写版
+ */
 async function toggleLeaderStatus(userId, currentStatus){
-    try{
+    console.log('🔄 [切换状态] userId:', userId, 'currentStatus:', currentStatus);
+    
+    if (!userId) {
+        showNotification('用户ID无效', 'error');
+        return;
+    }
+    
+    try {
         await ensureSupabaseReady();
-        let current = currentStatus || 'enabled';
-        // 若未提供当前状态，再尝试远端查询
-        if(!currentStatus){
-            try{ const q=await supabase.from('leaders_allowlist').select('status').eq('user_id', userId).limit(1); if(q && q.data && q.data[0]) current=q.data[0].status; }catch(_){ }
+        
+        // 确定新状态
+        const newStatus = currentStatus === 'enabled' ? 'disabled' : 'enabled';
+        console.log('📝 [切换状态] 新状态:', newStatus);
+        
+        // 更新 leaders_allowlist 表
+        const { error: updateError } = await supabase
+            .from('leaders_allowlist')
+            .update({ status: newStatus })
+            .eq('user_id', userId);
+        
+        if (updateError) {
+            console.error('❌ [切换状态] 更新失败:', updateError);
+            throw updateError;
         }
-        const next = current==='enabled' ? 'disabled' : 'enabled';
-        try{ const up = await supabase.from('leaders_allowlist').update({ status: next }).eq('user_id', userId); if(up && up.error) throw new Error(up.error.message); }
-        catch(_){ /* 忽略，仍同步本地 */ }
-        // 同步用户角色
-        try{ await supabase.from('users').update(next==='enabled'? { role:'leader', is_leader:true } : { role:'user', is_leader:false }).eq('id', userId); }catch(_){ }
-        // 同步本地
-        try{ const arr=JSON.parse(localStorage.getItem('leaders_allowlist')||'[]'); const idx=arr.findIndex(x=>x.user_id===userId); if(idx>=0){ arr[idx].status=next; localStorage.setItem('leaders_allowlist', JSON.stringify(arr)); setLeaderCacheQuick(userId, arr[idx].username, arr[idx].short_code, next); } }catch(_){ }
-        showNotification('状态已更新','success'); loadLeadersAllowlist();
-    }catch(e){ showNotification('更新失败: '+e.message,'error'); }
+        
+        console.log('✅ [切换状态] leaders_allowlist 已更新');
+        
+        // 同步更新 users 表的 role 和 is_leader
+        try {
+            const userUpdate = newStatus === 'enabled' 
+                ? { role: 'leader', is_leader: true } 
+                : { role: 'user', is_leader: false };
+            
+            await supabase.from('users').update(userUpdate).eq('id', userId);
+            console.log('✅ [切换状态] users 表已同步');
+        } catch(e) {
+            console.warn('⚠️ [切换状态] users 表同步失败:', e);
+        }
+        
+        // 清除本地缓存，强制重新加载
+        localStorage.removeItem('leaders_allowlist');
+        console.log('🗑️ [切换状态] 已清除本地缓存');
+        
+        showNotification('状态已更新', 'success');
+        
+        // 重新加载列表和数据概览
+        await Promise.all([
+            loadLeadersAllowlist(),
+            typeof loadLeaderOverviewData === 'function' ? loadLeaderOverviewData() : Promise.resolve()
+        ]);
+        
+    } catch(e) {
+        console.error('❌ [切换状态] 失败:', e);
+        showNotification('更新失败: ' + e.message, 'error');
+    }
 }
 
+/**
+ * 移除团长 - 全新重写版
+ */
 async function removeLeader(userId){
-    try{
+    console.log('🗑️ [移除团长] userId:', userId);
+    
+    if (!userId) {
+        showNotification('用户ID无效', 'error');
+        return;
+    }
+    
+    if (!confirm('确定要移除该团长吗？')) {
+        console.log('ℹ️ [移除团长] 用户取消操作');
+        return;
+    }
+    
+    try {
         await ensureSupabaseReady();
-        try{ const del = await supabase.from('leaders_allowlist').delete().eq('user_id', userId); if(del && del.error) throw new Error(del.error.message); }
-        catch(_){ /* 忽略 */ }
-        // 恢复用户角色
-        try{ await supabase.from('users').update({ role:'user', is_leader:false }).eq('id', userId); }catch(_){ }
-        // 同步本地
-        try{ const arr=JSON.parse(localStorage.getItem('leaders_allowlist')||'[]'); const next=arr.filter(x=>x.user_id!==userId); localStorage.setItem('leaders_allowlist', JSON.stringify(next)); setLeaderCacheQuick(userId, '', '', 'disabled'); }catch(_){ }
-        showNotification('已移除','success'); loadLeadersAllowlist();
-    }catch(e){ showNotification('移除失败: '+e.message,'error'); }
+        
+        // 从 leaders_allowlist 表删除
+        const { error: deleteError } = await supabase
+            .from('leaders_allowlist')
+            .delete()
+            .eq('user_id', userId);
+        
+        if (deleteError) {
+            console.error('❌ [移除团长] 删除失败:', deleteError);
+            throw deleteError;
+        }
+        
+        console.log('✅ [移除团长] leaders_allowlist 已删除');
+        
+        // 同步更新 users 表
+        try {
+            await supabase.from('users').update({ 
+                role: 'user', 
+                is_leader: false 
+            }).eq('id', userId);
+            console.log('✅ [移除团长] users 表已同步');
+        } catch(e) {
+            console.warn('⚠️ [移除团长] users 表同步失败:', e);
+        }
+        
+        // 清除本地缓存
+        localStorage.removeItem('leaders_allowlist');
+        console.log('🗑️ [移除团长] 已清除本地缓存');
+        
+        showNotification('已移除', 'success');
+        
+        // 重新加载列表和数据概览
+        await Promise.all([
+            loadLeadersAllowlist(),
+            typeof loadLeaderOverviewData === 'function' ? loadLeaderOverviewData() : Promise.resolve()
+        ]);
+        
+    } catch(e) {
+        console.error('❌ [移除团长] 失败:', e);
+        showNotification('移除失败: ' + e.message, 'error');
+    }
 }
 
 // 工具：与 my-team 相同的短码生成
@@ -4268,10 +4535,61 @@ async function bulkApproveWithdrawals(){
 
 async function bulkRejectWithdrawals(){
     if(!guardMaintenanceOrProceed('批量拒绝')) return;
-    const ids=[...(window.__withdrawalSelected||new Set())]; if(ids.length===0) return showNotification('请先勾选记录', 'info');
+    const ids=[...(window.__withdrawalSelected||new Set())]; 
+    if(ids.length===0) return showNotification('请先勾选记录', 'info');
+    
     const reason = prompt('请输入拒绝原因（可选）:')||'';
     if(!confirm(`确认批量拒绝 ${ids.length} 条提现？`)) return;
-    try{ await ensureSupabaseReady(); const payload = reason? {status:'rejected', admin_notes:reason}:{status:'rejected'}; const { error } = await supabase.from('withdrawals').update(payload).in('id', ids); if(error) throw error; showNotification('批量拒绝完成', 'success'); await loadWithdrawalsData(); }catch(e){ showNotification('批量拒绝失败: '+e.message, 'error'); }
+    
+    try{ 
+        await ensureSupabaseReady(); 
+        
+        // 1. 先获取所有要拒绝的提现记录详情
+        const { data: withdrawals, error: fetchError } = await supabase
+            .from('withdrawals')
+            .select('*')
+            .in('id', ids);
+        
+        if (fetchError) throw fetchError;
+        
+        console.log(`📋 准备批量拒绝 ${withdrawals?.length || 0} 条提现`);
+        
+        // 2. 更新提现状态
+        const payload = reason? {status:'rejected', admin_notes:reason}:{status:'rejected'}; 
+        const { error } = await supabase.from('withdrawals').update(payload).in('id', ids); 
+        if(error) throw error; 
+        
+        // 3. 🆕 为每条被拒绝的提现创建退回收益记录
+        if (withdrawals && withdrawals.length > 0) {
+            const refundEarnings = withdrawals.map(withdrawal => ({
+                user_id: withdrawal.user_id,
+                task_name: `提现退回 - ${reason || '提现申请被拒绝'}`,
+                amount: parseFloat(withdrawal.amount),
+                status: '已完成',
+                reward_type: '提现退回',
+                original_amount: parseFloat(withdrawal.amount),
+                created_at: new Date().toISOString()
+            }));
+            
+            console.log(`💰 创建 ${refundEarnings.length} 条退回收益记录`);
+            
+            const { error: earningError } = await supabase
+                .from('earnings')
+                .insert(refundEarnings);
+            
+            if (earningError) {
+                console.warn('⚠️ 部分退回收益记录创建失败:', earningError);
+            } else {
+                console.log('✅ 所有退回收益记录已创建');
+            }
+        }
+        
+        showNotification(`批量拒绝完成，已创建 ${withdrawals?.length || 0} 条退回记录`, 'success'); 
+        await loadWithdrawalsData(); 
+    }catch(e){ 
+        console.error('批量拒绝失败:', e);
+        showNotification('批量拒绝失败: '+e.message, 'error'); 
+    }
 }
 // 🎯 获取支付方式显示文本（强化版逻辑）
 function getPaymentMethodDisplay(withdrawal) {
@@ -4628,7 +4946,7 @@ function openEarningsModal(earning = null) {
     showModal('earningsModal');
 }
 // 打开x雷浏览器收益模态框（与KK专用弹窗一致的体验）
-function openXraySearchEarningsModal(){
+async function openXraySearchEarningsModal(){
     try{
         const modal = document.getElementById('xraySearchEarningsModal');
         if(!modal){ console.error('❌ x雷浏览器收益模态框不存在'); return; }
@@ -4647,10 +4965,49 @@ function openXraySearchEarningsModal(){
         });
         // 重置搜索选择区
         try{ clearXraySelectedKeyword(); hideXraySearchDropdown(); }catch(_){ }
-        // 载入可选关键词（含Supabase回源）
-        try{ loadKKSearchKeywordsForSelect(); }catch(_){ }
+        
         // 显示模态框
         showModal('xraySearchEarningsModal');
+        
+        // 显示加载提示
+        const searchInput = document.getElementById('xrayKeywordSearch');
+        if (searchInput) {
+            searchInput.placeholder = '🔄 正在加载关键词数据...';
+            searchInput.disabled = true;
+        }
+        
+        // 载入可选关键词（含Supabase回源）- 等待加载完成
+        console.log('🚀🚀🚀 [x雷模态框] 开始加载关键词数据...');
+        console.log('📊 [加载前] xraySearchKeywords数组长度:', xraySearchKeywords?.length || 0);
+        
+        try {
+            await loadKKSearchKeywordsForSelect();
+            
+            console.log('📊 [加载后] xraySearchKeywords数组长度:', xraySearchKeywords?.length || 0);
+            console.log('✅ 关键词数据加载完成');
+            
+            // 恢复搜索框
+            if (searchInput) {
+                searchInput.placeholder = '🔍 搜索关键词或用户名，回车确认...';
+                searchInput.disabled = false;
+            }
+            
+            if (xraySearchKeywords && xraySearchKeywords.length > 0) {
+                console.log('📋 x雷关键词前3个:', xraySearchKeywords.slice(0, 3));
+                showNotification(`✅ 成功加载 ${xraySearchKeywords.length} 个x雷关键词`, 'success');
+            } else {
+                console.warn('⚠️ 没有加载到任何x雷关键词！');
+                console.log('💡 提示：请检查数据库中是否有 task_type 包含 "x雷" 的已审核申请');
+                showNotification('未找到x雷关键词数据，请先审核通过关键词申请', 'warning');
+            }
+        } catch(err) {
+            console.error('❌ 加载关键词失败:', err);
+            if (searchInput) {
+                searchInput.placeholder = '❌ 加载失败，请刷新重试';
+                searchInput.disabled = false;
+            }
+            showNotification('加载关键词数据失败: ' + err.message, 'error');
+        }
     }catch(e){ console.warn('openXraySearchEarningsModal', e); }
 }
 async function saveEarning() {
@@ -5087,6 +5444,23 @@ async function rejectWithdrawal(withdrawalId) {
     const reason = prompt('请输入拒绝原因（可选）:');
     
     try {
+        // 1. 先获取提现记录详情
+        const { data: withdrawal, error: fetchError } = await supabase
+            .from('withdrawals')
+            .select('*')
+            .eq('id', withdrawalId)
+            .single();
+        
+        if (fetchError) throw fetchError;
+        if (!withdrawal) throw new Error('提现记录不存在');
+        
+        console.log('📋 准备拒绝提现:', {
+            id: withdrawalId,
+            userId: withdrawal.user_id,
+            amount: withdrawal.amount
+        });
+        
+        // 2. 更新提现状态为拒绝
         const updateData = { status: 'rejected' };
         if (reason) {
             updateData.admin_notes = reason;
@@ -5099,7 +5473,31 @@ async function rejectWithdrawal(withdrawalId) {
         
         if (error) throw error;
         
-        showNotification('提现申请已拒绝', 'success');
+        // 3. 🆕 创建退回收益记录
+        const refundEarning = {
+            user_id: withdrawal.user_id,
+            task_name: `提现退回 - ${reason || '提现申请被拒绝'}`,
+            amount: parseFloat(withdrawal.amount),
+            status: '已完成',
+            reward_type: '提现退回',
+            original_amount: parseFloat(withdrawal.amount),
+            created_at: new Date().toISOString()
+        };
+        
+        console.log('💰 创建退回收益记录:', refundEarning);
+        
+        const { error: earningError } = await supabase
+            .from('earnings')
+            .insert([refundEarning]);
+        
+        if (earningError) {
+            console.warn('⚠️ 退回收益记录创建失败:', earningError);
+            // 不抛出错误，提现拒绝已经完成
+        } else {
+            console.log('✅ 退回收益记录已创建');
+        }
+        
+        showNotification(`提现申请已拒绝，¥${withdrawal.amount} 已退回用户账户`, 'success');
         await loadWithdrawalsData();
         
     } catch (error) {
@@ -5625,32 +6023,475 @@ async function searchUsersForOther(term){
     }catch(_){ }
 }
 
-// 其他收益：加载与筛选
-async function loadOtherEarnings(){
+// 其他收益Tab切换
+function switchOtherEarningsTab(tabName){
+    try{
+        // 更新Tab激活状态
+        document.querySelectorAll('#otherEarningsSection .task-tab').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        const activeTab = document.querySelector(`#otherEarningsSection .task-tab[data-other-tab="${tabName}"]`);
+        if(activeTab) activeTab.classList.add('active');
+        
+        // 更新内容显示
+        document.querySelectorAll('#otherEarningsSection .other-earnings-tab-content').forEach(content => {
+            content.style.display = 'none';
+        });
+        
+        if(tabName === 'activity'){
+            document.getElementById('activityEarningsContent').style.display = 'block';
+            loadActivityEarnings();
+        } else if(tabName === 'team'){
+            document.getElementById('teamEarningsContent').style.display = 'block';
+            loadTeamEarnings();
+        }
+    }catch(e){ console.warn('switchOtherEarningsTab', e); }
+}
+
+// 加载活动收益
+async function loadActivityEarnings(){
     try{
         let rows=[]; let ok=false;
         try{ await ensureSupabaseReady(); }catch(_){ }
         if(typeof supabase!=='undefined' && supabase){
             try{
-                const { data, error } = await supabase.from('earnings').select('*').or('task_name.eq.活动收益,task_name.eq.团长收益,task_name.eq.其他收益').order('created_at', { ascending:false });
+                const { data, error } = await supabase.from('earnings').select('*').like('task_name', '%活动%').order('created_at', { ascending:false });
                 if(!error){ rows = data||[]; ok=true; }
             }catch(_){ }
         }
         if(!ok){
-            // 本地兜底：读取 earning_*
             const local=[];
-            try{
-                for(let i=0;i<localStorage.length;i++){
-                    const key=localStorage.key(i)||''; if(!key.startsWith('earning_')) continue;
-                    try{ const v=JSON.parse(localStorage.getItem(key)); if(v && ['活动收益','团长收益','其他收益'].includes(v.task_name)){ local.push(v); } }catch(_){ }
-                }
-            }catch(_){ }
+            for(let i=0;i<localStorage.length;i++){
+                const key=localStorage.key(i)||''; if(!key.startsWith('earning_')) continue;
+                try{ const v=JSON.parse(localStorage.getItem(key)); if(v && (v.task_name||'').includes('活动')){ local.push(v); } }catch(_){ }
+            }
             rows = local.sort((a,b)=> (new Date(b.created_at||0))-(new Date(a.created_at||0)) );
         }
-        // 关联用户名显示
         try{ await enrichEarningsWithUserData(rows); }catch(_){ }
-        renderOtherEarningsTable(rows);
-    }catch(e){ console.error('加载其他收益失败:', e); renderOtherEarningsTable([]); }
+        renderActivityEarningsTable(rows);
+        updateActivityTotal(rows);
+    }catch(e){ console.error('加载活动收益失败:', e); renderActivityEarningsTable([]); }
+}
+
+// 加载团队收益
+async function loadTeamEarnings(){
+    try{
+        let rows=[]; let ok=false;
+        try{ await ensureSupabaseReady(); }catch(_){ }
+        if(typeof supabase!=='undefined' && supabase){
+            try{
+                const { data, error } = await supabase.from('earnings').select('*').or('task_name.like.%团长%,task_name.like.%分成%,task_name.like.%邀请%').order('created_at', { ascending:false });
+                if(!error){ rows = data||[]; ok=true; }
+            }catch(_){ }
+        }
+        if(!ok){
+            const local=[];
+                for(let i=0;i<localStorage.length;i++){
+                    const key=localStorage.key(i)||''; if(!key.startsWith('earning_')) continue;
+                try{ 
+                    const v=JSON.parse(localStorage.getItem(key)); 
+                    const taskName = v.task_name || '';
+                    if(taskName.includes('团长') || taskName.includes('分成') || taskName.includes('邀请')){ 
+                        local.push(v); 
+                }
+            }catch(_){ }
+            }
+            rows = local.sort((a,b)=> (new Date(b.created_at||0))-(new Date(a.created_at||0)) );
+        }
+        try{ await enrichEarningsWithUserData(rows); }catch(_){ }
+        renderTeamEarningsTable(rows);
+        updateTeamTotal(rows);
+    }catch(e){ console.error('加载团队收益失败:', e); renderTeamEarningsTable([]); }
+}
+
+// 加载其他收益
+async function loadMiscEarnings(){
+    try{
+        let rows=[]; let ok=false;
+        try{ await ensureSupabaseReady(); }catch(_){ }
+        if(typeof supabase!=='undefined' && supabase){
+            try{
+                // 查询既不是活动也不是团队的收益
+                const { data, error } = await supabase.from('earnings').select('*').eq('task_name', '其他收益').order('created_at', { ascending:false });
+                if(!error){ rows = data||[]; ok=true; }
+            }catch(_){ }
+        }
+        if(!ok){
+            const local=[];
+            for(let i=0;i<localStorage.length;i++){
+                const key=localStorage.key(i)||''; if(!key.startsWith('earning_')) continue;
+                try{ const v=JSON.parse(localStorage.getItem(key)); if(v && v.task_name==='其他收益'){ local.push(v); } }catch(_){ }
+            }
+            rows = local.sort((a,b)=> (new Date(b.created_at||0))-(new Date(a.created_at||0)) );
+        }
+        try{ await enrichEarningsWithUserData(rows); }catch(_){ }
+        renderMiscEarningsTable(rows);
+        updateMiscTotal(rows);
+    }catch(e){ console.error('加载其他收益失败:', e); renderMiscEarningsTable([]); }
+}
+
+// 渲染活动收益表格
+function renderActivityEarningsTable(rows){
+    const tbody = document.querySelector('#activityEarningsTable tbody');
+    if(!tbody) return;
+    if(!rows || rows.length===0){
+        tbody.innerHTML = '<tr><td colspan="7" class="empty">暂无活动收益数据</td></tr>';
+        return;
+    }
+    tbody.innerHTML = rows.map((r)=>{
+        const id = r.id || '';
+        const user = r.username_display || (r.users&&r.users.username) || r.user_id || '';
+        const activityName = r.task_name || '活动奖励';
+        const amt = (r.amount!=null) ? Number(r.amount).toFixed(2) : '0.00';
+        const time = r.created_at ? new Date(r.created_at).toLocaleString() : '';
+        const status = r.status || '';
+        return `<tr>
+            <td>${id}</td>
+            <td>${user}</td>
+            <td>${activityName}</td>
+            <td>¥${amt}</td>
+            <td>${time}</td>
+            <td>${status}</td>
+            <td><button class="btn btn-secondary" onclick="editEarning('${id}')">编辑</button></td>
+        </tr>`;
+    }).join('');
+}
+
+// 渲染团队收益表格
+function renderTeamEarningsTable(rows){
+    const tbody = document.querySelector('#teamEarningsTable tbody');
+    if(!tbody) return;
+    if(!rows || rows.length===0){
+        tbody.innerHTML = '<tr><td colspan="7" class="empty">暂无团队收益数据</td></tr>';
+        return;
+    }
+    tbody.innerHTML = rows.map((r)=>{
+        const id = r.id || '';
+        const user = r.username_display || (r.users&&r.users.username) || r.user_id || '';
+        const type = r.task_name || '团队分成';
+        const amt = (r.amount!=null) ? Number(r.amount).toFixed(2) : '0.00';
+        const time = r.created_at ? new Date(r.created_at).toLocaleString() : '';
+        const status = r.status || '';
+        return `<tr>
+            <td>${id}</td>
+            <td>${user}</td>
+            <td>${type}</td>
+            <td>¥${amt}</td>
+            <td>${time}</td>
+            <td>${status}</td>
+            <td><button class="btn btn-secondary" onclick="editEarning('${id}')">编辑</button></td>
+        </tr>`;
+    }).join('');
+}
+
+// 渲染其他收益表格
+function renderMiscEarningsTable(rows){
+    const tbody = document.querySelector('#miscEarningsTable tbody');
+    if(!tbody) return;
+    if(!rows || rows.length===0){
+        tbody.innerHTML = '<tr><td colspan="7" class="empty">暂无其他收益数据</td></tr>';
+        return;
+    }
+    tbody.innerHTML = rows.map((r)=>{
+        const id = r.id || '';
+        const user = r.username_display || (r.users&&r.users.username) || r.user_id || '';
+        const type = r.task_name || '其他收益';
+        const amt = (r.amount!=null) ? Number(r.amount).toFixed(2) : '0.00';
+        const time = r.created_at ? new Date(r.created_at).toLocaleString() : '';
+        const status = r.status || '';
+        return `<tr>
+            <td>${id}</td>
+            <td>${user}</td>
+            <td>${type}</td>
+            <td>¥${amt}</td>
+            <td>${time}</td>
+            <td>${status}</td>
+            <td><button class="btn btn-secondary" onclick="editEarning('${id}')">编辑</button></td>
+        </tr>`;
+    }).join('');
+}
+
+// 更新统计总额
+function updateActivityTotal(rows){
+    const total = rows.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+    const el = document.getElementById('activityEarningsTotal');
+    if(el) el.textContent = '¥' + total.toFixed(2);
+}
+
+function updateTeamTotal(rows){
+    const total = rows.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+    const el = document.getElementById('teamEarningsTotal');
+    if(el) el.textContent = '¥' + total.toFixed(2);
+}
+
+function updateMiscTotal(rows){
+    const total = rows.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+    const el = document.getElementById('otherMiscTotal');
+    if(el) el.textContent = '¥' + total.toFixed(2);
+}
+
+// 筛选函数
+function activityEarningsFiltersChanged(){ applyActivityEarningsFilters(); }
+function applyActivityEarningsFilters(){
+    try{
+        const kw = (document.getElementById('activityEarningsSearch')?.value||'').trim().toLowerCase();
+        const status = document.getElementById('activityEarningsStatusFilter')?.value||'';
+        const rows = Array.from(document.querySelectorAll('#activityEarningsTable tbody tr'));
+        rows.forEach(tr=>{
+            const tds = tr.querySelectorAll('td');
+            if(tds.length<7){ tr.style.display=''; return; }
+            const text = Array.from(tds).map(td=> (td.textContent||'').toLowerCase()).join(' ');
+            const statusCell = (tds[5]?.textContent||'');
+            const matchKw = !kw || text.includes(kw);
+            const matchStatus = !status || statusCell===status;
+            tr.style.display = (matchKw && matchStatus) ? '' : 'none';
+        });
+    }catch(_){ }
+}
+
+function teamEarningsFiltersChanged(){ applyTeamEarningsFilters(); }
+function applyTeamEarningsFilters(){
+    try{
+        const kw = (document.getElementById('teamEarningsSearch')?.value||'').trim().toLowerCase();
+        const status = document.getElementById('teamEarningsStatusFilter')?.value||'';
+        const rows = Array.from(document.querySelectorAll('#teamEarningsTable tbody tr'));
+        rows.forEach(tr=>{
+            const tds = tr.querySelectorAll('td');
+            if(tds.length<7){ tr.style.display=''; return; }
+            const text = Array.from(tds).map(td=> (td.textContent||'').toLowerCase()).join(' ');
+            const statusCell = (tds[5]?.textContent||'');
+            const matchKw = !kw || text.includes(kw);
+            const matchStatus = !status || statusCell===status;
+            tr.style.display = (matchKw && matchStatus) ? '' : 'none';
+        });
+    }catch(_){ }
+}
+
+function miscEarningsFiltersChanged(){ applyMiscEarningsFilters(); }
+function applyMiscEarningsFilters(){
+    try{
+        const kw = (document.getElementById('miscEarningsSearch')?.value||'').trim().toLowerCase();
+        const status = document.getElementById('miscEarningsStatusFilter')?.value||'';
+        const rows = Array.from(document.querySelectorAll('#miscEarningsTable tbody tr'));
+        rows.forEach(tr=>{
+            const tds = tr.querySelectorAll('td');
+            if(tds.length<7){ tr.style.display=''; return; }
+            const text = Array.from(tds).map(td=> (td.textContent||'').toLowerCase()).join(' ');
+            const statusCell = (tds[5]?.textContent||'');
+            const matchKw = !kw || text.includes(kw);
+            const matchStatus = !status || statusCell===status;
+            tr.style.display = (matchKw && matchStatus) ? '' : 'none';
+        });
+    }catch(_){ }
+}
+
+// 打开添加模态框
+function openActivityEarningModal(){
+    // 复用现有的其他收益模态框，但预设类型为"活动收益"
+    try{
+        openOtherEarningModal();
+        document.getElementById('otherEarningType').value = '活动收益';
+    }catch(_){ }
+}
+
+function openTeamEarningModal(){
+    try{
+        openOtherEarningModal();
+        document.getElementById('otherEarningType').value = '团长收益';
+    }catch(_){ }
+}
+
+function openMiscEarningModal(){
+    try{
+        openOtherEarningModal();
+        document.getElementById('otherEarningType').value = '其他收益';
+    }catch(_){ }
+}
+
+// 🆕 标签页切换函数
+function switchOtherTypeTab(type) {
+    try {
+        // 更新标签页active状态
+        document.querySelectorAll('.other-type-tab').forEach(tab => {
+            const tabType = tab.getAttribute('data-type');
+            if (tabType === type) {
+                tab.classList.add('active');
+                tab.style.borderBottomColor = type === 'activity' ? '#10b981' : type === 'leader' ? '#8b5cf6' : '#f59e0b';
+                tab.style.color = type === 'activity' ? '#10b981' : type === 'leader' ? '#8b5cf6' : '#f59e0b';
+            } else {
+                tab.classList.remove('active');
+                tab.style.borderBottomColor = 'transparent';
+                tab.style.color = '#6b7280';
+            }
+        });
+        
+        // 切换内容显示
+        document.querySelectorAll('.other-type-content').forEach(content => {
+            content.style.display = 'none';
+        });
+        
+        if (type === 'activity') {
+            document.getElementById('activityEarningsContent').style.display = 'block';
+            loadActivityEarnings();
+        } else if (type === 'leader') {
+            document.getElementById('leaderEarningsContent').style.display = 'block';
+            loadLeaderEarnings();
+        } else if (type === 'other') {
+            document.getElementById('otherEarningsContent').style.display = 'block';
+            loadOtherTypeEarnings();
+        }
+    } catch (e) {
+        console.error('切换标签失败:', e);
+    }
+}
+
+// 🆕 加载活动收益
+async function loadActivityEarnings() {
+    try {
+        await ensureSupabaseReady();
+        const { data, error } = await supabase
+            .from('earnings')
+            .select('*, users(username)')
+            .eq('task_name', '活动收益')
+            .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        // 更新统计
+        const total = (data || []).reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+        const totalEl = document.getElementById('activityEarningsTotal');
+        if (totalEl) totalEl.textContent = `¥${total.toFixed(2)}`;
+        
+        // 渲染表格
+        renderEarningsToTable('activityEarningsTable', data || [], ['ID', '用户', '活动名称', '金额', '时间', '状态', '操作']);
+    } catch (e) {
+        console.error('加载活动收益失败:', e);
+        showNotification('加载活动收益失败', 'error');
+    }
+}
+
+// 🆕 加载团队收益
+async function loadLeaderEarnings() {
+    try {
+        await ensureSupabaseReady();
+        const { data, error } = await supabase
+            .from('earnings')
+            .select('*, users(username)')
+            .eq('task_name', '团长收益')
+            .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        // 更新统计
+        const total = (data || []).reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+        const totalEl = document.getElementById('leaderEarningsTotal');
+        if (totalEl) totalEl.textContent = `¥${total.toFixed(2)}`;
+        
+        // 渲染表格
+        renderEarningsToTable('leaderEarningsTable', data || [], ['ID', '用户', '来源', '金额', '时间', '状态', '操作']);
+    } catch (e) {
+        console.error('加载团队收益失败:', e);
+        showNotification('加载团队收益失败', 'error');
+    }
+}
+
+// 🆕 加载其他收益
+async function loadOtherTypeEarnings() {
+    try {
+        await ensureSupabaseReady();
+        const { data, error } = await supabase
+            .from('earnings')
+            .select('*, users(username)')
+            .eq('task_name', '其他收益')
+            .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        // 更新统计
+        const total = (data || []).reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+        const totalEl = document.getElementById('otherEarningsTotal');
+        if (totalEl) totalEl.textContent = `¥${total.toFixed(2)}`;
+        
+        // 渲染表格
+        renderEarningsToTable('otherTypeEarningsTable', data || [], ['ID', '用户', '说明', '金额', '时间', '状态', '操作']);
+    } catch (e) {
+        console.error('加载其他收益失败:', e);
+        showNotification('加载其他收益失败', 'error');
+    }
+}
+
+// 🆕 通用表格渲染函数
+function renderEarningsToTable(tableId, data, columns) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    
+    const tbody = table.querySelector('tbody');
+    if (!tbody) return;
+    
+    if (!data || data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="empty">暂无数据</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = data.map(item => {
+        const id = String(item.id || '').substring(0, 8);
+        const username = item.users?.username || item.user_id || '-';
+        const description = item.description || '-';
+        const amount = (parseFloat(item.amount) || 0).toFixed(2);
+        const time = item.created_at ? new Date(item.created_at).toLocaleString('zh-CN') : '-';
+        const status = item.status === 'completed' ? '已完成' : item.status === 'pending' ? '进行中' : item.status === 'rejected' ? '已取消' : item.status;
+        
+        return `
+            <tr>
+                <td>${id}</td>
+                <td>${username}</td>
+                <td>${description}</td>
+                <td>¥${amount}</td>
+                <td>${time}</td>
+                <td><span class="badge badge-${status === '已完成' ? 'success' : status === '进行中' ? 'warning' : 'danger'}">${status}</span></td>
+                <td><button class="btn btn-sm btn-secondary" onclick="editOtherEarning('${item.id}')">编辑</button></td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// 🆕 过滤函数
+function filterOtherEarnings(type) {
+    const searchInputId = type === 'activity' ? 'activityEarningsSearch' : 
+                          type === 'leader' ? 'leaderEarningsSearch' : 'otherTypeEarningsSearch';
+    const statusFilterId = type === 'activity' ? 'activityEarningsStatusFilter' : 
+                           type === 'leader' ? 'leaderEarningsStatusFilter' : 'otherTypeEarningsStatusFilter';
+    const tableId = type === 'activity' ? 'activityEarningsTable' : 
+                    type === 'leader' ? 'leaderEarningsTable' : 'otherTypeEarningsTable';
+    
+    const searchInput = document.getElementById(searchInputId);
+    const statusFilter = document.getElementById(statusFilterId);
+    const table = document.getElementById(tableId);
+    
+    if (!table) return;
+    
+    const keyword = (searchInput?.value || '').trim().toLowerCase();
+    const statusValue = statusFilter?.value || '';
+    
+    const rows = Array.from(table.querySelectorAll('tbody tr'));
+    rows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length < 2) return;
+        
+        const text = Array.from(cells).map(cell => (cell.textContent || '').toLowerCase()).join(' ');
+        const statusCell = cells[5]?.textContent || '';
+        
+        const matchKeyword = !keyword || text.includes(keyword);
+        const matchStatus = !statusValue || statusCell.includes(statusValue);
+        
+        row.style.display = (matchKeyword && matchStatus) ? '' : 'none';
+    });
+}
+
+// 其他收益：加载与筛选（保留原函数供兼容）
+async function loadOtherEarnings(){
+    // 现在默认加载活动收益
+    await loadActivityEarnings();
 }
 
 function renderOtherEarningsTable(rows){
@@ -5703,13 +6544,39 @@ function applyOtherEarningsFilters(){
     }catch(_){ }
 }
 
-function openOtherEarningModal(){
+function openOtherEarningModal(presetType){
     try{
         const form=document.getElementById('otherEarningForm'); if(form) form.reset();
         document.getElementById('otherEarningId').value='';
         try{ ensureOtherUserSearchUI(); }catch(_){ }
         try{ loadUsersForOtherSelect(); }catch(_){ }
         try{ const s=document.getElementById('otherUserSearch'); if(s){ s.value=''; } }catch(_){ }
+        
+        // 🆕 如果传入了预设类型，自动选中并禁用选择框
+        const typeSelect = document.getElementById('otherEarningType');
+        if (presetType && typeSelect) {
+            typeSelect.value = presetType;
+            typeSelect.disabled = true;
+            console.log('✅ 预设收益类型:', presetType);
+        } else if (typeSelect) {
+            typeSelect.disabled = false;
+            typeSelect.value = '';
+        }
+        
+        // 🆕 更新模态框标题
+        const modalTitle = document.querySelector('#otherEarningModal .modal-header h3');
+        if (modalTitle && presetType) {
+            if (presetType === '活动收益') {
+                modalTitle.textContent = '添加活动收益';
+            } else if (presetType === '团长收益') {
+                modalTitle.textContent = '添加团长收益';
+            } else {
+                modalTitle.textContent = '添加其他收益';
+            }
+        } else if (modalTitle) {
+            modalTitle.textContent = '添加其他收益';
+        }
+        
         showModal('otherEarningModal');
     }catch(_){ }
 }
@@ -5751,6 +6618,16 @@ function editOtherEarning(id){
 
 // 导出到全局，供内联调用
 if(typeof window!=='undefined'){
+    window.switchOtherEarningsTab = switchOtherEarningsTab;
+    window.openActivityEarningModal = openActivityEarningModal;
+    window.openTeamEarningModal = openTeamEarningModal;
+    window.openMiscEarningModal = openMiscEarningModal;
+    window.activityEarningsFiltersChanged = activityEarningsFiltersChanged;
+    window.applyActivityEarningsFilters = applyActivityEarningsFilters;
+    window.teamEarningsFiltersChanged = teamEarningsFiltersChanged;
+    window.applyTeamEarningsFilters = applyTeamEarningsFilters;
+    window.miscEarningsFiltersChanged = miscEarningsFiltersChanged;
+    window.applyMiscEarningsFilters = applyMiscEarningsFilters;
     window.openOtherEarningModal = openOtherEarningModal;
     window.saveOtherEarning = saveOtherEarning;
     window.otherEarningsFiltersChanged = otherEarningsFiltersChanged;
@@ -7996,17 +8873,36 @@ function openKKSearchEarningsModal() {
 async function loadKKSearchKeywordsForSelect() {
     try {
         console.log('🔄 开始加载关键词数据...');
+        console.log('==================================================');
         
         let applications = [];
+        let dataSource = '';
         try{
             await ensureSupabaseReady();
             const { data, error } = await supabase.from('keyword_applications').select('*').in('status',['approved','已通过']);
-            if(!error && Array.isArray(data)) applications = data; else throw new Error(error&&error.message||'db');
+            if(!error && Array.isArray(data)) {
+                applications = data;
+                dataSource = '数据库';
+                console.log('✅ 从数据库成功获取数据');
+            } else {
+                throw new Error(error&&error.message||'db');
+            }
         }catch(dbErr){
-            console.warn('关键词从数据库加载失败，回退本地: ', dbErr&&dbErr.message||dbErr);
+            console.warn('⚠️ 数据库加载失败，回退本地:', dbErr&&dbErr.message||dbErr);
             applications = loadKeywordApplicationsFromLocalStorage();
+            dataSource = 'localStorage';
         }
-        console.log(`📦 从localStorage获取到 ${applications.length} 个申请记录`);
+        console.log(`📦 从${dataSource}获取到 ${applications.length} 个申请记录`);
+        
+        // 🔍 详细输出所有记录（调试用）
+        if (applications.length > 0) {
+            console.log('📋 所有申请记录详情:');
+            applications.forEach((app, idx) => {
+                console.log(`  [${idx + 1}] ID:${app.id} | 用户:${app.username} | 任务:${app.task_type} | 状态:${app.status} | 关键词:${app.assigned_keywords || '无'}`);
+            });
+        } else {
+            console.warn('⚠️ 数据库和localStorage都没有找到任何申请记录！');
+        }
         
         const approvedApplications = applications.filter(app => 
             (app.status === 'approved' || app.status === '已通过') && 
@@ -8034,19 +8930,41 @@ async function loadKKSearchKeywordsForSelect() {
                             username: app.username,
                             userId: app.user_id || app.id
                         });
-                        const isXray = (app.task_type||'') === 'x雷浏览器搜索任务' || String(app.id||'').startsWith('XR');
+                        // 🔧 修复：使用更宽松的匹配，兼容数据录入错误
+                        const taskType = String(app.task_type || '');
+                        const taskId = String(app.id || '');
+                        const isXray = taskType.includes('x雷') || taskType.includes('X雷') || taskId.startsWith('XR') || taskId.startsWith('xr');
+                        
                         if (isXray) {
                             xraySearchKeywords.push({
                                 keyword: keyword,
                                 username: app.username,
                                 userId: app.user_id || app.id
                             });
+                            console.log(`✅ x雷关键词: ${keyword} (${app.username}) - task_type: ${app.task_type}`);
+                        } else {
+                            console.log(`⚠️ 非x雷关键词: ${keyword} - task_type: ${app.task_type} - ID: ${app.id}`);
                         }
                         console.log(`➕ 添加关键词数据: ${keyword} (${app.username})`);
                     }
                 });
             });
-            console.log(`✅ 成功加载了 ${kkSearchKeywords.length} 个关键词数据`);
+            console.log('==================================================');
+            console.log(`✅ 成功加载了 ${kkSearchKeywords.length} 个KK关键词, ${xraySearchKeywords.length} 个x雷关键词`);
+            console.log('==================================================');
+            
+            // 🔍 如果没有x雷关键词，提供诊断建议
+            if (xraySearchKeywords.length === 0) {
+                console.error('❌ 没有找到任何x雷浏览器关键词！');
+                console.log('💡 可能原因：');
+                console.log('   1. 数据库中没有task_type="x雷浏览器搜索任务"的记录');
+                console.log('   2. 所有记录的status都不是"approved"或"已通过"');
+                console.log('   3. 所有记录的assigned_keywords都为空');
+                console.log('💡 建议：');
+                console.log('   1. 检查上方列出的所有记录');
+                console.log('   2. 确认至少有一条记录满足：task_type="x雷浏览器搜索任务" AND status="已通过" AND assigned_keywords不为空');
+                console.log('   3. 如果没有记录，请先在前台提交关键词申请，然后在后台审核通过');
+            }
         }
         
     } catch (error) {
@@ -8292,7 +9210,27 @@ function handleXrayKeywordSearch(event){
     if(term.length>=1){ performXrayKeywordSearch(term); showXraySearchDropdown(); } else { hideXraySearchDropdown(); }
 }
 function performXrayKeywordSearch(term){
-    const results = (xraySearchKeywords||[]).filter(item=> item.keyword.toLowerCase().includes(term) || String(item.username||'').toLowerCase().includes(term));
+    console.log('🔍 开始搜索x雷关键词...');
+    console.log('📝 搜索词:', term);
+    console.log('📊 xraySearchKeywords数组长度:', xraySearchKeywords?.length || 0);
+    
+    if (xraySearchKeywords && xraySearchKeywords.length > 0) {
+        console.log('📋 前3个关键词数据示例:', xraySearchKeywords.slice(0, 3));
+        console.log('🔑 第一个关键词的结构:', Object.keys(xraySearchKeywords[0]));
+    }
+    
+    const results = (xraySearchKeywords||[]).filter(item=> {
+        const keyword = item.keyword || '';
+        const username = item.username || '';
+        const match = keyword.toLowerCase().includes(term) || String(username).toLowerCase().includes(term);
+        return match;
+    });
+    
+    console.log('✅ 搜索结果数量:', results.length);
+    if (results.length > 0) {
+        console.log('📋 搜索结果:', results.slice(0, 3));
+    }
+    
     renderXraySearchResults(results, term);
 }
 function renderXraySearchResults(results, term){
@@ -9178,3 +10116,1321 @@ async function saveKKSearchEarning() {
         showNotification('保存收益失败: ' + error.message, 'error');
     }
 }
+
+// ==================== 团长管理系统函数 ====================
+
+/**
+ * 切换团长管理子页面
+ * @param {string} sectionId - 页面ID (overview/list/commission/level/invite/analytics)
+ */
+function switchLeaderSection(sectionId) {
+    // 隐藏所有section
+    document.querySelectorAll('#leaders .leader-section').forEach(section => {
+        section.classList.remove('active');
+    });
+    
+    // 显示目标section
+    const targetSection = document.getElementById('leader-' + sectionId);
+    if (targetSection) {
+        targetSection.classList.add('active');
+    }
+    
+    // 更新顶部标签状态
+    document.querySelectorAll('#leaders .leader-nav-tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    // 找到并激活对应的标签
+    const clickedTab = event && event.currentTarget;
+    if (clickedTab && clickedTab.classList.contains('leader-nav-tab')) {
+        clickedTab.classList.add('active');
+    }
+    
+    // 根据section加载对应数据
+    loadLeaderSectionData(sectionId);
+}
+
+/**
+ * 加载section数据
+ */
+function loadLeaderSectionData(sectionId) {
+    switch(sectionId) {
+        case 'overview':
+            // 加载数据概览的真实数据
+            loadLeaderOverviewData();
+            break;
+        case 'list':
+            // 团长列表使用现有的loadLeadersAllowlist函数
+            if (typeof loadLeadersAllowlist === 'function') {
+                loadLeadersAllowlist();
+            }
+            break;
+        case 'commission':
+            console.log('加载佣金数据');
+            break;
+        case 'level':
+            console.log('加载等级配置');
+            break;
+        case 'invite':
+            console.log('加载邀请数据');
+            break;
+        case 'analytics':
+            console.log('加载数据分析');
+            break;
+    }
+}
+
+/**
+ * 加载数据概览的真实数据
+ */
+async function loadLeaderOverviewData() {
+    console.log('🔄 开始加载团长数据概览...');
+    try {
+        await ensureSupabaseReady();
+        
+        let allLeaders = [];
+        
+        // 1. 加载团长总数和等级分布
+        try {
+            await ensureLeadersReadable();
+            const { data: leaders, error } = await supabase.from('leaders_allowlist').select('*');
+            
+            console.log('📊 查询到的团长数据:', leaders);
+            
+            if (!error && leaders) {
+                allLeaders = leaders;
+                const total = leaders.length;
+                const active = leaders.filter(l => l.status === 'enabled').length;
+                
+                console.log('✅ 团长总数:', total, '活跃:', active);
+                
+                // 更新团长总数
+                const totalEl = document.getElementById('overview-total-leaders');
+                if (totalEl) {
+                    totalEl.textContent = total;
+                    console.log('✅ 更新团长总数显示:', total);
+                } else {
+                    console.warn('❌ 找不到元素 overview-total-leaders');
+                }
+                
+                // 更新活跃团长
+                const activeEl = document.getElementById('overview-active-leaders');
+                if (activeEl) {
+                    activeEl.textContent = active;
+                    console.log('✅ 更新活跃团长显示:', active);
+                } else {
+                    console.warn('❌ 找不到元素 overview-active-leaders');
+                }
+                
+                // 保存到本地缓存
+                localStorage.setItem('leaders_allowlist', JSON.stringify(leaders));
+                
+                // 计算等级分布
+                if (leaders.length > 0) {
+                    await updateLevelDistribution(leaders);
+                } else {
+                    console.log('⚠️ 没有团长数据，跳过等级分布计算');
+                    // 重置等级统计为0
+                    ['bronze', 'silver', 'gold', 'platinum', 'diamond'].forEach(levelId => {
+                        const countEl = document.getElementById(`level-count-${levelId}`);
+                        if (countEl) countEl.textContent = '0';
+                        const percentEl = document.getElementById(`level-percent-${levelId}`);
+                        if (percentEl) percentEl.textContent = '0%';
+                    });
+                }
+            } else if (error) {
+                console.error('❌ 查询团长数据出错:', error);
+            } else {
+                console.warn('⚠️ 查询结果为空');
+            }
+        } catch (e) {
+            console.error('加载团长数据失败:', e);
+        }
+        
+        // 2. 加载邀请会员总数（从referrals表）
+        try {
+            const { data: referrals } = await supabase.from('referrals').select('id');
+            const inviteCount = referrals ? referrals.length : 0;
+            
+            const inviteEl = document.getElementById('overview-total-members');  // 修正ID
+            if (inviteEl) inviteEl.textContent = inviteCount;
+        } catch (e) {
+            console.error('加载邀请数据失败:', e);
+        }
+        
+        // 3. 加载累计佣金（从earnings表，type=referral）
+        try {
+            const { data: earnings } = await supabase.from('earnings')
+                .select('amount, status, user_id')
+                .eq('type', 'referral');
+            
+            if (earnings && earnings.length > 0) {
+                const total = earnings.reduce((sum, e) => sum + Number(e.amount || 0), 0);
+                const pending = earnings
+                    .filter(e => e.status === 'pending' || e.status === '待结算')
+                    .reduce((sum, e) => sum + Number(e.amount || 0), 0);
+                
+                // 计算最高佣金（按用户聚合）
+                const userCommissions = {};
+                earnings.forEach(e => {
+                    const uid = e.user_id;
+                    if (!userCommissions[uid]) userCommissions[uid] = 0;
+                    userCommissions[uid] += Number(e.amount || 0);
+                });
+                const maxCommission = Math.max(...Object.values(userCommissions), 0);
+                
+                const totalEl = document.getElementById('overview-total-commission');
+                if (totalEl) totalEl.textContent = '¥' + total.toFixed(0);
+                
+                const pendingEl = document.getElementById('overview-pending-commission');
+                if (pendingEl) pendingEl.textContent = '¥' + pending.toFixed(0);
+                
+                const topEl = document.getElementById('overview-top-commission');
+                if (topEl) topEl.textContent = '¥' + maxCommission.toFixed(0);
+            }
+        } catch (e) {
+            console.error('加载佣金数据失败:', e);
+        }
+        
+    } catch (error) {
+        console.error('加载数据概览失败:', error);
+    }
+}
+
+/**
+ * 更新等级分布统计
+ */
+async function updateLevelDistribution(leaders) {
+    try {
+        // 等级配置
+        const LEVEL_CONFIG = [
+            { id: 'bronze', minMembers: 0 },
+            { id: 'silver', minMembers: 10 },
+            { id: 'gold', minMembers: 50 },
+            { id: 'platinum', minMembers: 100 },
+            { id: 'diamond', minMembers: 200 }
+        ];
+        
+        // 获取每个团长的团队人数
+        const levelCounts = {
+            bronze: 0,
+            silver: 0,
+            gold: 0,
+            platinum: 0,
+            diamond: 0
+        };
+        
+        // 为每个团长计算等级
+        for (const leader of leaders) {
+            try {
+                // 生成邀请码
+                const userId = leader.user_id;
+                const inviteCode = generateInviteCode(userId);
+                const body = inviteCode.slice(1, 7);
+                const legacyKey = 'uid_tail_' + body;
+                
+                // 查询团队成员数
+                let memberCount = 0;
+                try {
+                    const { data: ref1 } = await supabase.from('referrals')
+                        .select('id')
+                        .eq('inviter_id', inviteCode);
+                    const { data: ref2 } = await supabase.from('referrals')
+                        .select('id')
+                        .eq('inviter_id', legacyKey);
+                    
+                    memberCount = (ref1 ? ref1.length : 0) + (ref2 ? ref2.length : 0);
+                } catch (e) {
+                    console.error('查询团队成员失败:', e);
+                }
+                
+                // 根据人数确定等级
+                let currentLevel = 'bronze';
+                for (let i = LEVEL_CONFIG.length - 1; i >= 0; i--) {
+                    if (memberCount >= LEVEL_CONFIG[i].minMembers) {
+                        currentLevel = LEVEL_CONFIG[i].id;
+                        break;
+                    }
+                }
+                
+                levelCounts[currentLevel]++;
+                
+            } catch (e) {
+                console.error('计算团长等级失败:', e);
+                levelCounts.bronze++; // 默认为青铜
+            }
+        }
+        
+        // 更新UI
+        const total = leaders.length || 1; // 避免除以0
+        Object.keys(levelCounts).forEach(levelId => {
+            const count = levelCounts[levelId];
+            const percent = Math.round((count / total) * 100);
+            
+            const countEl = document.getElementById(`level-count-${levelId}`);
+            if (countEl) countEl.textContent = count;
+            
+            const percentEl = document.getElementById(`level-percent-${levelId}`);
+            if (percentEl) percentEl.textContent = percent + '%';
+        });
+        
+    } catch (error) {
+        console.error('更新等级分布失败:', error);
+    }
+}
+
+// 刷新数据概览
+function refreshLeaderOverview() {
+    loadLeaderOverviewData();
+    showNotification('正在刷新数据...', 'info');
+}
+
+function exportLeaderReport() {
+    showNotification('导出报表功能待实现', 'info');
+}
+
+function openAddLeaderModal() {
+    // 创建弹窗
+    const modal = document.createElement('div');
+    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:10000;';
+    
+    const modalContent = document.createElement('div');
+    modalContent.style.cssText = 'background:#fff;border-radius:12px;padding:24px;width:90%;max-width:400px;box-shadow:0 8px 32px rgba(0,0,0,0.2);';
+    
+    modalContent.innerHTML = `
+        <h3 style="margin:0 0 16px 0;font-size:18px;color:#111827;">添加团长</h3>
+        <input type="text" id="modal-leader-input" placeholder="输入用户名或用户ID" 
+               style="width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:14px;margin-bottom:16px;">
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+            <button onclick="this.closest('[style*=fixed]').remove()" 
+                    style="padding:8px 16px;border:1px solid #e5e7eb;background:#fff;border-radius:6px;cursor:pointer;">取消</button>
+            <button id="modal-confirm-btn" 
+                    style="padding:8px 16px;border:none;background:#6366f1;color:#fff;border-radius:6px;cursor:pointer;">确认添加</button>
+        </div>
+    `;
+    
+    modal.appendChild(modalContent);
+    document.body.appendChild(modal);
+    
+    // 焦点到输入框
+    setTimeout(() => document.getElementById('modal-leader-input')?.focus(), 100);
+    
+    // 确认按钮事件
+    document.getElementById('modal-confirm-btn').onclick = async function() {
+        const input = document.getElementById('modal-leader-input');
+        const username = input?.value?.trim();
+        if (!username) {
+            showNotification('请输入用户名', 'warning');
+            return;
+        }
+        
+        // 直接调用添加逻辑（不依赖旧的输入框）
+        try {
+            await ensureSupabaseReady();
+            
+            // 🔧 确保RLS策略正确配置
+            await ensureLeadersReadable();
+            const val = username.replace(/\s+/g,'');
+            
+            // 查找用户
+            let user = null;
+            try{ 
+                const r = await supabase.from('users').select('id, username').eq('username', val).limit(1); 
+                if(r && r.data && r.data.length){ user=r.data[0]; } 
+            }catch(e){ }
+            
+            if(!user){ 
+                try{ 
+                    const rzh = await supabase.from('users').select('id, 用户名').eq('用户名', val).limit(1); 
+                    if(rzh && !rzh.error && rzh.data && rzh.data.length){ 
+                        user={ id:rzh.data[0].id, username: rzh.data[0]['用户名'] }; 
+                    } 
+                }catch(e){ }
+            }
+            
+            if(!user){ 
+                try{ 
+                    const r3 = await supabase.from('users').select('id, username').eq('id', val).limit(1); 
+                    if(r3 && r3.data && r3.data.length){ user=r3.data[0]; } 
+                }catch(e){ }
+            }
+            
+            if(!user){
+                showNotification('未找到该用户: ' + val, 'error');
+                return;
+            }
+            
+            // 添加到团长白名单
+            const shortCode = generateInviteCode(user.id);
+            const { error } = await supabase.from('leaders_allowlist').upsert({
+                user_id: String(user.id),
+                username: user.username || '',
+                short_code: shortCode,
+                status: 'enabled'
+            }, { onConflict: 'user_id' });
+            
+            if(error){
+                showNotification('添加失败: ' + error.message, 'error');
+                return;
+            }
+            
+            showNotification('成功添加团长: ' + (user.username || user.id), 'success');
+            modal.remove();
+            
+            // 清除本地缓存，确保显示最新数据
+            localStorage.removeItem('leaders_allowlist');
+            console.log('✅ [添加团长] 已清除本地缓存');
+            
+            // 立即刷新所有数据（不延迟）
+            Promise.all([
+                typeof loadLeadersAllowlist === 'function' ? loadLeadersAllowlist() : Promise.resolve(),
+                typeof loadLeaderOverviewData === 'function' ? loadLeaderOverviewData() : Promise.resolve()
+            ]).then(() => {
+                console.log('✅ [添加团长] 数据刷新完成');
+            }).catch(e => {
+                console.error('❌ [添加团长] 数据刷新失败:', e);
+            });
+            
+        } catch(error) {
+            showNotification('操作失败: ' + error.message, 'error');
+        }
+    };
+    
+    // 点击背景关闭
+    modal.onclick = function(e) {
+        if (e.target === modal) modal.remove();
+    };
+    
+    // ESC键关闭
+    const escHandler = function(e) {
+        if (e.key === 'Escape') {
+            modal.remove();
+            document.removeEventListener('keydown', escHandler);
+        }
+    };
+    document.addEventListener('keydown', escHandler);
+}
+
+function exportLeaderList() {
+    showNotification('导出列表功能待实现', 'info');
+}
+
+// 确保函数在全局可用
+window.switchLeaderSection = switchLeaderSection;
+window.refreshLeaderOverview = refreshLeaderOverview;
+window.exportLeaderReport = exportLeaderReport;
+window.openAddLeaderModal = openAddLeaderModal;
+window.exportLeaderList = exportLeaderList;
+
+// ========================================
+// 📊 任务收益单价自动计算功能
+// ========================================
+
+// 任务单价配置（仅用于通用任务收益模态框，已有专属模态框的任务不在此列）
+// 注意：KK搜索、X雷浏览器搜索、w空短剧搜索、KK网盘都有专属模态框
+const TASK_UNIT_PRICES = {
+    // 暂时保留为空，所有任务都使用专属模态框
+};
+
+// 显示任务单价提示
+function updateTaskPriceDisplay() {
+    try {
+        const taskSelect = document.getElementById('taskType');
+        const quantityGroup = document.getElementById('taskQuantityGroup');
+        const priceDisplay = document.getElementById('taskPriceDisplay');
+        const amountInput = document.getElementById('amount');
+        
+        if (!taskSelect || !quantityGroup || !priceDisplay) return;
+        
+        const selectedTask = taskSelect.value;
+        
+        if (selectedTask && TASK_UNIT_PRICES[selectedTask]) {
+            // 显示数量输入框
+            quantityGroup.style.display = 'block';
+            
+            // 显示单价提示
+            const unitPrice = TASK_UNIT_PRICES[selectedTask];
+            priceDisplay.textContent = `单价: ¥${unitPrice}`;
+            
+            // 设置金额为只读
+            if (amountInput) {
+                amountInput.readOnly = true;
+                amountInput.style.backgroundColor = '#f5f5f5';
+                amountInput.style.fontWeight = 'bold';
+                amountInput.style.color = '#007bff';
+            }
+            
+            // 默认计算一次
+            calculateTaskEarningsAmount();
+        } else {
+            // 隐藏数量输入框
+            quantityGroup.style.display = 'none';
+            
+            // 允许手动输入金额
+            if (amountInput) {
+                amountInput.readOnly = false;
+                amountInput.style.backgroundColor = '#fff';
+                amountInput.style.fontWeight = 'normal';
+                amountInput.style.color = '#000';
+                amountInput.value = '';
+            }
+        }
+    } catch (e) {
+        console.warn('updateTaskPriceDisplay error:', e);
+    }
+}
+
+// 计算任务收益金额
+function calculateTaskEarningsAmount() {
+    try {
+        const taskSelect = document.getElementById('taskType');
+        const quantityInput = document.getElementById('taskQuantity');
+        const amountInput = document.getElementById('amount');
+        
+        if (!taskSelect || !quantityInput || !amountInput) return;
+        
+        const selectedTask = taskSelect.value;
+        const quantity = parseInt(quantityInput.value) || 0;
+        const unitPrice = TASK_UNIT_PRICES[selectedTask] || 0;
+        
+        const totalAmount = quantity * unitPrice;
+        amountInput.value = totalAmount.toFixed(2);
+        
+    } catch (e) {
+        console.warn('calculateTaskEarningsAmount error:', e);
+    }
+}
+
+// ========================================
+// 👥 团队收益智能识别功能
+// ========================================
+
+// 团长等级配置（与数据库保持一致）
+const LEADER_LEVEL_CONFIG = {
+    '青铜': { commission: 5, firstWithdrawal: 10 },
+    '白银': { commission: 7, firstWithdrawal: 20 },
+    '黄金': { commission: 9, firstWithdrawal: 30 },
+    '王者': { commission: 10, firstWithdrawal: 50 }
+};
+
+// 存储当前选择的用户等级信息
+let currentLeaderInfo = null;
+
+// 处理团队收益用户选择变化
+async function handleTeamEarningUserChange() {
+    try {
+        const userSelect = document.getElementById('otherEarningUser');
+        const typeSelect = document.getElementById('otherEarningType');
+        const banner = document.getElementById('leaderInfoBanner');
+        
+        if (!userSelect) return;
+        
+        const userId = userSelect.value;
+        const currentType = typeSelect ? typeSelect.value : '';
+        
+        // 只在选择了"团长收益"时才显示横幅
+        if (currentType === '团长收益' && userId && banner) {
+            await loadAndDisplayLeaderInfo(userId);
+        } else {
+            if (banner) banner.style.display = 'none';
+            currentLeaderInfo = null;
+        }
+        
+    } catch (e) {
+        console.warn('handleTeamEarningUserChange error:', e);
+    }
+}
+
+// 加载并显示团长信息
+async function loadAndDisplayLeaderInfo(userId) {
+    try {
+        const banner = document.getElementById('leaderInfoBanner');
+        const levelDisplay = document.getElementById('leaderLevelDisplay');
+        const commissionDisplay = document.getElementById('leaderCommissionDisplay');
+        const firstWithdrawalDisplay = document.getElementById('leaderFirstWithdrawalDisplay');
+        
+        if (!banner) return;
+        
+        // 显示加载状态
+        banner.style.display = 'block';
+        if (levelDisplay) levelDisplay.textContent = '加载中...';
+        if (commissionDisplay) commissionDisplay.textContent = '--';
+        if (firstWithdrawalDisplay) firstWithdrawalDisplay.textContent = '--';
+        
+        // 从数据库获取团队人数
+        await ensureSupabaseReady();
+        const { data: referrals, error } = await supabase
+            .from('referrals')
+            .select('id')
+            .eq('referrer_id', userId);
+        
+        if (error) {
+            console.error('获取团队人数失败:', error);
+            banner.style.display = 'none';
+            return;
+        }
+        
+        const teamCount = referrals ? referrals.length : 0;
+        
+        // 计算等级
+        let level = '青铜';
+        if (teamCount >= 50) level = '王者';
+        else if (teamCount >= 20) level = '黄金';
+        else if (teamCount >= 10) level = '白银';
+        else level = '青铜';
+        
+        const levelConfig = LEADER_LEVEL_CONFIG[level];
+        
+        // 保存当前信息
+        currentLeaderInfo = {
+            userId: userId,
+            level: level,
+            commission: levelConfig.commission,
+            firstWithdrawal: levelConfig.firstWithdrawal,
+            teamCount: teamCount
+        };
+        
+        // 显示信息
+        if (levelDisplay) levelDisplay.textContent = `${level}团长 (${teamCount}人)`;
+        if (commissionDisplay) commissionDisplay.textContent = `${levelConfig.commission}%`;
+        if (firstWithdrawalDisplay) firstWithdrawalDisplay.textContent = `¥${levelConfig.firstWithdrawal}`;
+        
+        console.log('✅ 团长信息加载完成:', currentLeaderInfo);
+        
+    } catch (e) {
+        console.error('loadAndDisplayLeaderInfo error:', e);
+        const banner = document.getElementById('leaderInfoBanner');
+        if (banner) banner.style.display = 'none';
+    }
+}
+
+// 处理收益类型变化
+async function handleOtherEarningTypeChange() {
+    try {
+        const typeSelect = document.getElementById('otherEarningType');
+        const userSelect = document.getElementById('otherEarningUser');
+        const banner = document.getElementById('leaderInfoBanner');
+        const subTypeGroup = document.getElementById('teamEarningSubTypeGroup');
+        const memberGroup = document.getElementById('memberEarningGroup');
+        const amountInput = document.getElementById('otherEarningAmount');
+        const modalTitle = document.getElementById('otherEarningModalTitle');
+        
+        if (!typeSelect) return;
+        
+        const selectedType = typeSelect.value;
+        
+        // 更新模态框标题
+        if (modalTitle) {
+            if (selectedType === '活动收益') {
+                modalTitle.textContent = '添加活动收益';
+            } else if (selectedType === '团长收益') {
+                modalTitle.textContent = '添加团队收益';
+            }
+        }
+        
+        if (selectedType === '团长收益') {
+            // 显示子类型选择
+            if (subTypeGroup) subTypeGroup.style.display = 'block';
+            
+            // 如果已选择用户，加载团长信息
+            if (userSelect && userSelect.value) {
+                await loadAndDisplayLeaderInfo(userSelect.value);
+            }
+            
+            // 设置金额为只读
+            if (amountInput) {
+                amountInput.readOnly = true;
+                amountInput.style.backgroundColor = '#f5f5f5';
+                amountInput.style.fontWeight = 'bold';
+                amountInput.style.color = '#007bff';
+                amountInput.value = '0.00';
+            }
+        } else {
+            // 隐藏团长相关UI
+            if (banner) banner.style.display = 'none';
+            if (subTypeGroup) subTypeGroup.style.display = 'none';
+            if (memberGroup) memberGroup.style.display = 'none';
+            currentLeaderInfo = null;
+            
+            // 活动收益允许手动输入
+            if (selectedType === '活动收益') {
+                if (amountInput) {
+                    amountInput.readOnly = false;
+                    amountInput.style.backgroundColor = '#fff';
+                    amountInput.style.fontWeight = 'normal';
+                    amountInput.style.color = '#000';
+                    amountInput.value = '';
+                }
+            }
+        }
+        
+    } catch (e) {
+        console.warn('handleOtherEarningTypeChange error:', e);
+    }
+}
+
+// 处理团队收益子类型变化
+function handleTeamEarningSubTypeChange() {
+    try {
+        const subTypeSelect = document.getElementById('teamEarningSubType');
+        const memberGroup = document.getElementById('memberEarningGroup');
+        const amountInput = document.getElementById('otherEarningAmount');
+        const memberAmountInput = document.getElementById('memberEarningAmount');
+        
+        if (!subTypeSelect || !currentLeaderInfo) return;
+        
+        const subType = subTypeSelect.value;
+        
+        if (subType === '首次提现奖励') {
+            // 一次性奖励：自动填充金额
+            if (memberGroup) memberGroup.style.display = 'none';
+            if (amountInput) {
+                amountInput.value = currentLeaderInfo.firstWithdrawal.toFixed(2);
+            }
+            if (memberAmountInput) {
+                memberAmountInput.value = '';
+            }
+        } else if (subType === '持续分成') {
+            // 持续分成：显示成员收益输入框
+            if (memberGroup) memberGroup.style.display = 'block';
+            if (amountInput) {
+                amountInput.value = '0.00';
+            }
+            // 触发一次计算
+            calculateCommissionAmount();
+        } else {
+            // 未选择子类型
+            if (memberGroup) memberGroup.style.display = 'none';
+            if (amountInput) {
+                amountInput.value = '0.00';
+            }
+        }
+        
+    } catch (e) {
+        console.warn('handleTeamEarningSubTypeChange error:', e);
+    }
+}
+
+// 计算分成金额
+function calculateCommissionAmount() {
+    try {
+        const memberAmountInput = document.getElementById('memberEarningAmount');
+        const amountInput = document.getElementById('otherEarningAmount');
+        const hintElement = document.getElementById('commissionHint');
+        
+        if (!memberAmountInput || !amountInput || !currentLeaderInfo) return;
+        
+        const memberEarning = parseFloat(memberAmountInput.value) || 0;
+        const commissionRate = currentLeaderInfo.commission / 100;
+        const commissionAmount = memberEarning * commissionRate;
+        
+        // 更新金额
+        amountInput.value = commissionAmount.toFixed(2);
+        
+        // 更新提示
+        if (hintElement) {
+            hintElement.textContent = `分成比例: ${currentLeaderInfo.commission}%，计算结果: ¥${commissionAmount.toFixed(2)}`;
+        }
+        
+    } catch (e) {
+        console.warn('calculateCommissionAmount error:', e);
+    }
+}
+
+// ========================================
+// 📱 w空短剧搜索收益计算
+// ========================================
+
+function calculateWukongEarningsAmount() {
+    try {
+        const pullNewCount = parseInt(document.getElementById('wukongPullNewCount')?.value) || 0;
+        const totalAmount = pullNewCount * 8.0;
+        const output = document.getElementById('wukongTotalAmount');
+        if (output) output.value = `¥${totalAmount.toFixed(2)}`;
+    } catch (e) {
+        console.warn('calculateWukongEarningsAmount error:', e);
+    }
+}
+
+async function saveWukongSearchEarning() {
+    try {
+        await ensureSupabaseReady();
+        
+        const selectedRaw = document.getElementById('wukongEarningKeyword').value || '';
+        const amountText = document.getElementById('wukongTotalAmount').value || '¥0.00';
+        const amount = parseFloat(amountText.replace('¥', '')) || 0;
+        const status = document.getElementById('wukongEarningStatus').value || '已完成';
+        const pullNewCount = parseInt(document.getElementById('wukongPullNewCount')?.value) || 0;
+        
+        // 解析选择的关键词（包含用户信息）
+        let keywordData = null; let keywordText = ''; let targetUserId = '';
+        try{ keywordData = JSON.parse(selectedRaw); keywordText = keywordData.keyword || ''; targetUserId = String(keywordData.userId||''); }catch(_){ keywordText = selectedRaw; }
+        
+        if (!keywordText) {
+            showNotification('请选择关键词', 'error');
+            return;
+        }
+        
+        if (amount <= 0) {
+            showNotification('请输入有效的拉新数量', 'error');
+            return;
+        }
+        
+        const taskName = `w空短剧搜索-${keywordText}`;
+        
+        // 保存JSON格式的详细信息
+        const description = JSON.stringify({
+            type: 'wukong',
+            keyword: keywordText,
+            username: keywordData?.username || '',
+            pullNew: pullNewCount,
+            unit: { pullNew: 8.0 }
+        });
+        
+        const { error } = await supabase.from('earnings').insert({
+            user_id: targetUserId || 'unknown',
+            username: keywordData?.username || undefined,
+            task_name: taskName,
+            amount: amount,
+            status: status,
+            description: description,
+            created_at: new Date().toISOString()
+        });
+        
+        if (error) throw error;
+        
+        showNotification('保存成功', 'success');
+        closeModal('wukongSearchEarningsModal');
+        
+        // 刷新数据
+        if (typeof loadOtherEarnings === 'function') loadOtherEarnings();
+        
+    } catch (e) {
+        console.error('saveWukongSearchEarning error:', e);
+        showNotification('保存失败: ' + e.message, 'error');
+    }
+}
+
+// ========================================
+// 💾 KK网盘收益计算
+// ========================================
+
+function calculateKKDiskEarningsAmount() {
+    try {
+        const mobilePullNew = parseInt(document.getElementById('kkDiskMobilePullNew')?.value) || 0;
+        const pcPullNew = parseInt(document.getElementById('kkDiskPCPullNew')?.value) || 0;
+        const transferCount = parseInt(document.getElementById('kkDiskTransferCount')?.value) || 0;
+        const memberCommission = parseFloat(document.getElementById('kkDiskMemberCommission')?.value) || 0;
+        
+        const totalAmount = (mobilePullNew * 7.0) + (pcPullNew * 3.0) + (transferCount * 0.3) + (memberCommission * 0.3);
+        const output = document.getElementById('kkDiskTotalAmount');
+        if (output) output.value = `¥${totalAmount.toFixed(2)}`;
+    } catch (e) {
+        console.warn('calculateKKDiskEarningsAmount error:', e);
+    }
+}
+
+async function saveKKDiskEarning() {
+    try {
+        await ensureSupabaseReady();
+        
+        const selectedRaw = document.getElementById('kkDiskUserUid').value || '';
+        const amountText = document.getElementById('kkDiskTotalAmount').value || '¥0.00';
+        const amount = parseFloat(amountText.replace('¥', '')) || 0;
+        const status = document.getElementById('kkDiskEarningStatus').value || '已完成';
+        
+        const mobilePullNew = parseInt(document.getElementById('kkDiskMobilePullNew')?.value) || 0;
+        const pcPullNew = parseInt(document.getElementById('kkDiskPCPullNew')?.value) || 0;
+        const transferCount = parseInt(document.getElementById('kkDiskTransferCount')?.value) || 0;
+        const memberCommission = parseFloat(document.getElementById('kkDiskMemberCommission')?.value) || 0;
+        
+        // 解析用户UID信息
+        let userData = null; let quarkUid = ''; let targetUserId = ''; let username = '';
+        try{ userData = JSON.parse(selectedRaw); quarkUid = userData.quarkUid || ''; targetUserId = String(userData.userId||''); username = userData.username || userData.realName || ''; }catch(_){ quarkUid = selectedRaw; }
+        
+        if (!quarkUid) {
+            showNotification('请选择用户夸克UID', 'error');
+            return;
+        }
+        
+        if (amount <= 0) {
+            showNotification('请输入有效的数量', 'error');
+            return;
+        }
+        
+        const taskName = `KK网盘-UID${quarkUid}`;
+        
+        // 保存JSON格式的详细信息
+        const description = JSON.stringify({
+            type: 'kkDisk',
+            quarkUid: quarkUid,
+            quarkPhone: userData?.quarkPhone || '',
+            realName: userData?.realName || '',
+            username: username,
+            mobilePullNew: mobilePullNew,
+            pcPullNew: pcPullNew,
+            transferCount: transferCount,
+            memberCommission: memberCommission,
+            unit: { mobile: 7.0, pc: 3.0, transfer: 0.3, commission: 0.3 }
+        });
+        
+        const { error } = await supabase.from('earnings').insert({
+            user_id: targetUserId || 'unknown',
+            username: username || undefined,
+            task_name: taskName,
+            amount: amount,
+            status: status,
+            description: description,
+            created_at: new Date().toISOString()
+        });
+        
+        if (error) throw error;
+        
+        showNotification('保存成功', 'success');
+        closeModal('kkDiskEarningsModal');
+        
+        // 刷新数据
+        if (typeof loadOtherEarnings === 'function') loadOtherEarnings();
+        
+    } catch (e) {
+        console.error('saveKKDiskEarning error:', e);
+        showNotification('保存失败: ' + e.message, 'error');
+    }
+}
+
+// ========================================
+// 🔓 打开专属模态框的函数
+// ========================================
+
+function openKKSearchEarningsModal() {
+    const modal = document.getElementById('kkSearchEarningsModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        // 重置表单
+        document.getElementById('pullNewCount').value = 0;
+        document.getElementById('pullActiveCount').value = 0;
+        document.getElementById('pullOldCount').value = 0;
+        calculateKKEarningsAmount();
+    }
+}
+
+async function openWukongSearchEarningsModal() {
+    const modal = document.getElementById('wukongSearchEarningsModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        // 重置表单
+        document.getElementById('wukongEarningKeyword').value = '';
+        document.getElementById('wukongPullNewCount').value = 0;
+        clearWukongSelectedKeyword();
+        hideWukongSearchDropdown();
+        calculateWukongEarningsAmount();
+        // 加载w空关键词数据（和x雷一样从已批准的申请中获取）
+        await loadWukongSearchKeywords();
+    }
+}
+
+// ⚠️ 此函数已在前面定义（第4898行），这里是重复定义，已删除
+
+function openKKDiskEarningsModal() {
+    const modal = document.getElementById('kkDiskEarningsModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        // 重置表单
+        document.getElementById('kkDiskUserUid').value = '';
+        document.getElementById('kkDiskMobilePullNew').value = 0;
+        document.getElementById('kkDiskPCPullNew').value = 0;
+        document.getElementById('kkDiskTransferCount').value = 0;
+        document.getElementById('kkDiskMemberCommission').value = 0;
+        clearKKDiskSelectedUser();
+        hideKKDiskSearchDropdown();
+        calculateKKDiskEarningsAmount();
+    }
+}
+
+// ========================================
+// 🔍 w空搜索 - 用户和关键词搜索功能
+// ========================================
+
+let wukongSearchKeywords = [];
+let wukongActiveIndex = -1;
+
+// 加载w空搜索关键词数据
+async function loadWukongSearchKeywords() {
+    try {
+        const { data, error } = await supabase
+            .from('keyword_applications')
+            .select('*')
+            .eq('status', 'approved')
+            .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        wukongSearchKeywords = [];
+        (data || []).forEach(app => {
+            const keywords = (app.assigned_keywords || '').split(',').map(k => k.trim());
+            keywords.forEach(keyword => {
+                if (keyword) {
+                    // 只添加w空短剧搜索的关键词
+                    const isWukong = (app.task_type || '') === 'w空短剧搜索' || 
+                                      (app.task_type || '').includes('悟空') || 
+                                      (app.task_type || '').includes('w空');
+                    if (isWukong) {
+                        wukongSearchKeywords.push({
+                            keyword: keyword,
+                            username: app.username,
+                            userId: app.user_id || app.id
+                        });
+                    }
+                }
+            });
+        });
+        
+        console.log(`✅ 加载了 ${wukongSearchKeywords.length} 个w空搜索关键词`);
+    } catch (error) {
+        console.error('❌ 加载w空关键词失败:', error);
+        showNotification('加载关键词数据失败: ' + error.message, 'error');
+    }
+}
+
+function handleWukongKeywordSearch(event) {
+    const term = event.target.value.toLowerCase().trim();
+    if (term.length >= 1) {
+        performWukongKeywordSearch(term);
+        showWukongSearchDropdown();
+    } else {
+        hideWukongSearchDropdown();
+    }
+}
+
+function performWukongKeywordSearch(term) {
+    const results = (wukongSearchKeywords || []).filter(item =>
+        item.keyword.toLowerCase().includes(term) ||
+        String(item.username || '').toLowerCase().includes(term)
+    );
+    renderWukongSearchResults(results, term);
+}
+
+function renderWukongSearchResults(results, term) {
+    const dropdown = document.getElementById('wukongDropdownContent');
+    const resultCount = document.getElementById('wukongResultCount');
+    if (!dropdown || !resultCount) return;
+    
+    resultCount.textContent = `${results.length} 个结果`;
+    wukongActiveIndex = -1;
+    
+    if (results.length === 0) {
+        dropdown.innerHTML = '<div class="dropdown-item placeholder">未找到匹配的关键词或用户</div>';
+        return;
+    }
+    
+    window.currentWukongSearchResults = results;
+    dropdown.innerHTML = results.map((item, idx) => {
+        const kw = highlightSearchTerm(item.keyword, term);
+        const un = highlightSearchTerm(item.username || '', term);
+        return `<div class="dropdown-item" data-index="${idx}" onclick="selectWukongKeywordFromResults(${idx})">
+            <span class="keyword-name">${kw}</span>
+            <span class="user-name">${un}</span>
+        </div>`;
+    }).join('');
+}
+
+function handleWukongKeywordNavigation(event) {
+    const dropdown = document.getElementById('wukongSearchDropdown');
+    const items = dropdown ? dropdown.querySelectorAll('.dropdown-item:not(.placeholder)') : [];
+    if (items.length === 0) return;
+    
+    switch (event.key) {
+        case 'ArrowDown':
+            event.preventDefault();
+            wukongActiveIndex = Math.min(wukongActiveIndex + 1, items.length - 1);
+            updateWukongActiveItem(items);
+            break;
+        case 'ArrowUp':
+            event.preventDefault();
+            wukongActiveIndex = Math.max(wukongActiveIndex - 1, -1);
+            updateWukongActiveItem(items);
+            break;
+        case 'Enter':
+            event.preventDefault();
+            if (wukongActiveIndex >= 0 && wukongActiveIndex < items.length) {
+                selectWukongKeywordFromResults(wukongActiveIndex);
+            }
+            break;
+        case 'Escape':
+            hideWukongSearchDropdown();
+            break;
+    }
+}
+
+function updateWukongActiveItem(items) {
+    items.forEach((it, i) => it.classList.toggle('active', i === wukongActiveIndex));
+}
+
+function selectWukongKeywordFromResults(index) {
+    const results = window.currentWukongSearchResults || [];
+    if (index < 0 || index >= results.length) return;
+    
+    const item = results[index];
+    // 设置隐藏字段
+    const inp = document.getElementById('wukongEarningKeyword');
+    if (inp) inp.value = JSON.stringify({ keyword: item.keyword, username: item.username, userId: item.userId });
+    
+    // 显示选择结果
+    const sel = document.getElementById('wukongSelectedKeyword');
+    const txt = sel?.querySelector('.keyword-text');
+    if (sel && txt) {
+        txt.textContent = `${item.keyword} (${item.username || ''})`;
+        sel.style.display = 'flex';
+    }
+    
+    // 隐藏输入框
+    const search = document.getElementById('wukongKeywordSearch');
+    if (search) search.style.display = 'none';
+    hideWukongSearchDropdown();
+}
+
+function clearWukongSelectedKeyword() {
+    const hid = document.getElementById('wukongEarningKeyword');
+    if (hid) hid.value = '';
+    
+    const box = document.getElementById('wukongSelectedKeyword');
+    if (box) box.style.display = 'none';
+    
+    const s = document.getElementById('wukongKeywordSearch');
+    if (s) {
+        s.style.display = 'block';
+        s.value = '';
+        s.focus();
+    }
+}
+
+function showWukongSearchDropdown() {
+    const dd = document.getElementById('wukongSearchDropdown');
+    if (dd) dd.style.display = 'block';
+}
+
+function hideWukongSearchDropdown() {
+    const dd = document.getElementById('wukongSearchDropdown');
+    if (dd) dd.style.display = 'none';
+    wukongActiveIndex = -1;
+}
+
+// ========================================
+// 🔍 KK网盘 - 夸克UID搜索功能
+// ========================================
+
+let kkDiskActiveIndex = -1;
+
+function handleKKDiskUidSearch(event) {
+    const term = event.target.value.toLowerCase().trim();
+    if (term.length >= 1) {
+        performKKDiskUidSearch(term);
+        showKKDiskSearchDropdown();
+    } else {
+        hideKKDiskSearchDropdown();
+    }
+}
+
+async function performKKDiskUidSearch(term) {
+    try {
+        // 从KK网盘申请记录中搜索夸克uid
+        const { data: applications, error } = await supabase
+            .from('keyword_applications')
+            .select('*')
+            .or(`task_type.eq.KK网盘任务,task_type.eq.KK网盘`)
+            .or(`quark_uid.ilike.%${term}%,username.ilike.%${term}%,user_id.ilike.%${term}%`)
+            .order('created_at', { ascending: false });
+        
+        if (error) {
+            console.error('搜索KK网盘申请失败:', error);
+            // 尝试从localStorage搜索
+            const locals = (typeof loadKeywordApplicationsFromLocalStorage === 'function') ? loadKeywordApplicationsFromLocalStorage() : [];
+            const localKKApps = (locals || []).filter(a => 
+                (a.task_type === 'KK网盘任务' || a.task_type === 'KK网盘') &&
+                (String(a.quark_uid || '').toLowerCase().includes(term) ||
+                 String(a.username || '').toLowerCase().includes(term) ||
+                 String(a.user_id || '').toLowerCase().includes(term))
+            );
+            renderKKDiskUidSearchResults(localKKApps, term);
+            return;
+        }
+        
+        // 合并数据库结果和本地数据
+        const locals = (typeof loadKeywordApplicationsFromLocalStorage === 'function') ? loadKeywordApplicationsFromLocalStorage() : [];
+        const map = {};
+        (applications || []).forEach(a => {
+            const id = String(a.id || '');
+            map[id] = a;
+        });
+        
+        // 从本地数据中补充可能缺失的字段
+        (locals || []).forEach(a => {
+            const id = String(a.id || '');
+            const isKK = (a.task_type === 'KK网盘任务' || a.task_type === 'KK网盘') || id.startsWith('KD');
+            if (!isKK) return;
+            
+            if (map[id]) {
+                // 合并数据
+                map[id].quark_uid = map[id].quark_uid || a.quark_uid || null;
+                map[id].quark_phone = map[id].quark_phone || a.quark_phone || null;
+                map[id].real_name = map[id].real_name || a.real_name || null;
+            } else if (String(a.quark_uid || '').toLowerCase().includes(term) ||
+                       String(a.username || '').toLowerCase().includes(term) ||
+                       String(a.user_id || '').toLowerCase().includes(term)) {
+                map[id] = a;
+            }
+        });
+        
+        const results = Object.values(map);
+        renderKKDiskUidSearchResults(results, term);
+    } catch (error) {
+        console.error('KK网盘UID搜索失败:', error);
+        showNotification('搜索失败: ' + error.message, 'error');
+    }
+}
+
+function renderKKDiskUidSearchResults(results, term) {
+    const dropdown = document.getElementById('kkDiskDropdownContent');
+    const resultCount = document.getElementById('kkDiskResultCount');
+    if (!dropdown || !resultCount) return;
+    
+    resultCount.textContent = `${results.length} 个结果`;
+    kkDiskActiveIndex = -1;
+    
+    if (results.length === 0) {
+        dropdown.innerHTML = '<div class="dropdown-item placeholder">未找到匹配的申请记录</div>';
+        return;
+    }
+    
+    window.currentKKDiskSearchResults = results;
+    dropdown.innerHTML = results.map((app, idx) => {
+        const quarkUid = highlightSearchTerm(String(app.quark_uid || '-'), term);
+        const username = highlightSearchTerm(app.username || app.real_name || '', term);
+        const phone = app.quark_phone ? ` (${app.quark_phone})` : '';
+        return `<div class="dropdown-item" data-index="${idx}" onclick="selectKKDiskUserFromResults(${idx})">
+            <span class="keyword-name">夸克UID: ${quarkUid}</span>
+            <span class="user-name">${username}${phone}</span>
+        </div>`;
+    }).join('');
+}
+
+function handleKKDiskUidNavigation(event) {
+    const dropdown = document.getElementById('kkDiskSearchDropdown');
+    const items = dropdown ? dropdown.querySelectorAll('.dropdown-item:not(.placeholder)') : [];
+    if (items.length === 0) return;
+    
+    switch (event.key) {
+        case 'ArrowDown':
+            event.preventDefault();
+            kkDiskActiveIndex = Math.min(kkDiskActiveIndex + 1, items.length - 1);
+            updateKKDiskActiveItem(items);
+            break;
+        case 'ArrowUp':
+            event.preventDefault();
+            kkDiskActiveIndex = Math.max(kkDiskActiveIndex - 1, -1);
+            updateKKDiskActiveItem(items);
+            break;
+        case 'Enter':
+            event.preventDefault();
+            if (kkDiskActiveIndex >= 0 && kkDiskActiveIndex < items.length) {
+                selectKKDiskUserFromResults(kkDiskActiveIndex);
+            }
+            break;
+        case 'Escape':
+            hideKKDiskSearchDropdown();
+            break;
+    }
+}
+
+function updateKKDiskActiveItem(items) {
+    items.forEach((it, i) => it.classList.toggle('active', i === kkDiskActiveIndex));
+}
+
+function selectKKDiskUserFromResults(index) {
+    const results = window.currentKKDiskSearchResults || [];
+    if (index < 0 || index >= results.length) return;
+    
+    const app = results[index];
+    // 设置隐藏字段（存储夸克uid和用户信息）
+    const inp = document.getElementById('kkDiskUserUid');
+    if (inp) inp.value = JSON.stringify({ 
+        quarkUid: app.quark_uid, 
+        quarkPhone: app.quark_phone,
+        realName: app.real_name,
+        username: app.username, 
+        userId: app.user_id || app.id 
+    });
+    
+    // 显示选择结果
+    const sel = document.getElementById('kkDiskSelectedUser');
+    const txt = sel?.querySelector('.keyword-text');
+    if (sel && txt) {
+        const displayName = app.real_name || app.username || '';
+        const phone = app.quark_phone ? ` (${app.quark_phone})` : '';
+        txt.textContent = `夸克UID: ${app.quark_uid}${phone} - ${displayName}`;
+        sel.style.display = 'flex';
+    }
+    
+    // 隐藏输入框
+    const search = document.getElementById('kkDiskUidSearch');
+    if (search) search.style.display = 'none';
+    hideKKDiskSearchDropdown();
+}
+
+function clearKKDiskSelectedUser() {
+    const hid = document.getElementById('kkDiskUserUid');
+    if (hid) hid.value = '';
+    
+    const box = document.getElementById('kkDiskSelectedUser');
+    if (box) box.style.display = 'none';
+    
+    const s = document.getElementById('kkDiskUidSearch');
+    if (s) {
+        s.style.display = 'block';
+        s.value = '';
+        s.focus();
+    }
+}
+
+function showKKDiskSearchDropdown() {
+    const dd = document.getElementById('kkDiskSearchDropdown');
+    if (dd) dd.style.display = 'block';
+}
+
+function hideKKDiskSearchDropdown() {
+    const dd = document.getElementById('kkDiskSearchDropdown');
+    if (dd) dd.style.display = 'none';
+    kkDiskActiveIndex = -1;
+}
+
+// 导出到window
+window.updateTaskPriceDisplay = updateTaskPriceDisplay;
+window.calculateTaskEarningsAmount = calculateTaskEarningsAmount;
+window.handleTeamEarningUserChange = handleTeamEarningUserChange;
+window.handleOtherEarningTypeChange = handleOtherEarningTypeChange;
+window.handleTeamEarningSubTypeChange = handleTeamEarningSubTypeChange;
+window.calculateCommissionAmount = calculateCommissionAmount;
+window.calculateWukongEarningsAmount = calculateWukongEarningsAmount;
+window.saveWukongSearchEarning = saveWukongSearchEarning;
+window.calculateKKDiskEarningsAmount = calculateKKDiskEarningsAmount;
+window.saveKKDiskEarning = saveKKDiskEarning;
+window.openKKSearchEarningsModal = openKKSearchEarningsModal;
+window.openWukongSearchEarningsModal = openWukongSearchEarningsModal;
+window.openXraySearchEarningsModal = openXraySearchEarningsModal;
+window.openKKDiskEarningsModal = openKKDiskEarningsModal;
+// w空搜索相关
+window.handleWukongKeywordSearch = handleWukongKeywordSearch;
+window.handleWukongKeywordNavigation = handleWukongKeywordNavigation;
+window.showWukongSearchDropdown = showWukongSearchDropdown;
+window.hideWukongSearchDropdown = hideWukongSearchDropdown;
+window.clearWukongSelectedKeyword = clearWukongSelectedKeyword;
+window.selectWukongKeywordFromResults = selectWukongKeywordFromResults;
+// KK网盘相关
+window.handleKKDiskUidSearch = handleKKDiskUidSearch;
+window.handleKKDiskUidNavigation = handleKKDiskUidNavigation;
+window.showKKDiskSearchDropdown = showKKDiskSearchDropdown;
+window.hideKKDiskSearchDropdown = hideKKDiskSearchDropdown;
+window.clearKKDiskSelectedUser = clearKKDiskSelectedUser;
+window.selectKKDiskUserFromResults = selectKKDiskUserFromResults;
+
+console.log('✅ 任务单价自动计算和团队收益智能识别功能已加载');

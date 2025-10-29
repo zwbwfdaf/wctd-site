@@ -1028,7 +1028,7 @@
                     console.log('🔄 方法1：使用与钱包页面一致的计算逻辑...');
                     
                     // 获取所有已完成的收益记录
-                    const { data: earnings, error: earningsError } = await window.supabase
+                    const { data: dbEarnings, error: earningsError } = await window.supabase
                         .from('earnings')
                         .select('*')
                         .eq('user_id', userId)
@@ -1038,9 +1038,41 @@
                         throw new Error('获取收益记录失败: ' + earningsError.message);
                     }
                     
+                    // 合并本地收益记录（localStorage中的临时数据）
+                    let earnings = dbEarnings || [];
+                    try {
+                        console.log('🔍 检查localStorage中的本地收益记录...');
+                        const localEarnings = [];
+                        for (let i = 0; i < localStorage.length; i++) {
+                            const key = localStorage.key(i);
+                            if (key && key.startsWith('earning_')) {
+                                try {
+                                    const earning = JSON.parse(localStorage.getItem(key));
+                                    const uid = earning.user_id || earning.userId || earning.用户ID;
+                                    if (String(uid) === String(userId)) {
+                                        // 检查状态是否为已完成
+                                        const status = String(earning.status || '').toLowerCase();
+                                        if (status === '已完成' || status === 'completed') {
+                                            localEarnings.push(earning);
+                                            console.log(`✅ 找到本地收益: ${key}, 金额: ${earning.amount}`);
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.warn(`解析本地收益失败: ${key}`, e);
+                                }
+                            }
+                        }
+                        if (localEarnings.length > 0) {
+                            console.log(`📦 合并 ${localEarnings.length} 条本地收益记录`);
+                            earnings = earnings.concat(localEarnings);
+                        }
+                    } catch (e) {
+                        console.warn('读取本地收益记录失败:', e);
+                    }
+                    
                     // 计算总收益
                     let totalEarnings = 0;
-                    earnings?.forEach(earning => {
+                    earnings.forEach(earning => {
                         const amount = parseFloat(earning.amount || earning.金额 || 0);
                         totalEarnings += amount;
                     });
@@ -1055,11 +1087,20 @@
                         throw new Error('获取提现记录失败: ' + withdrawalsError.message);
                     }
                     
-                    // 计算总提现
+                    // 计算总提现（统计：已完成/已批准/已支付/审核中(pending)；忽略：已拒绝）
                     let totalWithdrawn = 0;
                     withdrawals?.forEach(withdrawal => {
-                        const amount = parseFloat(withdrawal.amount || withdrawal.金额 || 0);
-                        totalWithdrawn += amount;
+                        const status = String(withdrawal.status || '').toLowerCase();
+                        if (status === '已完成' || status === 'completed' || 
+                            status === '已批准' || status === 'approved' ||
+                            status === '已支付' || status === 'paid' ||
+                            status === '审核中' || status === 'pending') {
+                            const amount = parseFloat(withdrawal.amount || withdrawal.金额 || 0);
+                            totalWithdrawn += amount;
+                            console.log(`✅ 统计提现: ${amount}元, 状态: ${status}`);
+                        } else {
+                            console.log(`⏭️ 跳过提现: ${withdrawal.amount}元, 状态: ${status}`);
+                        }
                     });
                     
                     // 计算实际可提现余额（与钱包页面逻辑一致）
@@ -1988,16 +2029,8 @@
                 
                 // 记录选择，便于后续回填
                 WithdrawalMethodSync.rememberSelection();
-                // 调用移动端提现处理模块
-                if (window.WithdrawalModule && typeof window.WithdrawalModule.processWithdrawal === 'function') {
-                    await window.WithdrawalModule.processWithdrawal(amount);
-                    
-                    // 提现成功后更新页面显示
-                    updatePageAfterWithdrawal(amount);
-                } else {
-                    // 如果模块不可用，自行处理提现逻辑
-                    await fallbackProcessWithdrawal(amount);
-                }
+                // 统一使用本页的提现处理逻辑，避免出现计算口径不一致
+                await fallbackProcessWithdrawal(amount);
                 
                 // 强制关闭加载指示器，避免残留
                 try { hideLoading(); } catch(_) {}
@@ -2054,6 +2087,20 @@
             if (!userId) {
                 throw new Error('无法获取用户ID');
             }
+            
+            // 1.1 防重校验：是否存在未完成(审核中)的提现
+            try {
+                const { data: existing, error: exErr } = await window.supabase
+                    .from('withdrawals')
+                    .select('id,status')
+                    .eq('user_id', userId)
+                    .in('status', ['pending'])
+                    .limit(1);
+                if (!exErr && Array.isArray(existing) && existing.length > 0) {
+                    showToast('已有一笔提现审核中，请等待处理完成后再申请', 'warning');
+                    return;
+                }
+            } catch(_){ }
             
             // 2. 确定钱包字段
             const walletField = getWalletField(currentUser);

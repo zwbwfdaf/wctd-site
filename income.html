@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#667eea">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta name="income-version" content="2.4.0">
     <title>收益中心 - KK搜索任务平台</title>
     <!-- 紧急数据库修复器 -->
     <script src="emergency-database-fix.js"></script>
@@ -458,6 +462,145 @@
             animation: pulse 2s infinite;
         }
         
+        /* Tab切换区域 */
+        .earnings-tabs {
+            display: flex;
+            justify-content: space-around;
+            border-bottom: 2px solid #e2e8f0;
+            margin-bottom: 20px;
+        }
+        
+        .tab-item {
+            flex: 1;
+            text-align: center;
+            padding: 14px 0;
+            font-size: 15px;
+            font-weight: 600;
+            color: #9ca3af;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .tab-item.active {
+            color: #667eea;
+        }
+        
+        .tab-item.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 3px;
+            background: #667eea;
+            border-radius: 2px 2px 0 0;
+        }
+        
+        .tab-item:hover {
+            color: #667eea;
+        }
+        
+        /* 任务统计卡片 */
+        .task-stats-card {
+            background: white;
+            border-radius: 16px;
+            padding: 18px 20px;
+            margin-bottom: 14px;
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            transition: all 0.3s ease;
+        }
+        
+        .task-stats-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+        }
+        
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        
+        .task-name {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 16px;
+            font-weight: 700;
+            color: #2d3748;
+        }
+        
+        .task-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+        
+        .view-detail-btn {
+            color: #667eea;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: color 0.3s ease;
+        }
+        
+        .view-detail-btn:hover {
+            color: #5a67d8;
+        }
+        
+        .task-stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 16px;
+        }
+        
+        .stat-box {
+            text-align: center;
+            padding: 12px 8px;
+            background: #f8fafc;
+            border-radius: 12px;
+        }
+        
+        .stat-number {
+            font-size: 22px;
+            font-weight: 700;
+            color: #2d3748;
+            margin-bottom: 6px;
+        }
+        
+        .stat-number.earnings {
+            color: #10b981;
+            font-size: 20px;
+        }
+        
+        .stat-desc {
+            font-size: 12px;
+            color: #718096;
+            font-weight: 500;
+        }
+        
+        /* Tab内容区域 */
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+            animation: fadeInUp 0.4s ease-out;
+        }
+        
         /* 响应式设计 */
         @media (max-width: 480px) {
             .main-earnings-card {
@@ -470,6 +613,22 @@
             
             .stat-value {
                 font-size: 18px;
+            }
+            
+            .task-stats-grid {
+                gap: 12px;
+            }
+            
+            .stat-number {
+                font-size: 18px;
+            }
+            
+            .stat-number.earnings {
+                font-size: 17px;
+            }
+            
+            .stat-desc {
+                font-size: 11px;
             }
         }
     </style>
@@ -522,21 +681,37 @@
     
     <!-- 主要内容区域 -->
     <main class="main-content fade-in" style="animation-delay: 0.4s;">
-        <div class="content-header">
-            <h2 class="content-title">
-                <i class="fas fa-history"></i>
-                收益记录
-            </h2>
-            <div class="view-more-btn" onclick="showAllRecords()">
-                查看全部
-                <i class="fas fa-chevron-right" style="margin-left: 4px; font-size: 12px;"></i>
+        <!-- Tab切换 -->
+        <div class="earnings-tabs">
+            <div class="tab-item active" onclick="switchTab('my-data')">我的数据</div>
+            <div class="tab-item" onclick="switchTab('activity')">活动收益</div>
+            <div class="tab-item" onclick="switchTab('team')">团队数据</div>
+        </div>
+        
+        <!-- Tab内容：我的数据 -->
+        <div id="my-data-content" class="tab-content active">
+            <div id="my-data-list">
+                <div class="loading">
+                    <div class="loader"></div>
+                </div>
             </div>
         </div>
         
-        <div id="earnings-list">
-            <!-- 收益记录将在这里动态加载 -->
-            <div class="loading" id="recordsLoading">
+        <!-- Tab内容：活动收益 -->
+        <div id="activity-content" class="tab-content">
+            <div id="activity-list">
+                <div class="loading">
                 <div class="loader"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tab内容：团队数据 -->
+        <div id="team-content" class="tab-content">
+            <div id="team-list">
+                <div class="loading">
+                    <div class="loader"></div>
+                </div>
             </div>
         </div>
     </main>
@@ -798,7 +973,7 @@
                 }
 
                 // 计算实际可提现金额
-                // 云端余额优先：若 users.wallet_balance 存在，以其为准，避免端侧与后台不同步
+                // 云端余额优先：若 users.wallet_balance 存在,以其为准，避免端侧与后台不同步
                 let withdrawableAmount = totalEarnings - totalWithdrawals;
                 if (supabaseWorking && !hasLocalEarnings) {
                     try {
@@ -868,188 +1043,6 @@
             animate();
         }
 
-        // 加载收益记录
-        async function loadEarningRecords() {
-            try {
-                const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-                const userId = currentUser.id || currentUser.用户ID;
-                const username = currentUser.username || currentUser.用户名 || userId;
-                
-                if (!userId && !username) {
-                    console.warn('未找到用户ID或用户名');
-                    return;
-                }
-
-                let earnings = [];
-                let withdrawals = [];
-                let supabaseWorking = false;
-
-                // 先尝试从 Supabase 获取数据
-                try {
-                    const client = await ensureClient();
-                    if (client && userId && typeof window.dbQuery === 'function') {
-                        const resE = await window.dbQuery((c)=> c
-                            .from('earnings')
-                            .select('*')
-                            .eq('user_id', userId)
-                            .order('created_at', { ascending: false })
-                        );
-                        const resW = await window.dbQuery((c)=> c
-                            .from('withdrawals')
-                            .select('*')
-                            .eq('user_id', userId)
-                            .order('created_at', { ascending: false })
-                        );
-                        earnings = resE.data || [];
-                        withdrawals = resW.data || [];
-                        supabaseWorking = true;
-                        console.log('从 Supabase 获取记录数据');
-                    }
-                } catch (error) {
-                    console.warn('Supabase 获取记录失败:', error);
-                }
-
-                // 合并本地记录（无论云端是否可用，都将本地新增合并进来，确保列表可见）
-                console.log('从 localStorage 获取记录数据');
-                // 获取收益记录
-                for (let i = 0; i < localStorage.length; i++) {
-                    const key = localStorage.key(i);
-                    if (key && key.startsWith('earning_')) {
-                        try {
-                            const earning = JSON.parse(localStorage.getItem(key));
-                            if (earning.username === username || earning.用户名 === username || String(earning.user_id||earning.userId||'') === String(userId)) {
-                                earnings.push(earning);
-                            }
-                        } catch (e) {
-                            console.warn('解析收益记录失败:', key, e);
-                        }
-                    }
-                }
-
-                // 若云端不可用，也合并本地提现记录
-                if (!supabaseWorking) {
-                    for (let i = 0; i < localStorage.length; i++) {
-                        const key = localStorage.key(i);
-                        if (key && key.startsWith('withdrawal_')) {
-                            try {
-                                const withdrawal = JSON.parse(localStorage.getItem(key));
-                                if (withdrawal.username === username || withdrawal.用户名 === username) {
-                                    withdrawals.push(withdrawal);
-                                }
-                            } catch (e) {
-                                console.warn('解析提现记录失败:', key, e);
-                            }
-                        }
-                    }
-                }
-
-                // 按时间排序
-                earnings.sort((a, b) => new Date(b.created_at || b.创建时间 || b.date || b.时间) - new Date(a.created_at || a.创建时间 || a.date || a.时间));
-                withdrawals.sort((a, b) => new Date(b.created_at || b.创建时间 || b.date || b.时间) - new Date(a.created_at || a.创建时间 || a.date || a.时间));
-
-                // 合并收益和提现记录
-                const allRecords = [];
-
-                // 处理收益记录（规范化展示：任务 - 关键词）
-                earnings?.forEach(earning => {
-                    // 跳过被撤销/拒绝的收益
-                    const { isRejected } = parseStatusFlags(earning.status || earning.状态);
-                    if (isRejected) return;
-                    let title = '';
-                    const taskName = earning.task_name || earning.任务名称 || '';
-                    const descRaw = earning.description || earning.任务描述 || '';
-                    let keyword = '';
-                    // 从 description 中尝试解析 keyword 字段
-                    try { const obj = JSON.parse(descRaw); if (obj && obj.keyword) keyword = obj.keyword; } catch(_) {}
-                    // 兜底：从 task_name 提取“-关键词”
-                    if (!keyword && taskName && taskName.includes('-')) {
-                        keyword = taskName.split('-').slice(1).join('-');
-                    }
-                    // 任务名（去掉 JSON）
-                    const taskTitle = taskName ? taskName.split('-')[0] : '任务收益';
-                    title = keyword ? `${taskTitle}-${keyword}` : (taskName || '任务收益');
-
-                    allRecords.push({
-                        type: 'earning',
-                        amount: parseFloat(earning.amount || earning.金额 || earning.收益金额 || 0),
-                        description: title,
-                        created_at: earning.created_at || earning.创建时间 || earning.date || earning.时间
-                    });
-                });
-
-                // 处理提现记录
-                withdrawals?.forEach(withdrawal => {
-                    const statusText = (withdrawal.status || withdrawal.状态 || '').toString().toLowerCase();
-                    const isRejected = ['rejected','fail','failed','已拒绝','审核不通过','未通过','失败'].some(k=> statusText.includes(k));
-                    const isCompleted = ['completed','paid','success','已到账','已完成','已打款','已提现'].some(k=> statusText.includes(k));
-                    const desc = isRejected ? '提现失败，资金已退回' : (isCompleted ? '提现到账' : '提现审核中');
-                    allRecords.push({
-                        type: 'withdrawal',
-                        amount: parseFloat(withdrawal.amount || withdrawal.金额 || withdrawal.提现金额 || 0),
-                        description: desc,
-                        created_at: withdrawal.created_at || withdrawal.创建时间 || withdrawal.date || withdrawal.时间
-                    });
-                });
-
-                // 按时间排序
-                allRecords.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-
-                // 渲染记录
-                renderEarningRecords(allRecords.slice(0, 10)); // 只显示最近10条记录
-
-            } catch (error) {
-                console.error('加载收益记录失败:', error);
-                showError('加载收益记录失败，请刷新重试');
-            }
-        }
-        
-        // 渲染收益记录
-        function renderEarningRecords(records) {
-            const container = document.getElementById('earnings-list');
-            
-            if (!records || records.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-chart-line"></i>
-                        <h3>暂无收益记录</h3>
-                        <p>您还没有收益记录，开始做任务赚取收益吧！</p>
-                    </div>
-                `;
-                return;
-            }
-            
-            let html = '';
-            records.forEach((record, index) => {
-                const isEarning = record.type === 'earning';
-                const typeClass = isEarning ? 'earning' : 'withdrawal';
-                const prefix = isEarning ? '+' : '-';
-                const task = (record.description || '').split('-')[0] || '任务收益';
-                const keyword = (record.description || '').includes('-') ? record.description.split('-').slice(1).join('-') : '';
-                const statusChip = isEarning ? '<span class="chip status-ok">已入账</span>' : '<span class="chip status-pending">提现在途</span>';
-
-                html += `
-                    <div class="record-card ${typeClass} fade-in" style="animation-delay:${index*0.08}s;">
-                        <div class="record-row">
-                            <div class="record-icon ${typeClass}">
-                                <i class="fas ${isEarning ? 'fa-coins' : 'fa-wallet'}"></i>
-                            </div>
-                            <div class="record-body">
-                                <div class="record-title">${task}</div>
-                                <div class="record-sub">
-                                    ${keyword ? `<span class=\"chip keyword\">${keyword}</span>` : ''}
-                                    ${statusChip}
-                                    <span class="record-time">${formatTime(record.created_at)}</span>
-                                </div>
-                            </div>
-                            <div class="record-right">
-                                <div class="amount ${typeClass}">${prefix}¥${record.amount.toFixed(2)}</div>
-                            </div>
-                        </div>
-                    </div>`;
-            });
-            
-            container.innerHTML = html;
-        }
         
         // 格式化时间
         function formatTime(timeString) {
@@ -1080,26 +1073,693 @@
             showToast('提现功能开发中，敬请期待！', 'info');
         }
         
-        // 显示所有记录
-        function showAllRecords() {
-            showToast('记录详情页面开发中', 'info');
+        // Tab切换函数
+        function switchTab(tabName) {
+            // 更新Tab激活状态
+            document.querySelectorAll('.tab-item').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // 更新内容显示
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(tabName + '-content').classList.add('active');
+            
+            // 根据Tab加载对应数据
+            if (tabName === 'my-data') {
+                loadMyData();
+            } else if (tabName === 'activity') {
+                loadActivityEarnings();
+            } else if (tabName === 'team') {
+                loadTeamData();
+            }
         }
         
-        // 显示错误状态
-        function showError(message) {
-            const container = document.getElementById('earnings-list');
+        // 加载我的数据（按任务分组统计）
+        async function loadMyData() {
+            try {
+                const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+                const userId = currentUser.id || currentUser.用户ID;
+                
+                if (!userId) {
+                    console.warn('未找到用户ID');
+                    return;
+                }
+
+                let earnings = [];
+
+                // 从Supabase获取数据
+                try {
+                    const client = await ensureClient();
+                    if (client && typeof window.dbQuery === 'function') {
+                        const res = await window.dbQuery((c)=> c
+                            .from('earnings')
+                            .select('*')
+                            .eq('user_id', userId)
+                        );
+                        earnings = res.data || [];
+                    }
+                } catch (error) {
+                    console.warn('Supabase获取失败，使用本地数据:', error);
+                }
+                
+                // 合并本地数据
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith('earning_')) {
+                        try {
+                            const e = JSON.parse(localStorage.getItem(key));
+                            const uid = e.user_id || e.userId || e.用户ID;
+                            if (String(uid) === String(userId)) {
+                                earnings.push(e);
+                            }
+                        } catch (_) {}
+                    }
+                }
+                
+                // 按任务类型分组统计（只统计正常任务，排除活动和团长收益）
+                const taskStats = {};
+                earnings.forEach(earning => {
+                    const { isRejected } = parseStatusFlags(earning.status || earning.状态);
+                    if (isRejected) return;
+                    
+                    const taskName = earning.task_name || earning.任务名称 || '未知任务';
+                    
+                    // 排除活动收益和团长收益
+                    if (taskName.includes('活动') || taskName.includes('团长') || 
+                        taskName.includes('分成') || taskName.includes('邀请奖励') || 
+                        taskName.includes('首次提现')) {
+                        return; // 跳过这些特殊收益
+                    }
+                    
+                    const baseTask = taskName.split('-')[0]; // 去掉关键词部分
+                    
+                    if (!taskStats[baseTask]) {
+                        taskStats[baseTask] = {
+                            taskName: baseTask,
+                            totalOrders: 0,
+                            completedOrders: 0,
+                            totalEarnings: 0
+                        };
+                    }
+                    
+                    taskStats[baseTask].totalOrders += 1;
+                    const { isCompleted } = parseStatusFlags(earning.status || earning.状态);
+                    if (isCompleted) {
+                        taskStats[baseTask].completedOrders += 1;
+                    }
+                    taskStats[baseTask].totalEarnings += parseFloat(earning.amount || earning.金额 || 0);
+                });
+                
+                // 渲染任务统计卡片
+                renderTaskStats(Object.values(taskStats));
+                
+            } catch (error) {
+                console.error('加载我的数据失败:', error);
+                showErrorInTab('my-data-list', '加载失败，请刷新重试');
+            }
+        }
+        
+        // 渲染任务统计卡片
+        function renderTaskStats(stats) {
+            const container = document.getElementById('my-data-list');
+            
+            if (!stats || stats.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-chart-line"></i>
+                        <h3>暂无任务数据</h3>
+                        <p>您还没有完成任务，开始做任务赚取收益吧！</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            stats.forEach((stat, index) => {
+                const taskEmoji = getTaskEmoji(stat.taskName);
+                html += `
+                    <div class="task-stats-card fade-in" style="animation-delay:${index*0.1}s;">
+                        <div class="task-header">
+                            <div class="task-name">
+                                <div class="task-icon">${taskEmoji}</div>
+                                ${stat.taskName}
+                            </div>
+                            <div class="view-detail-btn" onclick="viewTaskDetail('${stat.taskName}')">
+                                查看明细
+                                <i class="fas fa-chevron-right" style="font-size: 12px;"></i>
+                            </div>
+                        </div>
+                        <div class="task-stats-grid">
+                            <div class="stat-box">
+                                <div class="stat-number">${stat.totalOrders}</div>
+                                <div class="stat-desc">当前单量</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-number">${stat.completedOrders}</div>
+                                <div class="stat-desc">当前成单量</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-number earnings">¥${stat.totalEarnings.toFixed(2)}</div>
+                                <div class="stat-desc">当前收益</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        // 获取任务对应的emoji图标
+        function getTaskEmoji(taskName) {
+            const emojiMap = {
+                '知乎拉活': '📱',
+                '知乎会员': '🎓',
+                '夸克网盘': '☁️',
+                '悟空搜索': '🔍',
+                'X-RAY搜索': '🔎',
+                'KK网盘': '💾'
+            };
+            return emojiMap[taskName] || '📊';
+        }
+        
+        // 查看任务明细
+        async function viewTaskDetail(taskName) {
+            try {
+                const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+                const userId = currentUser.id || currentUser.用户ID;
+                
+                if (!userId) {
+                    showToast('未找到用户信息', 'error');
+                    return;
+                }
+                
+                // 获取该任务的所有收益记录
+                let earnings = [];
+                
+                try {
+                    const client = await ensureClient();
+                    if (client && typeof window.dbQuery === 'function') {
+                        const res = await window.dbQuery((c)=> c
+                            .from('earnings')
+                            .select('*')
+                            .eq('user_id', userId)
+                            .ilike('task_name', `%${taskName}%`)
+                            .order('created_at', { ascending: false })
+                        );
+                        earnings = res.data || [];
+                    }
+                } catch (error) {
+                    console.warn('从数据库获取失败，使用本地数据:', error);
+                }
+
+                // 合并本地数据
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith('earning_')) {
+                        try {
+                            const e = JSON.parse(localStorage.getItem(key));
+                            const uid = e.user_id || e.userId || e.用户ID;
+                            const tn = e.task_name || e.任务名称 || '';
+                            if (String(uid) === String(userId) && tn.includes(taskName)) {
+                                earnings.push(e);
+                            }
+                        } catch (_) {}
+                    }
+                }
+                
+                // 去重
+                const earningsMap = new Map();
+                earnings.forEach(e => {
+                    const key = e.id || `${e.task_name}_${e.created_at}_${e.amount}`;
+                    if (!earningsMap.has(key)) {
+                        earningsMap.set(key, e);
+                    }
+                });
+                
+                const uniqueEarnings = Array.from(earningsMap.values());
+                
+                // 显示明细模态框
+                showTaskDetailModal(taskName, uniqueEarnings);
+                
+            } catch (error) {
+                console.error('查看任务明细失败:', error);
+                showToast('加载失败，请重试', 'error');
+            }
+        }
+        
+        // 显示任务明细模态框
+        function showTaskDetailModal(taskName, earnings) {
+            const modal = document.getElementById('taskDetailModal');
+            if (!modal) return;
+            
+            // 设置标题
+            document.getElementById('taskDetailTitle').textContent = `${taskName} - 任务明细`;
+            
+            // 渲染明细列表
+            const container = document.getElementById('taskDetailList');
+            if (!earnings || earnings.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state" style="padding: 40px 20px;">
+                        <i class="fas fa-clipboard-list" style="font-size: 48px; color: #ccc;"></i>
+                        <p style="margin-top: 16px; color: #999;">暂无明细记录</p>
+                    </div>
+                `;
+            } else {
+                let html = '';
+                earnings.forEach((earning, index) => {
+                    html += renderTaskDetailItem(earning, taskName, index);
+                });
+                container.innerHTML = html;
+            }
+            
+            // 显示模态框
+            modal.style.display = 'flex';
+        }
+        
+        // 渲染单条任务明细
+        function renderTaskDetailItem(earning, taskName, index) {
+            const amount = parseFloat(earning.amount || earning.金额 || 0);
+            const createdAt = earning.created_at || earning.创建时间 || new Date().toISOString();
+            const description = earning.description || earning.描述 || '';
+            const fullTaskName = earning.task_name || earning.任务名称 || taskName;
+            
+            // 解析description中的详细信息
+            let detailsHtml = '';
+            let hasJsonData = false;
+            
+            try {
+                const details = JSON.parse(description);
+                hasJsonData = true;
+                
+                if (taskName.includes('KK搜索')) {
+                    if (details.keyword) {
+                        detailsHtml += `<div class="detail-item"><span class="detail-label">关键词:</span> ${details.keyword}</div>`;
+                    }
+                    if (details.pullNew !== undefined || details.pull_new_count !== undefined) {
+                        const pullNew = details.pullNew || details.pull_new_count || 0;
+                        detailsHtml += `<div class="detail-item"><span class="detail-label">拉新量:</span> ${pullNew}人</div>`;
+                    }
+                    if (details.pullActive !== undefined || details.pull_active_count !== undefined) {
+                        const pullActive = details.pullActive || details.pull_active_count || 0;
+                        detailsHtml += `<div class="detail-item"><span class="detail-label">拉失活:</span> ${pullActive}人</div>`;
+                    }
+                    if (details.pullOld !== undefined || details.pull_old_count !== undefined) {
+                        const pullOld = details.pullOld || details.pull_old_count || 0;
+                        detailsHtml += `<div class="detail-item"><span class="detail-label">拉活量:</span> ${pullOld}人</div>`;
+                    }
+                } else if (taskName.includes('KK网盘')) {
+                    if (details.quarkUid) {
+                        detailsHtml += `<div class="detail-item"><span class="detail-label">夸克UID:</span> ${details.quarkUid}</div>`;
+                    }
+                    if (details.realName || details.username) {
+                        detailsHtml += `<div class="detail-item"><span class="detail-label">用户名:</span> ${details.realName || details.username}</div>`;
+                    }
+                    if (details.mobilePullNew !== undefined) {
+                        detailsHtml += `<div class="detail-item"><span class="detail-label">移动拉新:</span> ${details.mobilePullNew}人</div>`;
+                    }
+                    if (details.pcPullNew !== undefined) {
+                        detailsHtml += `<div class="detail-item"><span class="detail-label">PC拉新:</span> ${details.pcPullNew}人</div>`;
+                    }
+                    if (details.transferCount !== undefined) {
+                        detailsHtml += `<div class="detail-item"><span class="detail-label">转存量:</span> ${details.transferCount}次</div>`;
+                    }
+                    if (details.memberCommission !== undefined) {
+                        detailsHtml += `<div class="detail-item"><span class="detail-label">会员佣金:</span> ¥${parseFloat(details.memberCommission).toFixed(2)}</div>`;
+                    }
+                } else if (taskName.includes('w空') || taskName.includes('悟空')) {
+                    if (details.keyword) {
+                        detailsHtml += `<div class="detail-item"><span class="detail-label">关键词:</span> ${details.keyword}</div>`;
+                    }
+                    if (details.pullNew !== undefined) {
+                        detailsHtml += `<div class="detail-item"><span class="detail-label">拉新量:</span> ${details.pullNew}人</div>`;
+                    }
+                } else if (taskName.includes('X-RAY') || taskName.includes('x雷') || taskName.includes('雷浏览器')) {
+                    if (details.keyword) {
+                        detailsHtml += `<div class="detail-item"><span class="detail-label">关键词:</span> ${details.keyword}</div>`;
+                    }
+                    if (details.pullNew10 !== undefined || details.pull_new_1_10 !== undefined) {
+                        detailsHtml += `<div class="detail-item"><span class="detail-label">拉新1-10人:</span> ${details.pullNew10 || details.pull_new_1_10 || 0}人</div>`;
+                    }
+                    if (details.pullNew100 !== undefined || details.pull_new_10_100 !== undefined) {
+                        detailsHtml += `<div class="detail-item"><span class="detail-label">拉新10-100人:</span> ${details.pullNew100 || details.pull_new_10_100 || 0}人</div>`;
+                    }
+                    if (details.pullNew200 !== undefined || details.pull_new_100_200 !== undefined) {
+                        detailsHtml += `<div class="detail-item"><span class="detail-label">拉新100-200人:</span> ${details.pullNew200 || details.pull_new_100_200 || 0}人</div>`;
+                    }
+                    if (details.pullNew1000 !== undefined || details.pull_new_200_1000 !== undefined) {
+                        detailsHtml += `<div class="detail-item"><span class="detail-label">拉新200-1000人:</span> ${details.pullNew1000 || details.pull_new_200_1000 || 0}人</div>`;
+                    }
+                                }
+                            } catch (e) {
+                // 如果description不是JSON，尝试从task_name中提取信息
+                hasJsonData = false;
+            }
+            
+            // 如果没有JSON数据或JSON数据为空，尝试从task_name中提取信息
+            if (!detailsHtml || detailsHtml.trim() === '') {
+                // 从task_name中提取关键词（格式如：KK搜索-文创探索(拉新5,拉活3)）
+                const keywordMatch = fullTaskName.match(/[-–](.*?)(?:\(|$)/);
+                if (keywordMatch && keywordMatch[1]) {
+                    detailsHtml += `<div class="detail-item"><span class="detail-label">关键词:</span> ${keywordMatch[1].trim()}</div>`;
+                }
+                
+                // 提取括号中的详细信息
+                const detailsMatch = fullTaskName.match(/\((.*?)\)/);
+                if (detailsMatch && detailsMatch[1]) {
+                    const parts = detailsMatch[1].split(/[,，]/);
+                    parts.forEach(part => {
+                        const trimmed = part.trim();
+                        if (trimmed) {
+                            // 尝试解析"拉新5"这样的格式
+                            const countMatch = trimmed.match(/(拉新|拉活|拉失活|拉旧|移动拉新|PC拉新|转存)(\d+)/);
+                            if (countMatch) {
+                                const label = countMatch[1];
+                                const value = countMatch[2];
+                                detailsHtml += `<div class="detail-item"><span class="detail-label">${label}:</span> ${value}人</div>`;
+                            } else {
+                                // 其他格式的详情
+                                detailsHtml += `<div class="detail-item"><span class="detail-label">详情:</span> ${trimmed}</div>`;
+                            }
+                        }
+                    });
+                }
+                
+                // 如果有原始description文本，也显示
+                if (description && description.trim() && !hasJsonData) {
+                    detailsHtml += `<div class="detail-item"><span class="detail-label">备注:</span> ${description}</div>`;
+                }
+            }
+            
+            // 如果还是没有任何信息，显示默认提示
+            if (!detailsHtml || detailsHtml.trim() === '') {
+                detailsHtml = `
+                    <div class="detail-item"><span class="detail-label">任务名称:</span> ${fullTaskName}</div>
+                    <div class="detail-item" style="color: #999; font-size: 13px; margin-top: 8px;">
+                        <i class="fas fa-info-circle"></i> 该记录暂无详细数据
+                    </div>
+                `;
+            }
+            
+            return `
+                <div class="task-detail-card fade-in" style="animation-delay:${index*0.05}s;">
+                    <div class="detail-header">
+                        <div class="detail-amount">¥${amount.toFixed(2)}</div>
+                        <div class="detail-time">
+                            <i class="fas fa-clock"></i>
+                            ${formatTime(createdAt)}
+                        </div>
+                    </div>
+                    <div class="detail-body">
+                        ${detailsHtml}
+                    </div>
+                </div>
+            `;
+        }
+        
+        // 关闭任务明细模态框
+        function closeTaskDetailModal() {
+            const modal = document.getElementById('taskDetailModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+        
+        // 加载活动收益
+        async function loadActivityEarnings() {
+            try {
+                const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+                const userId = currentUser.id || currentUser.用户ID;
+                
+                if (!userId) {
+                    showErrorInTab('activity-list', '未找到用户信息');
+                    return;
+                }
+                
+                let earnings = [];
+                
+                // 从Supabase获取收益数据
+                try {
+                    const client = await ensureClient();
+                    if (client && typeof window.dbQuery === 'function') {
+                        const res = await window.dbQuery((c)=> c
+                            .from('earnings')
+                            .select('*')
+                            .eq('user_id', userId)
+                            .order('created_at', { ascending: false })
+                        );
+                        earnings = res.data || [];
+                    }
+                } catch (error) {
+                    console.warn('Supabase获取失败，使用本地数据:', error);
+                }
+                
+                // 合并本地数据
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith('earning_')) {
+                        try {
+                            const e = JSON.parse(localStorage.getItem(key));
+                            const uid = e.user_id || e.userId || e.用户ID;
+                            if (String(uid) === String(userId)) {
+                                earnings.push(e);
+                            }
+                        } catch (_) {}
+                    }
+                }
+                
+                // 筛选出活动收益（task_name包含"活动"的记录）
+                const activities = [];
+                earnings.forEach(earning => {
+                    const { isRejected } = parseStatusFlags(earning.status || earning.状态);
+                    if (isRejected) return;
+                    
+                    const taskName = earning.task_name || earning.任务名称 || '';
+                    
+                    // 只要包含"活动"关键词的收益
+                    if (taskName.includes('活动')) {
+                        activities.push({
+                            activity_name: taskName,
+                            reward_amount: earning.amount || earning.金额 || 0,
+                            created_at: earning.created_at || earning.创建时间,
+                            status: earning.status || earning.状态
+                        });
+                    }
+                });
+
+                // 按时间排序
+                activities.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+                renderActivityEarnings(activities);
+
+            } catch (error) {
+                console.error('加载活动收益失败:', error);
+                showErrorInTab('activity-list', '加载失败，请刷新重试');
+            }
+        }
+        
+        // 渲染活动收益
+        function renderActivityEarnings(activities) {
+            const container = document.getElementById('activity-list');
+            
+            if (!activities || activities.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-gift"></i>
+                        <h3>暂无活动收益</h3>
+                        <p>参与平台活动即可获得奖励</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            activities.forEach((activity, index) => {
+                html += `
+                    <div class="record-card fade-in" style="animation-delay:${index*0.08}s;">
+                        <div class="record-row">
+                            <div class="record-icon earning">
+                                <i class="fas fa-gift"></i>
+                            </div>
+                            <div class="record-body">
+                                <div class="record-title">${activity.activity_name || '活动奖励'}</div>
+                                <div class="record-sub">
+                                    <span class="chip status-ok">已发放</span>
+                                    <span class="record-time">${formatTime(activity.created_at)}</span>
+                                </div>
+                            </div>
+                            <div class="record-right">
+                                <div class="amount earning">+¥${parseFloat(activity.reward_amount || 0).toFixed(2)}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        // 加载团队数据
+        async function loadTeamData() {
+            try {
+                const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+                const userId = currentUser.id || currentUser.用户ID;
+                
+                // 检查是否是团长
+                const isLeader = localStorage.getItem('user_is_leader') === 'true';
+                if (!isLeader) {
+                    document.getElementById('team-list').innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-crown" style="color: #fbbf24;"></i>
+                            <h3>开通团长权限</h3>
+                            <p>即可查看团队分成收益</p>
+                            <button onclick="contactAdmin()" style="padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 12px; cursor: pointer; margin-top: 16px;">
+                                <i class="fas fa-phone" style="margin-right: 8px;"></i>
+                                联系管理员
+                            </button>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                if (!userId) {
+                    showErrorInTab('team-list', '未找到用户信息');
+                    return;
+                }
+                
+                let earnings = [];
+                
+                // 从Supabase获取收益数据
+                try {
+                    const client = await ensureClient();
+                    if (client && typeof window.dbQuery === 'function') {
+                        const res = await window.dbQuery((c)=> c
+                            .from('earnings')
+                            .select('*')
+                            .eq('user_id', userId)
+                            .order('created_at', { ascending: false })
+                        );
+                        earnings = res.data || [];
+                    }
+                } catch (error) {
+                    console.warn('Supabase获取失败，使用本地数据:', error);
+                }
+                
+                // 合并本地数据
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith('earning_')) {
+                        try {
+                            const e = JSON.parse(localStorage.getItem(key));
+                            const uid = e.user_id || e.userId || e.用户ID;
+                            if (String(uid) === String(userId)) {
+                                earnings.push(e);
+                            }
+                        } catch (_) {}
+                    }
+                }
+                
+                // 筛选出团队分成收益（task_name包含"团长"、"分成"、"邀请"等关键词的记录）
+                const teamEarnings = [];
+                earnings.forEach(earning => {
+                    const { isRejected } = parseStatusFlags(earning.status || earning.状态);
+                    if (isRejected) return;
+                    
+                    const taskName = earning.task_name || earning.任务名称 || '';
+                    const description = earning.description || earning.任务描述 || '';
+                    
+                    // 只要包含团队相关关键词的收益
+                    if (taskName.includes('团长') || taskName.includes('分成') || 
+                        taskName.includes('邀请奖励') || taskName.includes('首次提现') ||
+                        description.includes('团队') || description.includes('下级')) {
+                        teamEarnings.push(earning);
+                    }
+                });
+                
+                // 按时间排序
+                teamEarnings.sort((a, b) => new Date(b.created_at || b.创建时间) - new Date(a.created_at || a.创建时间));
+                
+                renderTeamEarnings(teamEarnings);
+                
+            } catch (error) {
+                console.error('加载团队数据失败:', error);
+                showErrorInTab('team-list', '加载失败，请刷新重试');
+            }
+        }
+        
+        // 渲染团队收益
+        function renderTeamEarnings(earnings) {
+            const container = document.getElementById('team-list');
+            
+            if (!earnings || earnings.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-users"></i>
+                        <h3>暂无团队收益</h3>
+                        <p>邀请好友加入团队即可获得分成收益</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = '';
+            earnings.forEach((earning, index) => {
+                const taskName = earning.task_name || earning.任务名称 || '团队收益';
+                const amount = parseFloat(earning.amount || earning.金额 || 0);
+                const createdAt = earning.created_at || earning.创建时间;
+                
+                // 判断收益类型
+                let icon = 'fa-users';
+                let label = '团队分成';
+                if (taskName.includes('首次提现') || taskName.includes('邀请奖励')) {
+                    icon = 'fa-gift';
+                    label = '邀请奖励';
+                }
+                
+                html += `
+                    <div class="record-card fade-in" style="animation-delay:${index*0.08}s;">
+                        <div class="record-row">
+                            <div class="record-icon earning">
+                                <i class="fas ${icon}"></i>
+                            </div>
+                            <div class="record-body">
+                                <div class="record-title">${taskName}</div>
+                                <div class="record-sub">
+                                    <span class="chip status-ok">${label}</span>
+                                    <span class="record-time">${formatTime(createdAt)}</span>
+                                </div>
+                            </div>
+                            <div class="record-right">
+                                <div class="amount earning">+¥${amount.toFixed(2)}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        // 在Tab中显示错误
+        function showErrorInTab(containerId, message) {
+            const container = document.getElementById(containerId);
             container.innerHTML = `
                 <div class="empty-state">
                     <i class="fas fa-exclamation-triangle" style="color: #ef4444;"></i>
                     <h3 style="color: #ef4444;">加载失败</h3>
                     <p>${message}</p>
-                    <button onclick="loadEarningRecords()" style="padding: 12px 24px; background: #667eea; color: white; border: none; border-radius: 12px; cursor: pointer; margin-top: 16px;">
-                        <i class="fas fa-sync-alt" style="margin-right: 8px;"></i>
-                        重新加载
-                    </button>
                 </div>
             `;
         }
+        
+        // 联系管理员
+        function contactAdmin() {
+            showToast('请联系管理员开通团长权限', 'info');
+        }
+        
 
         // 显示提示消息
         function showToast(message, type = 'info') {
@@ -1157,11 +1817,9 @@
                 // 初始化Supabase
                 await initializeSupabase();
 
-                // 计算收益并加载记录
-                await Promise.all([
-                    calculateEarnings(),
-                    loadEarningRecords()
-                ]);
+                // 计算收益并加载数据
+                await calculateEarnings();
+                await loadMyData(); // 默认加载"我的数据"
 
                 // 设置定时刷新
                 setInterval(calculateEarnings, 60000); // 每分钟刷新一次
@@ -1182,14 +1840,28 @@
         // 页面获得焦点时刷新数据
         window.addEventListener('focus', () => {
             calculateEarnings();
-            loadEarningRecords();
+            // 刷新当前激活的Tab数据
+            const activeTab = document.querySelector('.tab-item.active');
+            if (activeTab) {
+                const tabText = activeTab.textContent.trim();
+                if (tabText === '我的数据') loadMyData();
+                else if (tabText === '活动收益') loadActivityEarnings();
+                else if (tabText === '团队数据') loadTeamData();
+            }
         });
 
         // 页面可见性改变时刷新数据
         document.addEventListener('visibilitychange', function() {
             if (!document.hidden) {
                 calculateEarnings();
-                loadEarningRecords();
+                // 刷新当前激活的Tab数据
+                const activeTab = document.querySelector('.tab-item.active');
+                if (activeTab) {
+                    const tabText = activeTab.textContent.trim();
+                    if (tabText === '我的数据') loadMyData();
+                    else if (tabText === '活动收益') loadActivityEarnings();
+                    else if (tabText === '团队数据') loadTeamData();
+                }
             }
         });
 
@@ -1208,5 +1880,282 @@
             }, 150);
         }
     </script>
+
+    <!-- 任务明细模态框 -->
+    <div id="taskDetailModal" class="task-detail-modal" style="display: none;">
+        <div class="modal-overlay" onclick="closeTaskDetailModal()"></div>
+        <div class="modal-container">
+            <div class="modal-header">
+                <h3 id="taskDetailTitle">任务明细</h3>
+                <button class="close-btn" onclick="closeTaskDetailModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="taskDetailList">
+                <!-- 明细列表将动态加载到这里 -->
+            </div>
+        </div>
+    </div>
+
+    <style>
+        /* 任务明细模态框 - 全屏显示 */
+        .task-detail-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 9999;
+            display: flex;
+            align-items: stretch;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            animation: fadeIn 0.3s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .modal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: transparent;
+        }
+        
+        .modal-container {
+            position: relative;
+            background: linear-gradient(to bottom, #ffffff 0%, #f8f9fa 100%);
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            animation: slideInUp 0.3s ease-out;
+            overflow: hidden;
+        }
+        
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .modal-header {
+            padding: 20px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            flex-shrink: 0;
+        }
+        
+        .modal-header h3 {
+            font-size: 20px;
+            font-weight: 600;
+            color: white;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .modal-header h3::before {
+            content: '📋';
+            font-size: 24px;
+        }
+        
+        .close-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            font-size: 18px;
+        }
+        
+        .close-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: scale(1.1);
+        }
+        
+        .close-btn:active {
+            transform: scale(0.95);
+        }
+        
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .task-detail-card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            border: 1px solid #e9ecef;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            transition: all 0.2s;
+        }
+        
+        .task-detail-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            transform: translateY(-2px);
+        }
+        
+        .detail-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .detail-amount {
+            font-size: 28px;
+            font-weight: 700;
+            color: #10b981;
+            text-shadow: 0 1px 2px rgba(16, 185, 129, 0.1);
+        }
+        
+        .detail-time {
+            font-size: 13px;
+            color: #6c757d;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: #f8f9fa;
+            padding: 6px 12px;
+            border-radius: 12px;
+        }
+        
+        .detail-time i {
+            color: #667eea;
+        }
+        
+        .detail-body {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .detail-item {
+            font-size: 15px;
+            color: #495057;
+            display: flex;
+            align-items: flex-start;
+            line-height: 1.6;
+        }
+        
+        .detail-label {
+            font-weight: 600;
+            color: #667eea;
+            margin-right: 12px;
+            min-width: 90px;
+            flex-shrink: 0;
+        }
+        
+        /* 空状态样式 */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+        
+        .empty-state i {
+            font-size: 64px;
+            color: #ddd;
+            margin-bottom: 16px;
+        }
+        
+        .empty-state h3 {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+        
+        .empty-state p {
+            font-size: 14px;
+            color: #999;
+        }
+        
+        /* 移动端优化 */
+        @media (max-width: 640px) {
+            .modal-header {
+                padding: 16px;
+            }
+            
+            .modal-header h3 {
+                font-size: 18px;
+            }
+            
+            .modal-body {
+                padding: 16px;
+            }
+            
+            .task-detail-card {
+                padding: 16px;
+                margin-bottom: 12px;
+            }
+            
+            .detail-amount {
+                font-size: 24px;
+            }
+            
+            .detail-time {
+                font-size: 12px;
+                padding: 4px 10px;
+            }
+            
+            .detail-label {
+                min-width: 70px;
+                font-size: 14px;
+            }
+            
+            .detail-item {
+                font-size: 14px;
+            }
+        }
+        
+        /* 滚动条美化 */
+        .modal-body::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .modal-body::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        
+        .modal-body::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+        
+        .modal-body::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+    </style>
 </body>
 </html>

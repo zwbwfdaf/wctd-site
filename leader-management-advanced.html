@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>团长管理系统 - 高级版</title>
+    <link rel="stylesheet" href="admin-styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        /* 团长管理专用样式 */
+        .leader-nav-tabs{display:flex;gap:6px;margin-bottom:20px;background:#fff;padding:6px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.06);border:1px solid #e5e7eb}
+        .leader-nav-tab{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px 16px;background:transparent;border:none;border-radius:8px;font-size:14px;font-weight:500;color:#64748b;cursor:pointer;transition:all .2s ease}
+        .leader-nav-tab:hover{background:#f8fafc;color:#1e293b}
+        .leader-nav-tab.active{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;box-shadow:0 4px 12px rgba(99,102,241,0.3)}
+        .leader-nav-tab i{font-size:16px}
+        .leader-section{display:none}
+        .leader-section.active{display:block;animation:fadeIn .3s ease}
+        .leader-stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:24px}
+        .leader-stat-card{background:linear-gradient(135deg,#f8fafc,#fff);border:1px solid #e5e7eb;border-radius:12px;padding:20px;box-shadow:0 4px 12px rgba(0,0,0,0.04);transition:all .3s ease}
+        .leader-stat-card:hover{transform:translateY(-4px);box-shadow:0 8px 24px rgba(0,0,0,0.08)}
+        .leader-stat-card .stat-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:12px}
+        .leader-stat-card .stat-value{font-size:28px;font-weight:700;color:#1e293b;margin-bottom:4px}
+        .leader-stat-card .stat-label{font-size:13px;color:#64748b}
+        .leader-stat-card .stat-change{font-size:12px;margin-top:6px}
+        .leader-stat-card .stat-change.up{color:#10b981}
+        .leader-stat-card .stat-change.down{color:#ef4444}
+        .level-badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:9999px;font-size:12px;font-weight:600}
+        .level-badge.bronze{background:linear-gradient(135deg,#cd7f32,#b87333);color:#fff}
+        .level-badge.silver{background:linear-gradient(135deg,#c0c0c0,#a8a8a8);color:#fff}
+        .level-badge.gold{background:linear-gradient(135deg,#ffd700,#ffed4e);color:#1e293b}
+        .level-badge.platinum{background:linear-gradient(135deg,#e5e4e2,#d4d4d4);color:#1e293b}
+        .level-badge.diamond{background:linear-gradient(135deg,#b9f2ff,#87ceeb);color:#1e293b}
+        .leader-status{display:inline-block;padding:4px 10px;border-radius:9999px;font-size:12px;font-weight:600}
+        .leader-status.active{background:#dcfce7;color:#166534}
+        .leader-status.suspended{background:#fee2e2;color:#991b1b}
+        .leader-status.pending{background:#fef3c7;color:#92400e}
+        .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px;padding:16px;background:#f8fafc;border-radius:12px;border:1px solid #e5e7eb}
+        .toolbar input,.toolbar select{min-width:180px}
+        .level-config-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+        .level-config-card{background:#fff;border:2px solid #e5e7eb;border-radius:12px;padding:20px;transition:all .3s ease}
+        .level-config-card:hover{border-color:#6366f1;box-shadow:0 8px 24px rgba(99,102,241,0.15)}
+        .level-config-card .level-header{display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #f1f5f9}
+        .level-config-card .level-icon{width:50px;height:50px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px}
+        .level-config-card .level-name{font-size:18px;font-weight:700;color:#1e293b}
+        .commission-badge{display:inline-flex;align-items:center;gap:4px;padding:6px 12px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border-radius:9999px;font-size:13px;font-weight:600}
+        .ranking-badge{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;font-weight:700;font-size:14px}
+        .ranking-badge.top1{background:linear-gradient(135deg,#ffd700,#ffed4e);color:#1e293b}
+        .ranking-badge.top2{background:linear-gradient(135deg,#c0c0c0,#a8a8a8);color:#fff}
+        .ranking-badge.top3{background:linear-gradient(135deg,#cd7f32,#b87333);color:#fff}
+        .ranking-badge.normal{background:#f1f5f9;color:#64748b}
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <!-- 侧边栏（简化版） -->
+        <aside class="sidebar" style="width:250px;">
+            <div class="logo">
+                <i class="fas fa-crown"></i>
+                <span>团长管理系统</span>
+            </div>
+            
+            <nav class="nav-menu">
+                <ul>
+                    <li class="nav-item" onclick="window.location.href='admin-dashboard.html'">
+                        <i class="fas fa-arrow-left"></i>
+                        <span>返回后台</span>
+                    </li>
+                    <li class="nav-item" onclick="switchLeaderSection('overview'); document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active')); this.classList.add('active')">
+                        <i class="fas fa-chart-line"></i>
+                        <span>数据概览</span>
+                    </li>
+                    <li class="nav-item" onclick="switchLeaderSection('list'); document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active')); this.classList.add('active')">
+                        <i class="fas fa-users"></i>
+                        <span>团长列表</span>
+                    </li>
+                    <li class="nav-item" onclick="switchLeaderSection('commission'); document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active')); this.classList.add('active')">
+                        <i class="fas fa-coins"></i>
+                        <span>佣金管理</span>
+                    </li>
+                    <li class="nav-item" onclick="switchLeaderSection('level'); document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active')); this.classList.add('active')">
+                        <i class="fas fa-trophy"></i>
+                        <span>等级体系</span>
+                    </li>
+                    <li class="nav-item" onclick="switchLeaderSection('invite'); document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active')); this.classList.add('active')">
+                        <i class="fas fa-qrcode"></i>
+                        <span>邀请管理</span>
+                    </li>
+                    <li class="nav-item" onclick="switchLeaderSection('analytics'); document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active')); this.classList.add('active')">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>数据分析</span>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="main-content">
+            <!-- 顶部导航 -->
+            <header class="header">
+                <div class="header-left">
+                    <h1 class="page-title">团长管理系统</h1>
+                </div>
+                <div class="header-right">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" placeholder="全局搜索..." id="globalSearch">
+                    </div>
+                    <div class="user-menu">
+                        <button class="user-avatar">
+                            <i class="fas fa-user-circle"></i>
+                            <span>管理员</span>
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- 页面内容 -->
+            <div class="content">
+                
+                <!-- 顶部导航标签 -->
+                <div class="leader-nav-tabs">
+                    <button class="leader-nav-tab active" onclick="switchLeaderSection('overview')">
+                        <i class="fas fa-chart-line"></i>
+                        <span>数据概览</span>
+                    </button>
+                    <button class="leader-nav-tab" onclick="switchLeaderSection('list')">
+                        <i class="fas fa-users"></i>
+                        <span>团长列表</span>
+                    </button>
+                    <button class="leader-nav-tab" onclick="switchLeaderSection('commission')">
+                        <i class="fas fa-coins"></i>
+                        <span>佣金管理</span>
+                    </button>
+                    <button class="leader-nav-tab" onclick="switchLeaderSection('level')">
+                        <i class="fas fa-trophy"></i>
+                        <span>等级体系</span>
+                    </button>
+                    <button class="leader-nav-tab" onclick="switchLeaderSection('invite')">
+                        <i class="fas fa-qrcode"></i>
+                        <span>邀请管理</span>
+                    </button>
+                    <button class="leader-nav-tab" onclick="switchLeaderSection('analytics')">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>数据分析</span>
+                    </button>
+                </div>
+
+                <!-- 1. 数据概览 -->
+                <div id="leader-overview" class="leader-section active">
+                    <div class="page-header" style="margin-bottom:20px;">
+                        <h2>团长数据概览</h2>
+                        <div class="page-actions">
+                            <button class="btn" onclick="refreshLeaderOverview()">
+                                <i class="fas fa-sync-alt"></i> 刷新数据
+                            </button>
+                            <button class="btn btn-primary" onclick="exportLeaderReport()">
+                                <i class="fas fa-file-export"></i> 导出报表
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 核心数据统计 -->
+                    <div class="leader-stats-grid">
+                        <div class="leader-stat-card">
+                            <div class="stat-icon" style="background:linear-gradient(135deg,#667eea,#764ba2);">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="stat-value" id="overview-total-leaders">0</div>
+                            <div class="stat-label">团长总数</div>
+                            <div class="stat-change up" id="overview-total-change">
+                                <i class="fas fa-arrow-up"></i> 本月新增 0
+                            </div>
+                        </div>
+                        <div class="leader-stat-card">
+                            <div class="stat-icon" style="background:linear-gradient(135deg,#f093fb,#f5576c);">
+                                <i class="fas fa-user-check"></i>
+                            </div>
+                            <div class="stat-value" id="overview-active-leaders">0</div>
+                            <div class="stat-label">活跃团长</div>
+                            <div class="stat-change up" id="overview-active-rate">
+                                <i class="fas fa-chart-line"></i> 活跃率 0%
+                            </div>
+                        </div>
+                        <div class="leader-stat-card">
+                            <div class="stat-icon" style="background:linear-gradient(135deg,#4facfe,#00f2fe);">
+                                <i class="fas fa-user-friends"></i>
+                            </div>
+                            <div class="stat-value" id="overview-total-members">0</div>
+                            <div class="stat-label">邀请会员总数</div>
+                            <div class="stat-change up" id="overview-members-change">
+                                <i class="fas fa-arrow-up"></i> 今日新增 0
+                            </div>
+                        </div>
+                        <div class="leader-stat-card">
+                            <div class="stat-icon" style="background:linear-gradient(135deg,#43e97b,#38f9d7);">
+                                <i class="fas fa-coins"></i>
+                            </div>
+                            <div class="stat-value" id="overview-total-commission">¥0</div>
+                            <div class="stat-label">累计佣金</div>
+                            <div class="stat-change up" id="overview-commission-change">
+                                <i class="fas fa-arrow-up"></i> 本月增长 ¥0
+                            </div>
+                        </div>
+                        <div class="leader-stat-card">
+                            <div class="stat-icon" style="background:linear-gradient(135deg,#fa709a,#fee140);">
+                                <i class="fas fa-wallet"></i>
+                            </div>
+                            <div class="stat-value" id="overview-pending-commission">¥0</div>
+                            <div class="stat-label">待发放佣金</div>
+                            <div class="stat-change" id="overview-pending-count">
+                                <i class="fas fa-users"></i> 待发放人数 0
+                            </div>
+                        </div>
+                        <div class="leader-stat-card">
+                            <div class="stat-icon" style="background:linear-gradient(135deg,#30cfd0,#330867);">
+                                <i class="fas fa-trophy"></i>
+                            </div>
+                            <div class="stat-value" id="overview-top-commission">¥0</div>
+                            <div class="stat-label">最高佣金</div>
+                            <div class="stat-change" id="overview-avg-commission">
+                                <i class="fas fa-chart-bar"></i> 平均佣金 ¥0
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 等级分布统计 -->
+                    <div class="card" style="margin-bottom:20px;">
+                        <div class="card-header">
+                            <h3><i class="fas fa-layer-group"></i> 团长等级分布</h3>
+                        </div>
+                        <div class="card-body">
+                            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;">
+                                <div style="text-align:center;padding:16px;background:#f8fafc;border-radius:10px;">
+                                    <div class="level-badge bronze" style="font-size:14px;margin-bottom:8px;">
+                                        <i class="fas fa-medal"></i> 青铜团长
+                                    </div>
+                                    <div style="font-size:24px;font-weight:700;color:#cd7f32;" id="level-count-bronze">0</div>
+                                    <div style="font-size:12px;color:#64748b;margin-top:4px;">占比 <span id="level-percent-bronze">0%</span></div>
+                                </div>
+                                <div style="text-align:center;padding:16px;background:#f8fafc;border-radius:10px;">
+                                    <div class="level-badge silver" style="font-size:14px;margin-bottom:8px;">
+                                        <i class="fas fa-medal"></i> 白银团长
+                                    </div>
+                                    <div style="font-size:24px;font-weight:700;color:#c0c0c0;" id="level-count-silver">0</div>
+                                    <div style="font-size:12px;color:#64748b;margin-top:4px;">占比 <span id="level-percent-silver">0%</span></div>
+                                </div>
+                                <div style="text-align:center;padding:16px;background:#f8fafc;border-radius:10px;">
+                                    <div class="level-badge gold" style="font-size:14px;margin-bottom:8px;">
+                                        <i class="fas fa-medal"></i> 黄金团长
+                                    </div>
+                                    <div style="font-size:24px;font-weight:700;color:#ffd700;" id="level-count-gold">0</div>
+                                    <div style="font-size:12px;color:#64748b;margin-top:4px;">占比 <span id="level-percent-gold">0%</span></div>
+                                </div>
+                                <div style="text-align:center;padding:16px;background:#f8fafc;border-radius:10px;">
+                                    <div class="level-badge platinum" style="font-size:14px;margin-bottom:8px;">
+                                        <i class="fas fa-crown"></i> 铂金团长
+                                    </div>
+                                    <div style="font-size:24px;font-weight:700;color:#e5e4e2;" id="level-count-platinum">0</div>
+                                    <div style="font-size:12px;color:#64748b;margin-top:4px;">占比 <span id="level-percent-platinum">0%</span></div>
+                                </div>
+                                <div style="text-align:center;padding:16px;background:#f8fafc;border-radius:10px;">
+                                    <div class="level-badge diamond" style="font-size:14px;margin-bottom:8px;">
+                                        <i class="fas fa-gem"></i> 钻石团长
+                                    </div>
+                                    <div style="font-size:24px;font-weight:700;color:#b9f2ff;" id="level-count-diamond">0</div>
+                                    <div style="font-size:12px;color:#64748b;margin-top:4px;">占比 <span id="level-percent-diamond">0%</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 本月TOP 10团长排行榜 -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-ranking-star"></i> 本月TOP 10团长排行榜</h3>
+                            <div class="filter-tabs" style="gap:6px;">
+                                <button class="filter-tab active" onclick="switchRankingType('commission')">按佣金排序</button>
+                                <button class="filter-tab" onclick="switchRankingType('members')">按团队人数</button>
+                                <button class="filter-tab" onclick="switchRankingType('growth')">按增长率</button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-container">
+                                <table class="data-table" id="leaderRankingTable">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:60px;">排名</th>
+                                            <th>团长</th>
+                                            <th>等级</th>
+                                            <th>团队人数</th>
+                                            <th>本月佣金</th>
+                                            <th>累计佣金</th>
+                                            <th>增长率</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="rankingTableBody">
+                                        <tr><td colspan="7" class="loading">加载中...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. 团长列表 -->
+                <div id="leader-list" class="leader-section">
+                    <div class="page-header" style="margin-bottom:20px;">
+                        <h2>团长列表管理</h2>
+                        <div class="page-actions">
+                            <button class="btn btn-primary" onclick="openAddLeaderModal()">
+                                <i class="fas fa-user-plus"></i> 添加团长
+                            </button>
+                            <button class="btn" onclick="batchImportLeaders()">
+                                <i class="fas fa-file-import"></i> 批量导入
+                            </button>
+                            <button class="btn" onclick="exportLeaderList()">
+                                <i class="fas fa-download"></i> 导出列表
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 搜索和筛选工具栏 -->
+                    <div class="toolbar">
+                        <input type="text" class="search-input" id="leader-search" placeholder="搜索用户名、ID、手机号..." oninput="filterLeaderList()">
+                        <select class="filter-select" id="leader-level-filter" onchange="filterLeaderList()">
+                            <option value="">全部等级</option>
+                            <option value="bronze">青铜团长</option>
+                            <option value="silver">白银团长</option>
+                            <option value="gold">黄金团长</option>
+                            <option value="platinum">铂金团长</option>
+                            <option value="diamond">钻石团长</option>
+                        </select>
+                        <select class="filter-select" id="leader-status-filter" onchange="filterLeaderList()">
+                            <option value="">全部状态</option>
+                            <option value="active">正常</option>
+                            <option value="suspended">已暂停</option>
+                            <option value="pending">待审核</option>
+                        </select>
+                        <select class="filter-select" id="leader-sort" onchange="filterLeaderList()">
+                            <option value="joined-desc">注册时间↓</option>
+                            <option value="joined-asc">注册时间↑</option>
+                            <option value="members-desc">团队人数↓</option>
+                            <option value="members-asc">团队人数↑</option>
+                            <option value="commission-desc">佣金收入↓</option>
+                            <option value="commission-asc">佣金收入↑</option>
+                        </select>
+                        <div style="flex:1;"></div>
+                        <button class="btn" onclick="resetLeaderFilters()">
+                            <i class="fas fa-redo"></i> 重置
+                        </button>
+                    </div>
+
+                    <!-- 批量操作栏 -->
+                    <div style="display:none;margin-bottom:16px;padding:12px;background:#eef2ff;border-radius:8px;border:1px solid #c7d2fe;" id="leader-batch-toolbar">
+                        <span style="margin-right:12px;font-weight:600;">已选择 <span id="leader-selected-count">0</span> 个团长</span>
+                        <button class="btn btn-sm btn-primary" onclick="batchUpdateLeaderLevel()">
+                            <i class="fas fa-level-up-alt"></i> 批量调整等级
+                        </button>
+                        <button class="btn btn-sm btn-success" onclick="batchEnableLeaders()">
+                            <i class="fas fa-check-circle"></i> 批量启用
+                        </button>
+                        <button class="btn btn-sm btn-warning" onclick="batchSuspendLeaders()">
+                            <i class="fas fa-pause-circle"></i> 批量暂停
+                        </button>
+                        <button class="btn btn-sm" onclick="clearLeaderSelection()">
+                            <i class="fas fa-times"></i> 取消选择
+                        </button>
+                    </div>
+
+                    <!-- 团长列表表格 -->
+                    <div class="card">
+                        <div class="card-body" style="padding:0;">
+                            <div class="table-container">
+                                <table class="data-table" id="leaderListTable">
+                                    <thead>
+                                        <tr>
+                                            <th style="width:50px;">
+                                                <input type="checkbox" id="leader-select-all" onchange="toggleAllLeaderSelection()">
+                                            </th>
+                                            <th>ID</th>
+                                            <th>团长信息</th>
+                                            <th>等级</th>
+                                            <th>团队人数</th>
+                                            <th>累计佣金</th>
+                                            <th>本月佣金</th>
+                                            <th>注册时间</th>
+                                            <th>状态</th>
+                                            <th style="width:200px;">操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="leaderListTableBody">
+                                        <tr><td colspan="10" class="loading">加载中...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <!-- 分页 -->
+                            <div style="padding:16px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid #e5e7eb;">
+                                <div style="color:#64748b;font-size:14px;">
+                                    共 <span id="leader-total-count">0</span> 个团长，显示第 <span id="leader-current-page">1</span> 页
+                                </div>
+                                <div style="display:flex;gap:8px;">
+                                    <button class="btn btn-sm" onclick="prevLeaderPage()">
+                                        <i class="fas fa-chevron-left"></i> 上一页
+                                    </button>
+                                    <button class="btn btn-sm" onclick="nextLeaderPage()">
+                                        下一页 <i class="fas fa-chevron-right"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. 佣金管理 -->
+                <div id="leader-commission" class="leader-section">
+                    <div class="page-header" style="margin-bottom:20px;">
+                        <h2>佣金管理</h2>
+                        <div class="page-actions">
+                            <button class="btn btn-primary" onclick="openBatchCommissionModal()">
+                                <i class="fas fa-coins"></i> 批量发放佣金
+                            </button>
+                            <button class="btn btn-success" onclick="openCommissionRuleModal()">
+                                <i class="fas fa-cog"></i> 佣金规则设置
+                            </button>
+                            <button class="btn" onclick="exportCommissionReport()">
+                                <i class="fas fa-file-excel"></i> 导出报表
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 佣金统计 -->
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-bottom:24px;">
+                        <div class="leader-stat-card">
+                            <div class="stat-icon" style="background:linear-gradient(135deg,#667eea,#764ba2);">
+                                <i class="fas fa-wallet"></i>
+                            </div>
+                            <div class="stat-value" id="commission-pending-amount">¥0</div>
+                            <div class="stat-label">待发放总额</div>
+                            <div class="stat-change" id="commission-pending-people">
+                                <i class="fas fa-users"></i> 待发放人数 0
+                            </div>
+                        </div>
+                        <div class="leader-stat-card">
+                            <div class="stat-icon" style="background:linear-gradient(135deg,#f093fb,#f5576c);">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div class="stat-value" id="commission-paid-amount">¥0</div>
+                            <div class="stat-label">已发放总额</div>
+                            <div class="stat-change up" id="commission-paid-month">
+                                <i class="fas fa-calendar-alt"></i> 本月发放 ¥0
+                            </div>
+                        </div>
+                        <div class="leader-stat-card">
+                            <div class="stat-icon" style="background:linear-gradient(135deg,#4facfe,#00f2fe);">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <div class="stat-value" id="commission-total-amount">¥0</div>
+                            <div class="stat-label">累计佣金</div>
+                            <div class="stat-change up" id="commission-growth">
+                                <i class="fas fa-arrow-up"></i> 较上月 +0%
+                            </div>
+                        </div>
+                        <div class="leader-stat-card">
+                            <div class="stat-icon" style="background:linear-gradient(135deg,#43e97b,#38f9d7);">
+                                <i class="fas fa-calculator"></i>
+                            </div>
+                            <div class="stat-value" id="commission-avg-amount">¥0</div>
+                            <div class="stat-label">人均佣金</div>
+                            <div class="stat-change" id="commission-avg-month">
+                                <i class="fas fa-chart-bar"></i> 本月人均 ¥0
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 佣金记录筛选 -->
+                    <div class="toolbar">
+                        <input type="text" class="search-input" id="commission-search" placeholder="搜索团长..." oninput="filterCommissionList()">
+                        <select class="filter-select" id="commission-status-filter" onchange="filterCommissionList()">
+                            <option value="">全部状态</option>
+                            <option value="pending">待发放</option>
+                            <option value="paid">已发放</option>
+                            <option value="cancelled">已取消</option>
+                        </select>
+                        <select class="filter-select" id="commission-type-filter" onchange="filterCommissionList()">
+                            <option value="">全部类型</option>
+                            <option value="direct">直推佣金</option>
+                            <option value="indirect">间推佣金</option>
+                            <option value="bonus">奖励佣金</option>
+                        </select>
+                        <input type="date" class="filter-select" id="commission-date-start" onchange="filterCommissionList()">
+                        <span style="color:#64748b;">至</span>
+                        <input type="date" class="filter-select" id="commission-date-end" onchange="filterCommissionList()">
+                        <div style="flex:1;"></div>
+                        <button class="btn" onclick="resetCommissionFilters()">
+                            <i class="fas fa-redo"></i> 重置
+                        </button>
+                    </div>
+
+                    <!-- 佣金记录表格 -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>佣金发放记录</h3>
+                        </div>
+                        <div class="card-body" style="padding:0;">
+                            <div class="table-container">
+                                <table class="data-table" id="commissionRecordTable">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>团长</th>
+                                            <th>佣金类型</th>
+                                            <th>金额</th>
+                                            <th>来源</th>
+                                            <th>发放时间</th>
+                                            <th>状态</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="commissionRecordTableBody">
+                                        <tr><td colspan="8" class="loading">加载中...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. 等级体系 -->
+                <div id="leader-level" class="leader-section">
+                    <div class="page-header" style="margin-bottom:20px;">
+                        <h2>团长等级体系</h2>
+                        <div class="page-actions">
+                            <button class="btn btn-primary" onclick="saveAllLevelConfig()">
+                                <i class="fas fa-save"></i> 保存所有配置
+                            </button>
+                            <button class="btn" onclick="resetLevelConfig()">
+                                <i class="fas fa-undo"></i> 恢复默认
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 等级配置卡片 -->
+                    <div class="level-config-grid">
+                        <!-- 青铜团长 -->
+                        <div class="level-config-card">
+                            <div class="level-header">
+                                <div class="level-icon" style="background:linear-gradient(135deg,#cd7f32,#b87333);">
+                                    <i class="fas fa-medal" style="color:#fff;"></i>
+                                </div>
+                                <div>
+                                    <div class="level-name">青铜团长</div>
+                                    <div style="color:#64748b;font-size:13px;">入门级别</div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>升级条件</label>
+                                <input type="number" style="width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:6px;" id="bronze-members" value="0" placeholder="团队人数">
+                                <small style="color:#64748b;margin-top:4px;display:block;">新用户默认等级，无需升级条件</small>
+                            </div>
+                            <div class="form-group">
+                                <label>佣金比例</label>
+                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                                    <div>
+                                        <input type="number" style="width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:6px;" id="bronze-direct" value="5" step="0.1">
+                                        <small style="color:#64748b;">直推 %</small>
+                                    </div>
+                                    <div>
+                                        <input type="number" style="width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:6px;" id="bronze-indirect" value="2" step="0.1">
+                                        <small style="color:#64748b;">间推 %</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="commission-badge">
+                                <i class="fas fa-coins"></i>
+                                直推 <span id="bronze-direct-display">5</span>% | 间推 <span id="bronze-indirect-display">2</span>%
+                            </div>
+                        </div>
+
+                        <!-- 白银团长 -->
+                        <div class="level-config-card">
+                            <div class="level-header">
+                                <div class="level-icon" style="background:linear-gradient(135deg,#c0c0c0,#a8a8a8);">
+                                    <i class="fas fa-medal" style="color:#fff;"></i>
+                                </div>
+                                <div>
+                                    <div class="level-name">白银团长</div>
+                                    <div style="color:#64748b;font-size:13px;">初级团长</div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>升级条件</label>
+                                <input type="number" style="width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:6px;" id="silver-members" value="10" placeholder="团队人数">
+                                <small style="color:#64748b;margin-top:4px;display:block;">需要邀请 <span id="silver-members-display">10</span> 人</small>
+                            </div>
+                            <div class="form-group">
+                                <label>佣金比例</label>
+                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                                    <div>
+                                        <input type="number" style="width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:6px;" id="silver-direct" value="8" step="0.1">
+                                        <small style="color:#64748b;">直推 %</small>
+                                    </div>
+                                    <div>
+                                        <input type="number" style="width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:6px;" id="silver-indirect" value="3" step="0.1">
+                                        <small style="color:#64748b;">间推 %</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="commission-badge">
+                                <i class="fas fa-coins"></i>
+                                直推 <span id="silver-direct-display">8</span>% | 间推 <span id="silver-indirect-display">3</span>%
+                            </div>
+                        </div>
+
+                        <!-- 黄金团长 -->
+                        <div class="level-config-card">
+                            <div class="level-header">
+                                <div class="level-icon" style="background:linear-gradient(135deg,#ffd700,#ffed4e);">
+                                    <i class="fas fa-medal" style="color:#1e293b;"></i>
+                                </div>
+                                <div>
+                                    <div class="level-name">黄金团长</div>
+                                    <div style="color:#64748b;font-size:13px;">中级团长</div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>升级条件</label>
+                                <input type="number" style="width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:6px;" id="gold-members" value="50" placeholder="团队人数">
+                                <small style="color:#64748b;margin-top:4px;display:block;">需要邀请 <span id="gold-members-display">50</span> 人</small>
+                            </div>
+                            <div class="form-group">
+                                <label>佣金比例</label>
+                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                                    <div>
+                                        <input type="number" style="width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:6px;" id="gold-direct" value="12" step="0.1">
+                                        <small style="color:#64748b;">直推 %</small>
+                                    </div>
+                                    <div>
+                                        <input type="number" style="width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:6px;" id="gold-indirect" value="5" step="0.1">
+                                        <small style="color:#64748b;">间推 %</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="commission-badge">
+                                <i class="fas fa-coins"></i>
+                                直推 <span id="gold-direct-display">12</span>% | 间推 <span id="gold-indirect-display">5</span>%
+                            </div>
+                        </div>
+
+                        <!-- 铂金团长 -->
+                        <div class="level-config-card">
+                            <div class="level-header">
+                                <div class="level-icon" style="background:linear-gradient(135deg,#e5e4e2,#d4d4d4);">
+                                    <i class="fas fa-crown" style="color:#1e293b;"></i>
+                                </div>
+                                <div>
+                                    <div class="level-name">铂金团长</div>
+                                    <div style="color:#64748b;font-size:13px;">高级团长</div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>升级条件</label>
+                                <input type="number" style="width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:6px;" id="platinum-members" value="100" placeholder="团队人数">
+                                <small style="color:#64748b;margin-top:4px;display:block;">需要邀请 <span id="platinum-members-display">100</span> 人</small>
+                            </div>
+                            <div class="form-group">
+                                <label>佣金比例</label>
+                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                                    <div>
+                                        <input type="number" style="width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:6px;" id="platinum-direct" value="15" step="0.1">
+                                        <small style="color:#64748b;">直推 %</small>
+                                    </div>
+                                    <div>
+                                        <input type="number" style="width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:6px;" id="platinum-indirect" value="7" step="0.1">
+                                        <small style="color:#64748b;">间推 %</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="commission-badge">
+                                <i class="fas fa-coins"></i>
+                                直推 <span id="platinum-direct-display">15</span>% | 间推 <span id="platinum-indirect-display">7</span>%
+                            </div>
+                        </div>
+
+                        <!-- 钻石团长 -->
+                        <div class="level-config-card">
+                            <div class="level-header">
+                                <div class="level-icon" style="background:linear-gradient(135deg,#b9f2ff,#87ceeb);">
+                                    <i class="fas fa-gem" style="color:#1e293b;"></i>
+                                </div>
+                                <div>
+                                    <div class="level-name">钻石团长</div>
+                                    <div style="color:#64748b;font-size:13px;">顶级团长</div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>升级条件</label>
+                                <input type="number" style="width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:6px;" id="diamond-members" value="200" placeholder="团队人数">
+                                <small style="color:#64748b;margin-top:4px;display:block;">需要邀请 <span id="diamond-members-display">200</span> 人</small>
+                            </div>
+                            <div class="form-group">
+                                <label>佣金比例</label>
+                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                                    <div>
+                                        <input type="number" style="width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:6px;" id="diamond-direct" value="20" step="0.1">
+                                        <small style="color:#64748b;">直推 %</small>
+                                    </div>
+                                    <div>
+                                        <input type="number" style="width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:6px;" id="diamond-indirect" value="10" step="0.1">
+                                        <small style="color:#64748b;">间推 %</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="commission-badge">
+                                <i class="fas fa-coins"></i>
+                                直推 <span id="diamond-direct-display">20</span>% | 间推 <span id="diamond-indirect-display">10</span>%
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 等级权益说明 -->
+                    <div class="card" style="margin-top:24px;">
+                        <div class="card-header">
+                            <h3><i class="fas fa-info-circle"></i> 等级权益说明</h3>
+                        </div>
+                        <div class="card-body">
+                            <div style="line-height:1.8;color:#475569;">
+                                <p><strong>直推佣金：</strong>团长直接邀请的用户产生的收益佣金比例</p>
+                                <p><strong>间推佣金：</strong>团长的下级团长邀请的用户产生的收益佣金比例</p>
+                                <p><strong>自动升级：</strong>当团队人数达到升级条件时，系统会自动升级团长等级</p>
+                                <p><strong>等级保护：</strong>团长等级只升不降，即使团队人数减少也不会降级</p>
+                                <p style="background:#fef3c7;padding:12px;border-radius:8px;margin-top:12px;">
+                                    <i class="fas fa-exclamation-triangle" style="color:#f59e0b;"></i>
+                                    <strong>提示：</strong>修改等级配置后需要点击"保存所有配置"按钮才能生效，修改会影响新加入的团长，已有团长的等级和佣金比例保持不变。
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. 邀请管理 -->
+                <div id="leader-invite" class="leader-section">
+                    <div class="page-header" style="margin-bottom:20px;">
+                        <h2>邀请码管理</h2>
+                        <div class="page-actions">
+                            <button class="btn btn-primary" onclick="generateInviteCode()">
+                                <i class="fas fa-plus"></i> 生成邀请码
+                            </button>
+                            <button class="btn" onclick="generateQRCode()">
+                                <i class="fas fa-qrcode"></i> 生成二维码
+                            </button>
+                            <button class="btn" onclick="exportInviteCodes()">
+                                <i class="fas fa-download"></i> 导出邀请码
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 邀请数据统计 -->
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-bottom:24px;">
+                        <div class="leader-stat-card">
+                            <div class="stat-icon" style="background:linear-gradient(135deg,#667eea,#764ba2);">
+                                <i class="fas fa-ticket-alt"></i>
+                            </div>
+                            <div class="stat-value" id="invite-total-codes">0</div>
+                            <div class="stat-label">邀请码总数</div>
+                            <div class="stat-change" id="invite-active-codes">
+                                <i class="fas fa-check-circle"></i> 可用 0
+                            </div>
+                        </div>
+                        <div class="leader-stat-card">
+                            <div class="stat-icon" style="background:linear-gradient(135deg,#f093fb,#f5576c);">
+                                <i class="fas fa-user-plus"></i>
+                            </div>
+                            <div class="stat-value" id="invite-total-users">0</div>
+                            <div class="stat-label">邀请用户总数</div>
+                            <div class="stat-change up" id="invite-today-users">
+                                <i class="fas fa-calendar-day"></i> 今日 +0
+                            </div>
+                        </div>
+                        <div class="leader-stat-card">
+                            <div class="stat-icon" style="background:linear-gradient(135deg,#4facfe,#00f2fe);">
+                                <i class="fas fa-percentage"></i>
+                            </div>
+                            <div class="stat-value" id="invite-conversion-rate">0%</div>
+                            <div class="stat-label">邀请转化率</div>
+                            <div class="stat-change up" id="invite-avg-users">
+                                <i class="fas fa-chart-bar"></i> 人均邀请 0
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 白名单管理 -->
+                    <div class="card" style="margin-bottom:20px;">
+                        <div class="card-header">
+                            <h3><i class="fas fa-shield-alt"></i> 团长白名单（邀请权限）</h3>
+                            <div class="page-actions">
+                                <button class="btn btn-sm btn-primary" onclick="addToWhitelist()">
+                                    <i class="fas fa-plus"></i> 添加白名单
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="toolbar" style="margin-bottom:12px;">
+                                <input type="text" class="search-input" id="whitelist-search" placeholder="搜索用户名或ID..." oninput="filterWhitelist()">
+                                <select class="filter-select" id="whitelist-status-filter" onchange="filterWhitelist()">
+                                    <option value="">全部状态</option>
+                                    <option value="active">启用</option>
+                                    <option value="disabled">禁用</option>
+                                </select>
+                                <div style="flex:1;"></div>
+                                <button class="btn btn-sm" onclick="resetWhitelistFilters()">
+                                    <i class="fas fa-redo"></i> 重置
+                                </button>
+                            </div>
+                            <div class="table-container">
+                                <table class="data-table" id="whitelistTable">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>用户名</th>
+                                            <th>邀请码</th>
+                                            <th>已邀请人数</th>
+                                            <th>添加时间</th>
+                                            <th>状态</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="whitelistTableBody">
+                                        <tr><td colspan="7" class="loading">加载中...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 邀请数据统计表 -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-chart-pie"></i> 邀请数据统计</h3>
+                            <div class="filter-tabs" style="gap:6px;">
+                                <button class="filter-tab active" onclick="switchInviteStats('all')">全部</button>
+                                <button class="filter-tab" onclick="switchInviteStats('today')">今日</button>
+                                <button class="filter-tab" onclick="switchInviteStats('week')">本周</button>
+                                <button class="filter-tab" onclick="switchInviteStats('month')">本月</button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-container">
+                                <table class="data-table" id="inviteStatsTable">
+                                    <thead>
+                                        <tr>
+                                            <th>排名</th>
+                                            <th>团长</th>
+                                            <th>等级</th>
+                                            <th>邀请码</th>
+                                            <th>邀请人数</th>
+                                            <th>活跃用户</th>
+                                            <th>转化率</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="inviteStatsTableBody">
+                                        <tr><td colspan="7" class="loading">加载中...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 6. 数据分析 -->
+                <div id="leader-analytics" class="leader-section">
+                    <div class="page-header" style="margin-bottom:20px;">
+                        <h2>数据分析</h2>
+                        <div class="page-actions">
+                            <select class="filter-select" id="analytics-range" onchange="updateAnalytics()">
+                                <option value="7">最近7天</option>
+                                <option value="30" selected>最近30天</option>
+                                <option value="90">最近90天</option>
+                                <option value="365">最近一年</option>
+                            </select>
+                            <button class="btn" onclick="refreshAnalytics()">
+                                <i class="fas fa-sync-alt"></i> 刷新
+                            </button>
+                            <button class="btn btn-primary" onclick="exportAnalyticsReport()">
+                                <i class="fas fa-file-export"></i> 导出报告
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 趋势图表 -->
+                    <div class="card" style="margin-bottom:20px;">
+                        <div class="card-header">
+                            <h3><i class="fas fa-chart-line"></i> 团长增长趋势</h3>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="leaderGrowthChart" style="max-height:300px;"></canvas>
+                        </div>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:20px;margin-bottom:20px;">
+                        <!-- 佣金趋势 -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-coins"></i> 佣金发放趋势</h3>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="commissionTrendChart" style="max-height:250px;"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- 等级分布 -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-chart-pie"></i> 等级分布</h3>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="levelDistributionChart" style="max-height:250px;"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 数据表格 -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-table"></i> 详细数据</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-container">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>日期</th>
+                                            <th>新增团长</th>
+                                            <th>活跃团长</th>
+                                            <th>新增会员</th>
+                                            <th>发放佣金</th>
+                                            <th>人均佣金</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="analyticsDataTableBody">
+                                        <tr><td colspan="6" class="loading">加载中...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // 页面切换函数
+        function switchLeaderSection(sectionId) {
+            // 隐藏所有section
+            document.querySelectorAll('.leader-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            // 显示目标section
+            document.getElementById('leader-' + sectionId).classList.add('active');
+            
+            // 更新顶部标签状态
+            document.querySelectorAll('.leader-nav-tab').forEach((tab, index) => {
+                tab.classList.remove('active');
+            });
+            event.target.closest('.leader-nav-tab').classList.add('active');
+            
+            // 根据section加载对应数据
+            loadSectionData(sectionId);
+        }
+
+        // 加载section数据
+        function loadSectionData(sectionId) {
+            switch(sectionId) {
+                case 'overview':
+                    loadOverviewData();
+                    break;
+                case 'list':
+                    loadLeaderList();
+                    break;
+                case 'commission':
+                    loadCommissionData();
+                    break;
+                case 'level':
+                    loadLevelConfig();
+                    break;
+                case 'invite':
+                    loadInviteData();
+                    break;
+                case 'analytics':
+                    loadAnalyticsData();
+                    break;
+            }
+        }
+
+        // 模拟数据加载函数
+        function loadOverviewData() {
+            // 这里应该从API加载真实数据
+            // 示例数据
+            const mockData = {
+                totalLeaders: 156,
+                totalChange: 12,
+                activeLeaders: 128,
+                activeRate: 82,
+                totalMembers: 3420,
+                membersChange: 45,
+                totalCommission: 125600,
+                commissionChange: 8200,
+                pendingCommission: 12400,
+                pendingCount: 38,
+                topCommission: 8500,
+                avgCommission: 806
+            };
+
+            document.getElementById('overview-total-leaders').textContent = mockData.totalLeaders;
+            document.getElementById('overview-total-change').innerHTML = `<i class="fas fa-arrow-up"></i> 本月新增 ${mockData.totalChange}`;
+            document.getElementById('overview-active-leaders').textContent = mockData.activeLeaders;
+            document.getElementById('overview-active-rate').innerHTML = `<i class="fas fa-chart-line"></i> 活跃率 ${mockData.activeRate}%`;
+            document.getElementById('overview-total-members').textContent = mockData.totalMembers;
+            document.getElementById('overview-members-change').innerHTML = `<i class="fas fa-arrow-up"></i> 今日新增 ${mockData.membersChange}`;
+            document.getElementById('overview-total-commission').textContent = `¥${mockData.totalCommission.toLocaleString()}`;
+            document.getElementById('overview-commission-change').innerHTML = `<i class="fas fa-arrow-up"></i> 本月增长 ¥${mockData.commissionChange.toLocaleString()}`;
+            document.getElementById('overview-pending-commission').textContent = `¥${mockData.pendingCommission.toLocaleString()}`;
+            document.getElementById('overview-pending-count').innerHTML = `<i class="fas fa-users"></i> 待发放人数 ${mockData.pendingCount}`;
+            document.getElementById('overview-top-commission').textContent = `¥${mockData.topCommission.toLocaleString()}`;
+            document.getElementById('overview-avg-commission').innerHTML = `<i class="fas fa-chart-bar"></i> 平均佣金 ¥${mockData.avgCommission}`;
+
+            // 等级分布
+            const levelDist = {bronze: 45, silver: 38, gold: 42, platinum: 21, diamond: 10};
+            Object.keys(levelDist).forEach(level => {
+                const percent = (levelDist[level] / mockData.totalLeaders * 100).toFixed(1);
+                document.getElementById(`level-count-${level}`).textContent = levelDist[level];
+                document.getElementById(`level-percent-${level}`).textContent = `${percent}%`;
+            });
+
+            loadRankingData();
+        }
+
+        function loadRankingData() {
+            const mockRanking = [
+                {rank: 1, name: '张三', username: 'zhangsan', level: 'diamond', members: 256, monthCommission: 8500, totalCommission: 52300, growth: 15.6},
+                {rank: 2, name: '李四', username: 'lisi', level: 'platinum', members: 189, monthCommission: 6200, totalCommission: 38900, growth: 12.3},
+                {rank: 3, name: '王五', username: 'wangwu', level: 'platinum', members: 165, monthCommission: 5800, totalCommission: 35600, growth: 10.8},
+                {rank: 4, name: '赵六', username: 'zhaoliu', level: 'gold', members: 142, monthCommission: 4900, totalCommission: 28700, growth: 9.2},
+                {rank: 5, name: '孙七', username: 'sunqi', level: 'gold', members: 128, monthCommission: 4200, totalCommission: 24500, growth: 8.5},
+            ];
+
+            const tbody = document.getElementById('rankingTableBody');
+            tbody.innerHTML = mockRanking.map(item => {
+                const badgeClass = item.rank === 1 ? 'top1' : item.rank === 2 ? 'top2' : item.rank === 3 ? 'top3' : 'normal';
+                return `
+                    <tr>
+                        <td>
+                            <div class="ranking-badge ${badgeClass}">${item.rank}</div>
+                        </td>
+                        <td>
+                            <div style="font-weight:600;">${item.name}</div>
+                            <div style="font-size:12px;color:#64748b;">@${item.username}</div>
+                        </td>
+                        <td><span class="level-badge ${item.level}"><i class="fas fa-medal"></i> ${getLevelName(item.level)}</span></td>
+                        <td>${item.members}</td>
+                        <td style="color:#10b981;font-weight:600;">¥${item.monthCommission.toLocaleString()}</td>
+                        <td>¥${item.totalCommission.toLocaleString()}</td>
+                        <td style="color:#10b981;">+${item.growth}%</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function getLevelName(level) {
+            const names = {bronze: '青铜', silver: '白银', gold: '黄金', platinum: '铂金', diamond: '钻石'};
+            return names[level] || level;
+        }
+
+        function loadLeaderList() {
+            console.log('加载团长列表...');
+            // 这里应该从API加载数据
+            const mockLeaders = [
+                {id: 1, username: 'zhangsan', name: '张三', level: 'diamond', members: 256, totalCommission: 52300, monthCommission: 8500, joinedAt: '2024-01-15', status: 'active'},
+                {id: 2, username: 'lisi', name: '李四', level: 'platinum', members: 189, totalCommission: 38900, monthCommission: 6200, joinedAt: '2024-02-20', status: 'active'},
+                {id: 3, username: 'wangwu', name: '王五', level: 'gold', members: 142, totalCommission: 28700, monthCommission: 4900, joinedAt: '2024-03-10', status: 'active'},
+            ];
+
+            const tbody = document.getElementById('leaderListTableBody');
+            tbody.innerHTML = mockLeaders.map(leader => `
+                <tr>
+                    <td><input type="checkbox" class="leader-checkbox" data-id="${leader.id}"></td>
+                    <td>${leader.id}</td>
+                    <td>
+                        <div style="font-weight:600;">${leader.name}</div>
+                        <div style="font-size:12px;color:#64748b;">@${leader.username}</div>
+                    </td>
+                    <td><span class="level-badge ${leader.level}"><i class="fas fa-medal"></i> ${getLevelName(leader.level)}</span></td>
+                    <td>${leader.members}</td>
+                    <td>¥${leader.totalCommission.toLocaleString()}</td>
+                    <td style="color:#10b981;font-weight:600;">¥${leader.monthCommission.toLocaleString()}</td>
+                    <td>${leader.joinedAt}</td>
+                    <td><span class="leader-status ${leader.status}">${getStatusName(leader.status)}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" onclick="viewLeaderDetail(${leader.id})"><i class="fas fa-eye"></i> 详情</button>
+                        <button class="btn btn-sm btn-warning" onclick="editLeader(${leader.id})"><i class="fas fa-edit"></i> 编辑</button>
+                    </td>
+                </tr>
+            `).join('');
+
+            document.getElementById('leader-total-count').textContent = mockLeaders.length;
+        }
+
+        function getStatusName(status) {
+            const names = {active: '正常', suspended: '已暂停', pending: '待审核'};
+            return names[status] || status;
+        }
+
+        function loadCommissionData() {
+            console.log('加载佣金数据...');
+            // Mock data
+            document.getElementById('commission-pending-amount').textContent = '¥12,400';
+            document.getElementById('commission-pending-people').innerHTML = '<i class="fas fa-users"></i> 待发放人数 38';
+            document.getElementById('commission-paid-amount').textContent = '¥156,800';
+            document.getElementById('commission-paid-month').innerHTML = '<i class="fas fa-calendar-alt"></i> 本月发放 ¥25,600';
+            document.getElementById('commission-total-amount').textContent = '¥169,200';
+            document.getElementById('commission-growth').innerHTML = '<i class="fas fa-arrow-up"></i> 较上月 +12.5%';
+            document.getElementById('commission-avg-amount').textContent = '¥1,085';
+            document.getElementById('commission-avg-month').innerHTML = '<i class="fas fa-chart-bar"></i> 本月人均 ¥164';
+
+            const tbody = document.getElementById('commissionRecordTableBody');
+            tbody.innerHTML = '<tr><td colspan="8">暂无数据</td></tr>';
+        }
+
+        function loadLevelConfig() {
+            console.log('加载等级配置...');
+        }
+
+        function loadInviteData() {
+            console.log('加载邀请数据...');
+            document.getElementById('invite-total-codes').textContent = '156';
+            document.getElementById('invite-active-codes').innerHTML = '<i class="fas fa-check-circle"></i> 可用 148';
+            document.getElementById('invite-total-users').textContent = '3,420';
+            document.getElementById('invite-today-users').innerHTML = '<i class="fas fa-calendar-day"></i> 今日 +45';
+            document.getElementById('invite-conversion-rate').textContent = '68.5%';
+            document.getElementById('invite-avg-users').innerHTML = '<i class="fas fa-chart-bar"></i> 人均邀请 21.9';
+
+            const tbody1 = document.getElementById('whitelistTableBody');
+            tbody1.innerHTML = '<tr><td colspan="7">暂无数据</td></tr>';
+
+            const tbody2 = document.getElementById('inviteStatsTableBody');
+            tbody2.innerHTML = '<tr><td colspan="7">暂无数据</td></tr>';
+        }
+
+        function loadAnalyticsData() {
+            console.log('加载数据分析...');
+            const tbody = document.getElementById('analyticsDataTableBody');
+            tbody.innerHTML = '<tr><td colspan="6">暂无数据</td></tr>';
+        }
+
+        // 其他功能函数（占位）
+        function refreshLeaderOverview() { loadOverviewData(); alert('数据已刷新'); }
+        function exportLeaderReport() { alert('导出报表功能待实现'); }
+        function switchRankingType(type) { console.log('切换排序类型:', type); }
+        function openAddLeaderModal() { alert('添加团长功能待实现'); }
+        function batchImportLeaders() { alert('批量导入功能待实现'); }
+        function exportLeaderList() { alert('导出列表功能待实现'); }
+        function filterLeaderList() { console.log('筛选团长列表'); }
+        function resetLeaderFilters() { console.log('重置筛选'); }
+        function toggleAllLeaderSelection() { console.log('全选/取消全选'); }
+        function batchUpdateLeaderLevel() { alert('批量调整等级功能待实现'); }
+        function batchEnableLeaders() { alert('批量启用功能待实现'); }
+        function batchSuspendLeaders() { alert('批量暂停功能待实现'); }
+        function clearLeaderSelection() { console.log('清除选择'); }
+        function prevLeaderPage() { console.log('上一页'); }
+        function nextLeaderPage() { console.log('下一页'); }
+        function viewLeaderDetail(id) { alert('查看团长详情: ' + id); }
+        function editLeader(id) { alert('编辑团长: ' + id); }
+        function openBatchCommissionModal() { alert('批量发放佣金功能待实现'); }
+        function openCommissionRuleModal() { alert('佣金规则设置功能待实现'); }
+        function exportCommissionReport() { alert('导出佣金报表功能待实现'); }
+        function filterCommissionList() { console.log('筛选佣金记录'); }
+        function resetCommissionFilters() { console.log('重置佣金筛选'); }
+        function saveAllLevelConfig() { alert('保存等级配置功能待实现'); }
+        function resetLevelConfig() { if(confirm('确定恢复默认配置吗？')) { alert('已恢复默认配置'); } }
+        function generateInviteCode() { alert('生成邀请码功能待实现'); }
+        function generateQRCode() { alert('生成二维码功能待实现'); }
+        function exportInviteCodes() { alert('导出邀请码功能待实现'); }
+        function addToWhitelist() { alert('添加白名单功能待实现'); }
+        function filterWhitelist() { console.log('筛选白名单'); }
+        function resetWhitelistFilters() { console.log('重置白名单筛选'); }
+        function switchInviteStats(period) { console.log('切换邀请统计时间范围:', period); }
+        function updateAnalytics() { console.log('更新分析数据'); }
+        function refreshAnalytics() { loadAnalyticsData(); alert('数据已刷新'); }
+        function exportAnalyticsReport() { alert('导出分析报告功能待实现'); }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadOverviewData();
+        });
+    </script>
+</body>
+</html>

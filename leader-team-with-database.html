@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的团队 - 真实数据库版本</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- 引入Supabase客户端 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #6366f1;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: var(--bg-color);
+            color: var(--text-primary);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 16px 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-title {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .member-list {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .list-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+        }
+
+        .member-item {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .member-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-color), #8b5cf6);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+
+        .member-info {
+            flex: 1;
+        }
+
+        .member-name {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .member-meta {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .level-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .level-1 {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success-color);
+        }
+
+        .level-2 {
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--primary-color);
+        }
+
+        .level-3 {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning-color);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        .error {
+            text-align: center;
+            padding: 40px;
+            color: var(--error-color);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="header-title">
+                <i class="fas fa-users"></i>
+                我的团队（真实数据版）
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- 统计卡片 -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">团队总人数</div>
+                <div class="stat-value" id="totalMembers">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">一级成员</div>
+                <div class="stat-value" style="color: var(--success-color);" id="level1Members">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">二级成员</div>
+                <div class="stat-value" style="color: var(--primary-color);" id="level2Members">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">三级成员</div>
+                <div class="stat-value" style="color: var(--warning-color);" id="level3Members">-</div>
+            </div>
+        </div>
+
+        <!-- 成员列表 -->
+        <div class="member-list">
+            <div class="list-header">
+                团队成员列表
+            </div>
+            <div id="memberListContent">
+                <div class="loading">
+                    <i class="fas fa-spinner fa-spin"></i> 正在加载数据...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // 配置部分 - 请修改为你的Supabase信息
+        // ============================================
+        const SUPABASE_URL = 'https://your-project.supabase.co'; // 替换为你的URL
+        const SUPABASE_ANON_KEY = 'your-anon-key'; // 替换为你的密钥
+
+        // 初始化Supabase客户端
+        const { createClient } = supabase;
+        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // ============================================
+        // 核心功能 - 从数据库加载真实数据
+        // ============================================
+
+        /**
+         * 获取当前登录用户ID
+         */
+        async function getCurrentUserId() {
+            try {
+                const { data: { user }, error } = await supabaseClient.auth.getUser();
+                
+                if (error || !user) {
+                    console.error('用户未登录:', error);
+                    // 在实际应用中，这里应该跳转到登录页面
+                    // window.location.href = 'login.html';
+                    return null;
+                }
+                
+                return user.id;
+            } catch (error) {
+                console.error('获取用户信息失败:', error);
+                return null;
+            }
+        }
+
+        /**
+         * 从数据库加载团队数据
+         */
+        async function loadTeamData() {
+            try {
+                // 1. 获取当前用户ID
+                const userId = await getCurrentUserId();
+                if (!userId) {
+                    showError('请先登录');
+                    return;
+                }
+
+                // 2. 查询团长信息
+                const { data: leaderData, error: leaderError } = await supabaseClient
+                    .from('leaders')
+                    .select('*')
+                    .eq('user_id', userId)
+                    .eq('status', 'active')
+                    .single();
+
+                if (leaderError) {
+                    console.error('查询团长信息失败:', leaderError);
+                    showError('您还不是团长，无法查看此页面');
+                    return;
+                }
+
+                // 3. 更新统计数据
+                document.getElementById('totalMembers').textContent = leaderData.total_members || 0;
+                document.getElementById('level1Members').textContent = leaderData.level1_members || 0;
+                document.getElementById('level2Members').textContent = leaderData.level2_members || 0;
+                document.getElementById('level3Members').textContent = leaderData.level3_members || 0;
+
+                // 4. 查询团队成员列表
+                const { data: members, error: membersError } = await supabaseClient
+                    .from('team_members')
+                    .select(`
+                        *,
+                        member:users!member_id(id, username, name, avatar)
+                    `)
+                    .eq('leader_id', leaderData.id)
+                    .eq('status', 'active')
+                    .order('joined_at', { ascending: false });
+
+                if (membersError) {
+                    console.error('查询团队成员失败:', membersError);
+                    showError('加载团队成员失败');
+                    return;
+                }
+
+                // 5. 渲染成员列表
+                renderMembers(members);
+
+            } catch (error) {
+                console.error('加载数据失败:', error);
+                showError('加载数据失败，请刷新重试');
+            }
+        }
+
+        /**
+         * 渲染成员列表
+         */
+        function renderMembers(members) {
+            const container = document.getElementById('memberListContent');
+
+            if (!members || members.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-users-slash" style="font-size: 48px; margin-bottom: 16px; opacity: 0.3;"></i>
+                        <p>还没有团队成员</p>
+                        <p style="font-size: 12px; margin-top: 8px;">邀请好友加入你的团队吧！</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const html = members.map(member => {
+                const memberName = member.member?.name || member.member?.username || '未知用户';
+                const memberUsername = member.member?.username || '-';
+                
+                return `
+                    <div class="member-item">
+                        <div class="member-avatar">${memberName.charAt(0)}</div>
+                        <div class="member-info">
+                            <div class="member-name">${memberName}</div>
+                            <div class="member-meta">
+                                <span class="level-badge level-${member.level}">
+                                    ${member.level === 1 ? '一级' : member.level === 2 ? '二级' : '三级'}成员
+                                </span>
+                                · @${memberUsername}
+                                · 加入于 ${formatDate(member.joined_at)}
+                            </div>
+                        </div>
+                        <div style="font-weight: 600; color: var(--success-color);">
+                            ¥${member.contribution?.toFixed(2) || '0.00'}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = html;
+        }
+
+        /**
+         * 显示错误信息
+         */
+        function showError(message) {
+            const container = document.getElementById('memberListContent');
+            container.innerHTML = `
+                <div class="error">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 48px; margin-bottom: 16px;"></i>
+                    <p>${message}</p>
+                </div>
+            `;
+        }
+
+        /**
+         * 格式化日期
+         */
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+            const date = new Date(dateString);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // ============================================
+        // 实时更新（可选）
+        // ============================================
+
+        /**
+         * 订阅团队成员变化
+         */
+        function subscribeToChanges(leaderId) {
+            const subscription = supabaseClient
+                .channel('team_members_changes')
+                .on('postgres_changes', 
+                    { 
+                        event: '*', 
+                        schema: 'public', 
+                        table: 'team_members',
+                        filter: `leader_id=eq.${leaderId}`
+                    }, 
+                    (payload) => {
+                        console.log('团队成员变化:', payload);
+                        // 重新加载数据
+                        loadTeamData();
+                    }
+                )
+                .subscribe();
+
+            // 页面卸载时取消订阅
+            window.addEventListener('beforeunload', () => {
+                subscription.unsubscribe();
+            });
+        }
+
+        // ============================================
+        // 页面加载时执行
+        // ============================================
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('页面加载完成，开始加载数据...');
+            loadTeamData();
+        });
+
+        // ============================================
+        // 开发调试信息
+        // ============================================
+        console.log('='.repeat(50));
+        console.log('团队页面 - 数据库集成版本');
+        console.log('Supabase URL:', SUPABASE_URL);
+        console.log('请确保已配置正确的Supabase连接信息');
+        console.log('='.repeat(50));
+    </script>
+</body>
+</html>
+

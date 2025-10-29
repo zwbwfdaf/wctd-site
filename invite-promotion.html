@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>邀请推广</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #6366f1;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: var(--bg-color);
+            color: var(--text-primary);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #43e97b, #38f9d7);
+            color: white;
+            padding: 16px 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-title {
+            font-size: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .back-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* 邀请卡片 */
+        .invite-card {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 16px;
+            padding: 30px;
+            color: white;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+        }
+
+        .invite-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .invite-subtitle {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 24px;
+        }
+
+        .invite-code-section {
+            background: rgba(255,255,255,0.2);
+            border-radius: 12px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .code-label {
+            font-size: 12px;
+            margin-bottom: 8px;
+            opacity: 0.8;
+        }
+
+        .code-display {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .code-text {
+            flex: 1;
+            font-size: 32px;
+            font-weight: 700;
+            letter-spacing: 4px;
+        }
+
+        .copy-btn {
+            padding: 12px 24px;
+            background: white;
+            color: var(--primary-color);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s;
+        }
+
+        .copy-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .link-display {
+            background: rgba(255,255,255,0.2);
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            word-break: break-all;
+        }
+
+        /* 二维码卡片 */
+        .qrcode-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            text-align: center;
+        }
+
+        .qrcode-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .qrcode-img {
+            width: 200px;
+            height: 200px;
+            margin: 0 auto 20px;
+            border: 4px solid var(--border-color);
+            border-radius: 12px;
+            background: #f0f0f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+        }
+
+        .qrcode-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        .action-btn {
+            padding: 10px 20px;
+            border: 1px solid var(--border-color);
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s;
+        }
+
+        .action-btn:hover {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        /* 统计卡片 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        /* 分享按钮 */
+        .share-section {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .share-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .share-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 12px;
+        }
+
+        .share-btn {
+            padding: 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .share-btn:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .share-btn i {
+            font-size: 24px;
+        }
+
+        .share-btn.wechat { color: #07c160; }
+        .share-btn.wechat:hover { background: #07c160; color: white; }
+
+        .share-btn.qq { color: #12b7f5; }
+        .share-btn.qq:hover { background: #12b7f5; color: white; }
+
+        .share-btn.weibo { color: #ff8200; }
+        .share-btn.weibo:hover { background: #ff8200; color: white; }
+
+        .share-btn.link { color: var(--primary-color); }
+        .share-btn.link:hover { background: var(--primary-color); color: white; }
+
+        /* 推广素材 */
+        .materials-section {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .materials-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .materials-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .material-item {
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+
+        .material-item:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .material-preview {
+            width: 100%;
+            height: 150px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 48px;
+        }
+
+        .material-info {
+            padding: 12px;
+        }
+
+        .material-name {
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .material-download {
+            width: 100%;
+            padding: 8px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        /* 提示 */
+        .tip-box {
+            background: rgba(99, 102, 241, 0.1);
+            border-left: 4px solid var(--primary-color);
+            padding: 16px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .tip-box i {
+            color: var(--primary-color);
+            margin-right: 8px;
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .code-text {
+                font-size: 24px;
+            }
+
+            .share-buttons {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="header-title">
+                <i class="fas fa-share-alt"></i>
+                <span>邀请推广</span>
+            </div>
+            <button class="back-btn" onclick="window.history.back()">
+                <i class="fas fa-arrow-left"></i>
+                返回
+            </button>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- 邀请卡片 -->
+        <div class="invite-card">
+            <div class="invite-title">邀请好友，共享收益</div>
+            <div class="invite-subtitle">分享你的专属邀请码或链接，好友注册后成为你的团队成员</div>
+            
+            <div class="invite-code-section">
+                <div class="code-label">你的专属邀请码</div>
+                <div class="code-display">
+                    <div class="code-text" id="inviteCode">ABC123</div>
+                    <button class="copy-btn" onclick="copyCode()">
+                        <i class="fas fa-copy"></i>
+                        复制
+                    </button>
+                </div>
+                
+                <div class="code-label">你的专属邀请链接</div>
+                <div class="link-display" id="inviteLink">
+                    https://example.com/register?ref=ABC123
+                </div>
+                <button class="copy-btn" onclick="copyLink()" style="margin-top: 12px; width: 100%; justify-content: center;">
+                    <i class="fas fa-link"></i>
+                    复制链接
+                </button>
+            </div>
+        </div>
+
+        <!-- 邀请统计 -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">今日邀请</div>
+                <div class="stat-value" id="todayInvites">3</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">本月邀请</div>
+                <div class="stat-value" id="monthInvites">48</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">总邀请人数</div>
+                <div class="stat-value" id="totalInvites">156</div>
+            </div>
+        </div>
+
+        <!-- 二维码 -->
+        <div class="qrcode-card">
+            <div class="qrcode-title">邀请二维码</div>
+            <div class="qrcode-img" id="qrcodeImg">
+                <i class="fas fa-qrcode" style="font-size: 48px;"></i>
+            </div>
+            <div class="qrcode-actions">
+                <button class="action-btn" onclick="downloadQR()">
+                    <i class="fas fa-download"></i>
+                    下载二维码
+                </button>
+                <button class="action-btn" onclick="shareQR()">
+                    <i class="fas fa-share-alt"></i>
+                    分享二维码
+                </button>
+            </div>
+        </div>
+
+        <!-- 分享到社交平台 -->
+        <div class="share-section">
+            <div class="share-title">分享到社交平台</div>
+            <div class="share-buttons">
+                <button class="share-btn wechat" onclick="shareToWechat()">
+                    <i class="fab fa-weixin"></i>
+                    <span>微信</span>
+                </button>
+                <button class="share-btn qq" onclick="shareToQQ()">
+                    <i class="fab fa-qq"></i>
+                    <span>QQ</span>
+                </button>
+                <button class="share-btn weibo" onclick="shareToWeibo()">
+                    <i class="fab fa-weibo"></i>
+                    <span>微博</span>
+                </button>
+                <button class="share-btn link" onclick="copyLink()">
+                    <i class="fas fa-link"></i>
+                    <span>复制链接</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 推广素材 -->
+        <div class="materials-section">
+            <div class="materials-title">推广素材</div>
+            <div class="materials-grid">
+                <div class="material-item">
+                    <div class="material-preview">
+                        <i class="fas fa-image"></i>
+                    </div>
+                    <div class="material-info">
+                        <div class="material-name">推广海报1</div>
+                        <button class="material-download" onclick="downloadMaterial('poster1')">
+                            <i class="fas fa-download"></i> 下载
+                        </button>
+                    </div>
+                </div>
+                <div class="material-item">
+                    <div class="material-preview">
+                        <i class="fas fa-image"></i>
+                    </div>
+                    <div class="material-info">
+                        <div class="material-name">推广海报2</div>
+                        <button class="material-download" onclick="downloadMaterial('poster2')">
+                            <i class="fas fa-download"></i> 下载
+                        </button>
+                    </div>
+                </div>
+                <div class="material-item">
+                    <div class="material-preview">
+                        <i class="fas fa-file-alt"></i>
+                    </div>
+                    <div class="material-info">
+                        <div class="material-name">文案模板</div>
+                        <button class="material-download" onclick="downloadMaterial('copywriting')">
+                            <i class="fas fa-download"></i> 下载
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 推广提示 -->
+        <div class="tip-box">
+            <i class="fas fa-lightbulb"></i>
+            <strong>推广技巧：</strong>
+            <ul style="margin-top: 8px; margin-left: 20px;">
+                <li>定期在社交平台分享邀请链接</li>
+                <li>结合推广素材提高转化率</li>
+                <li>向好友介绍平台优势和收益</li>
+                <li>建立社群维护团队关系</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // 复制邀请码
+        function copyCode() {
+            const code = document.getElementById('inviteCode').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                alert('邀请码已复制：' + code);
+            });
+        }
+
+        // 复制邀请链接
+        function copyLink() {
+            const link = document.getElementById('inviteLink').textContent;
+            navigator.clipboard.writeText(link).then(() => {
+                alert('邀请链接已复制！');
+            });
+        }
+
+        // 下载二维码
+        function downloadQR() {
+            alert('正在生成二维码...');
+            // 实际实现应调用API生成二维码图片并下载
+        }
+
+        // 分享二维码
+        function shareQR() {
+            alert('请选择分享方式');
+        }
+
+        // 分享到微信
+        function shareToWechat() {
+            alert('请使用微信扫描二维码或复制链接分享');
+        }
+
+        // 分享到QQ
+        function shareToQQ() {
+            const link = document.getElementById('inviteLink').textContent;
+            window.open(`https://connect.qq.com/widget/shareqq/index.html?url=${encodeURIComponent(link)}`);
+        }
+
+        // 分享到微博
+        function shareToWeibo() {
+            const link = document.getElementById('inviteLink').textContent;
+            window.open(`https://service.weibo.com/share/share.php?url=${encodeURIComponent(link)}`);
+        }
+
+        // 下载素材
+        function downloadMaterial(type) {
+            alert('正在下载素材：' + type);
+            // 实际实现应调用API获取素材并下载
+        }
+
+        // 加载数据
+        function loadInviteData() {
+            // 实际应从API获取
+            const data = {
+                inviteCode: 'ABC123',
+                inviteLink: 'https://example.com/register?ref=ABC123',
+                todayInvites: 3,
+                monthInvites: 48,
+                totalInvites: 156
+            };
+
+            document.getElementById('inviteCode').textContent = data.inviteCode;
+            document.getElementById('inviteLink').textContent = data.inviteLink;
+            document.getElementById('todayInvites').textContent = data.todayInvites;
+            document.getElementById('monthInvites').textContent = data.monthInvites;
+            document.getElementById('totalInvites').textContent = data.totalInvites;
+
+            // 生成二维码（实际应调用API）
+            // generateQRCode(data.inviteLink);
+        }
+
+        document.addEventListener('DOMContentLoaded', loadInviteData);
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#6366f1">
+    <title>佣金明细</title>
+    <script src="emergency-database-fix.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #6366f1;
+            --primary-dark: #4f46e5;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --error-color: #ef4444;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: var(--bg-color);
+            color: var(--text-primary);
+            line-height: 1.6;
+            padding-bottom: 60px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+            color: white;
+            padding: 16px 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-title {
+            font-size: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .back-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s;
+        }
+
+        .back-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 16px;
+        }
+
+        .stats-summary {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .summary-item {
+            text-align: center;
+        }
+
+        .summary-item h3 {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .summary-item .value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .summary-item .value.success {
+            color: var(--success-color);
+        }
+
+        .summary-item .value.warning {
+            color: var(--warning-color);
+        }
+
+        .filters-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .search-filters {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-input, .filter-select {
+            padding: 10px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            min-width: 200px;
+            flex: 1;
+        }
+
+        .filter-select {
+            min-width: 150px;
+            flex: unset;
+        }
+
+        .btn {
+            padding: 10px 16px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #64748b;
+        }
+
+        .table-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            overflow-x: auto;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .data-table th {
+            background: var(--bg-color);
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .data-table tbody tr:hover {
+            background: #f9fafb;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-badge.settled {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-badge.pending {
+            background: #fed7aa;
+            color: #92400e;
+        }
+
+        .pagination {
+            margin-top: 16px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        .empty {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 8px;
+            }
+
+            /* 统计摘要 - 2列布局 */
+            .stats-summary {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+                padding: 12px;
+                margin-bottom: 12px;
+            }
+
+            .summary-item h3 {
+                font-size: 11px;
+                margin-bottom: 4px;
+            }
+
+            .summary-item .value {
+                font-size: 20px;
+            }
+
+            /* 筛选器优化 */
+            .filters-card {
+                padding: 12px;
+                margin-bottom: 12px;
+            }
+
+            .search-filters {
+                flex-direction: column;
+                gap: 6px;
+            }
+
+            .filter-select {
+                width: 100%;
+                padding: 8px 10px;
+                font-size: 13px;
+                min-width: unset;
+            }
+
+            .btn {
+                width: 100%;
+                padding: 8px 12px;
+                font-size: 13px;
+                justify-content: center;
+            }
+
+            /* 表格优化 */
+            .table-card {
+                padding: 12px;
+                margin-bottom: 12px;
+            }
+
+            .data-table th,
+            .data-table td {
+                padding: 8px 6px;
+                font-size: 12px;
+            }
+
+            .data-table th {
+                font-size: 11px;
+            }
+
+            .status-badge {
+                font-size: 10px;
+                padding: 3px 8px;
+            }
+
+            /* 分页 */
+            .pagination {
+                margin-top: 12px;
+                gap: 6px;
+            }
+
+            .pagination .btn {
+                width: auto;
+                padding: 6px 12px;
+                font-size: 12px;
+            }
+
+            #pageInfo {
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="header-title">
+                <i class="fas fa-coins"></i>
+                <span>佣金明细</span>
+            </div>
+            <button class="back-btn" onclick="window.history.back()">
+                <i class="fas fa-arrow-left"></i>
+                <span>返回</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- 统计摘要 -->
+        <div class="stats-summary">
+            <div class="summary-item">
+                <h3>累计佣金</h3>
+                <div class="value">¥<span id="totalAmount">0</span></div>
+            </div>
+            <div class="summary-item">
+                <h3>已结算</h3>
+                <div class="value success">¥<span id="settledAmount">0</span></div>
+            </div>
+            <div class="summary-item">
+                <h3>待结算</h3>
+                <div class="value warning">¥<span id="pendingAmount">0</span></div>
+            </div>
+            <div class="summary-item">
+                <h3>本月收入</h3>
+                <div class="value">¥<span id="monthAmount">0</span></div>
+            </div>
+        </div>
+
+        <!-- 筛选器 -->
+        <div class="filters-card">
+            <div class="search-filters">
+                <select id="statusFilter" class="filter-select">
+                    <option value="">全部状态</option>
+                    <option value="settled">已结算</option>
+                    <option value="pending">待结算</option>
+                </select>
+                <select id="dateRange" class="filter-select">
+                    <option value="">时间: 全部</option>
+                    <option value="7">近7天</option>
+                    <option value="30">近30天</option>
+                    <option value="90">近90天</option>
+                </select>
+                <select id="sortBy" class="filter-select">
+                    <option value="time-desc">时间↓</option>
+                    <option value="time-asc">时间↑</option>
+                    <option value="amount-desc">金额↓</option>
+                    <option value="amount-asc">金额↑</option>
+                </select>
+                <select id="pageSize" class="filter-select">
+                    <option value="10">每页 10</option>
+                    <option value="20">每页 20</option>
+                    <option value="50">每页 50</option>
+                </select>
+                <button class="btn" onclick="applyFilters()">
+                    <i class="fas fa-filter"></i> 筛选
+                </button>
+                <button class="btn" onclick="resetFilters()">
+                    <i class="fas fa-redo"></i> 重置
+                </button>
+                <div style="flex:1"></div>
+                <button class="btn btn-secondary" onclick="exportCSV()">
+                    <i class="fas fa-file-csv"></i> 导出CSV
+                </button>
+            </div>
+        </div>
+
+        <!-- 数据表格 -->
+        <div class="table-card">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>金额</th>
+                        <th>来源说明</th>
+                        <th>状态</th>
+                        <th>时间</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr><td colspan="5" class="loading">加载中...</td></tr>
+                </tbody>
+            </table>
+
+            <div class="pagination">
+                <button class="btn" onclick="prevPage()">上一页</button>
+                <span id="pageInfo">1 / 1</span>
+                <button class="btn" onclick="nextPage()">下一页</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const state = {
+            all: [],
+            filtered: [],
+            page: 1,
+            pageSize: 10,
+            totalPages: 1
+        };
+
+        // 统一获取数据库客户端
+        async function ensureClient() {
+            try {
+                let c = (typeof window.getEmergencyClient === 'function') ? window.getEmergencyClient() : null;
+                if (!c && typeof window.emergencyInitDatabase === 'function') {
+                    await window.emergencyInitDatabase();
+                    c = (typeof window.getEmergencyClient === 'function') ? window.getEmergencyClient() : null;
+                }
+                if (!c && window.supabase && typeof window.supabase.from === 'function') c = window.supabase;
+                return c;
+            } catch (_) { return null; }
+        }
+
+        // 加载佣金数据
+        async function loadCommissions() {
+            try {
+                const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+                if (!currentUser || !currentUser.id) {
+                    alert('请先登录');
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                const userId = currentUser.id || currentUser['用户ID'];
+                const client = await ensureClient();
+                
+                if (!client) {
+                    document.getElementById('tableBody').innerHTML = '<tr><td colspan="5" class="empty">无法连接数据库</td></tr>';
+                    return;
+                }
+
+                // 查询佣金记录
+                const { data: commissions, error } = await client.from('earnings')
+                    .select('*')
+                    .eq('user_id', userId)
+                    .eq('type', 'referral')
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                if (!commissions || commissions.length === 0) {
+                    document.getElementById('tableBody').innerHTML = '<tr><td colspan="5" class="empty">暂无佣金记录</td></tr>';
+                    updateStats(0, 0, 0, 0);
+                    return;
+                }
+
+                state.all = commissions.map(c => ({
+                    id: c.id,
+                    amount: Number(c.amount || 0),
+                    description: c.description || '推广佣金',
+                    status: c.status === 'settled' || c.status === '已结算' ? 'settled' : 'pending',
+                    created_at: c.created_at
+                }));
+
+                // 计算统计数据
+                const totalAmount = state.all.reduce((sum, c) => sum + c.amount, 0);
+                const settledAmount = state.all.filter(c => c.status === 'settled').reduce((sum, c) => sum + c.amount, 0);
+                const pendingAmount = state.all.filter(c => c.status === 'pending').reduce((sum, c) => sum + c.amount, 0);
+                
+                const now = new Date();
+                const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+                const monthAmount = state.all.filter(c => new Date(c.created_at) >= thisMonth).reduce((sum, c) => sum + c.amount, 0);
+
+                updateStats(totalAmount, settledAmount, pendingAmount, monthAmount);
+                applyFilters();
+
+            } catch (error) {
+                console.error('加载佣金数据失败:', error);
+                document.getElementById('tableBody').innerHTML = '<tr><td colspan="5" class="empty">加载失败</td></tr>';
+            }
+        }
+
+        function updateStats(total, settled, pending, month) {
+            document.getElementById('totalAmount').textContent = total.toFixed(2);
+            document.getElementById('settledAmount').textContent = settled.toFixed(2);
+            document.getElementById('pendingAmount').textContent = pending.toFixed(2);
+            document.getElementById('monthAmount').textContent = month.toFixed(2);
+        }
+
+        function applyFilters() {
+            const statusFilter = document.getElementById('statusFilter').value;
+            const dateRange = document.getElementById('dateRange').value;
+            const sortBy = document.getElementById('sortBy').value;
+            state.pageSize = parseInt(document.getElementById('pageSize').value) || 10;
+
+            let filtered = state.all.slice();
+
+            // 状态筛选
+            if (statusFilter) {
+                filtered = filtered.filter(c => c.status === statusFilter);
+            }
+
+            // 时间范围筛选
+            if (dateRange) {
+                const days = parseInt(dateRange);
+                const minDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+                filtered = filtered.filter(c => new Date(c.created_at) >= minDate);
+            }
+
+            // 排序
+            const [key, dir] = sortBy.split('-');
+            filtered.sort((a, b) => {
+                let va, vb;
+                if (key === 'time') {
+                    va = new Date(a.created_at).getTime();
+                    vb = new Date(b.created_at).getTime();
+                } else if (key === 'amount') {
+                    va = a.amount;
+                    vb = b.amount;
+                }
+                if (va === vb) return 0;
+                return (va > vb ? 1 : -1) * (dir === 'asc' ? 1 : -1);
+            });
+
+            state.filtered = filtered;
+            state.page = 1;
+            renderTable();
+        }
+
+        function resetFilters() {
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('dateRange').value = '';
+            document.getElementById('sortBy').value = 'time-desc';
+            document.getElementById('pageSize').value = '10';
+            applyFilters();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            const start = (state.page - 1) * state.pageSize;
+            const end = start + state.pageSize;
+            const pageData = state.filtered.slice(start, end);
+
+            state.totalPages = Math.max(1, Math.ceil(state.filtered.length / state.pageSize));
+
+            if (pageData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="empty">暂无数据</td></tr>';
+            } else {
+                tbody.innerHTML = pageData.map((c, idx) => {
+                    const statusClass = c.status === 'settled' ? 'settled' : 'pending';
+                    const statusText = c.status === 'settled' ? '已结算' : '待结算';
+                    return `
+                        <tr>
+                            <td>${start + idx + 1}</td>
+                            <td><strong style="color:#10b981;">¥${c.amount.toFixed(2)}</strong></td>
+                            <td>${c.description}</td>
+                            <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                            <td>${formatDate(c.created_at)}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            document.getElementById('pageInfo').textContent = `${state.page} / ${state.totalPages}`;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            return dateStr.replace('T', ' ').slice(0, 19);
+        }
+
+        function prevPage() {
+            if (state.page > 1) {
+                state.page--;
+                renderTable();
+            }
+        }
+
+        function nextPage() {
+            if (state.page < state.totalPages) {
+                state.page++;
+                renderTable();
+            }
+        }
+
+        function exportCSV() {
+            const header = ['金额', '来源说明', '状态', '时间'];
+            const rows = state.filtered.map(c => [
+                c.amount.toFixed(2),
+                c.description,
+                c.status === 'settled' ? '已结算' : '待结算',
+                c.created_at
+            ]);
+            const csv = [header, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = '佣金明细.csv';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        document.addEventListener('DOMContentLoaded', loadCommissions);
+    </script>
+</body>
+</html>
+

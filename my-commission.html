@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的佣金</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #6366f1;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --error-color: #ef4444;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: var(--bg-color);
+            color: var(--text-primary);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+            color: white;
+            padding: 16px 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-title {
+            font-size: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .back-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* 统计卡片 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            transition: all 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .stat-value.success { color: var(--success-color); }
+        .stat-value.warning { color: var(--warning-color); }
+
+        /* 筛选栏 */
+        .filter-bar {
+            background: white;
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .filter-bar select,
+        .filter-bar input {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .filter-bar button {
+            padding: 8px 16px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        /* 佣金列表 */
+        .commission-list {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .list-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .commission-items {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .commission-item {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.2s;
+        }
+
+        .commission-item:hover {
+            background: var(--bg-color);
+        }
+
+        .commission-item:last-child {
+            border-bottom: none;
+        }
+
+        .item-info {
+            flex: 1;
+        }
+
+        .item-type {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .type-level1 {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success-color);
+        }
+
+        .type-level2 {
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--primary-color);
+        }
+
+        .type-level3 {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning-color);
+        }
+
+        .item-source {
+            font-size: 14px;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .item-time {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .item-amount {
+            font-size: 24px;
+            font-weight: 700;
+            margin-right: 12px;
+        }
+
+        .amount-pending {
+            color: var(--warning-color);
+        }
+
+        .amount-paid {
+            color: var(--success-color);
+        }
+
+        .item-status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-pending {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning-color);
+        }
+
+        .status-paid {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success-color);
+        }
+
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state i {
+            font-size: 64px;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+
+        /* 提现按钮 */
+        .withdraw-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
+            transition: all 0.3s;
+        }
+
+        .withdraw-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 24px rgba(16, 185, 129, 0.6);
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .commission-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+
+            .item-amount {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="header-title">
+                <i class="fas fa-coins"></i>
+                <span>我的佣金</span>
+            </div>
+            <button class="back-btn" onclick="window.history.back()">
+                <i class="fas fa-arrow-left"></i>
+                <span>返回</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- 统计卡片 -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">累计收入</div>
+                <div class="stat-value success">¥<span id="totalIncome">5,200</span></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">本月收入</div>
+                <div class="stat-value success">¥<span id="monthIncome">520</span></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">待发放</div>
+                <div class="stat-value warning">¥<span id="pendingAmount">300</span></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">已提现</div>
+                <div class="stat-value">¥<span id="withdrawnAmount">4,900</span></div>
+            </div>
+        </div>
+
+        <!-- 筛选栏 -->
+        <div class="filter-bar">
+            <select id="typeFilter">
+                <option value="">全部类型</option>
+                <option value="level1">一级佣金</option>
+                <option value="level2">二级佣金</option>
+                <option value="level3">三级佣金</option>
+            </select>
+            <select id="statusFilter">
+                <option value="">全部状态</option>
+                <option value="pending">待发放</option>
+                <option value="paid">已发放</option>
+            </select>
+            <input type="date" id="startDate">
+            <span>至</span>
+            <input type="date" id="endDate">
+            <button onclick="applyFilter()">
+                <i class="fas fa-filter"></i> 筛选
+            </button>
+        </div>
+
+        <!-- 佣金列表 -->
+        <div class="commission-list">
+            <div class="list-header">
+                <span>佣金明细</span>
+                <span id="totalCount">共 15 条记录</span>
+            </div>
+            <div class="commission-items" id="commissionItems">
+                <!-- 佣金记录将动态加载 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 提现按钮 -->
+    <button class="withdraw-btn" onclick="goToWithdraw()" title="申请提现">
+        <i class="fas fa-hand-holding-usd"></i>
+    </button>
+
+    <script>
+        // 模拟佣金数据
+        const mockCommissions = [
+            {
+                id: 1,
+                type: 'level1',
+                typeName: '一级佣金',
+                source: '用户A完成任务',
+                amount: 50,
+                time: '2024-10-28 14:30',
+                status: 'pending',
+                statusName: '待发放'
+            },
+            {
+                id: 2,
+                type: 'level2',
+                typeName: '二级佣金',
+                source: '用户B完成任务',
+                amount: 30,
+                time: '2024-10-27 10:15',
+                status: 'paid',
+                statusName: '已发放'
+            },
+            {
+                id: 3,
+                type: 'level1',
+                typeName: '一级佣金',
+                source: '用户C完成任务',
+                amount: 45,
+                time: '2024-10-26 16:45',
+                status: 'paid',
+                statusName: '已发放'
+            },
+            {
+                id: 4,
+                type: 'level3',
+                typeName: '三级佣金',
+                source: '用户D完成任务',
+                amount: 15,
+                time: '2024-10-25 09:20',
+                status: 'paid',
+                statusName: '已发放'
+            },
+            {
+                id: 5,
+                type: 'level1',
+                typeName: '一级佣金',
+                source: '用户E完成任务',
+                amount: 60,
+                time: '2024-10-24 13:10',
+                status: 'pending',
+                statusName: '待发放'
+            }
+        ];
+
+        // 渲染佣金列表
+        function renderCommissions(commissions) {
+            const container = document.getElementById('commissionItems');
+            
+            if (!commissions || commissions.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <p>暂无佣金记录</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const html = commissions.map(item => `
+                <div class="commission-item">
+                    <div class="item-info">
+                        <span class="item-type type-${item.type}">${item.typeName}</span>
+                        <div class="item-source">${item.source}</div>
+                        <div class="item-time">${item.time}</div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div class="item-amount amount-${item.status}">
+                            ¥${item.amount.toFixed(2)}
+                        </div>
+                        <div class="item-status status-${item.status}">
+                            ${item.statusName}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            container.innerHTML = html;
+            document.getElementById('totalCount').textContent = `共 ${commissions.length} 条记录`;
+        }
+
+        // 应用筛选
+        function applyFilter() {
+            const type = document.getElementById('typeFilter').value;
+            const status = document.getElementById('statusFilter').value;
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+
+            let filtered = mockCommissions;
+
+            if (type) {
+                filtered = filtered.filter(item => item.type === type);
+            }
+
+            if (status) {
+                filtered = filtered.filter(item => item.status === status);
+            }
+
+            if (startDate && endDate) {
+                filtered = filtered.filter(item => {
+                    const itemDate = item.time.split(' ')[0];
+                    return itemDate >= startDate && itemDate <= endDate;
+                });
+            }
+
+            renderCommissions(filtered);
+        }
+
+        // 跳转到提现页面
+        function goToWithdraw() {
+            window.location.href = 'withdrawal.html';
+        }
+
+        // 加载数据
+        function loadCommissionData() {
+            // 这里应该调用实际的API
+            // const response = await fetch('/api/leader/commissions?userId=' + userId);
+            
+            // 渲染数据
+            renderCommissions(mockCommissions);
+        }
+
+        // 页面加载时执行
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCommissionData();
+        });
+    </script>
+</body>
+</html>
+

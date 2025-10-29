@@ -1,0 +1,18 @@
+<!-- 重定向到新版本，强制清除缓存 -->
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="refresh" content="0;url=admin-dashboard.html?v=20251028233053">
+    <script>
+        // 清除所有可能的缓存
+        if('caches' in window){
+            caches.keys().then(keys => keys.forEach(key => caches.delete(key)));
+        }
+        window.location.href = 'admin-dashboard.html?v=' + Date.now();
+    </script>
+</head>
+<body>
+    <p>正在清除缓存并跳转到最新版本...</p>
+</body>
+</html>
+

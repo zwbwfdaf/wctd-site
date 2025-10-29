@@ -253,65 +253,243 @@
         
         .project-card {
             flex: 1;
-            background: linear-gradient(180deg,#ffffff,#fbfdff);
-            border-radius: 16px;
-            padding: 14px 12px 12px;
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
+            border-radius: 18px;
+            padding: 18px 14px 14px;
             text-align: center;
             border: 1px solid #e8eef7;
-            box-shadow: 0 2px 8px rgba(15,23,42,.04);
-            transition: transform .28s cubic-bezier(.2,.8,.2,1), box-shadow .28s ease, border-color .28s ease, opacity .28s ease;
+            box-shadow: 0 4px 12px rgba(15,23,42,.06);
+            transition: all .3s cubic-bezier(.2,.8,.2,1);
             position: relative;
             height: 100%;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
-            transform: scale(.9);
-            opacity: .96;
+            justify-content: flex-start;
+            transform: scale(.92);
+            opacity: .88;
+            cursor: pointer;
+            overflow: hidden;
         }
-        .project-card::before{ display:none; }
+        
+        /* 卡片发光边框效果 */
+        .project-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: 18px;
+            padding: 2px;
+            background: linear-gradient(135deg, #667eea, #764ba2, #f093fb);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            opacity: 0;
+            transition: opacity .3s ease;
+        }
+        
         .project-card:hover {
-            transform: translateY(-2px) scale(1.02);
-            box-shadow: 0 18px 36px rgba(99,102,241,.18);
-            border-color:#dde6f5;
+            transform: translateY(-6px) scale(1.0);
+            box-shadow: 0 20px 40px rgba(99,102,241,.2), 0 0 20px rgba(99,102,241,.1);
+            border-color:#d5dcf5;
+        }
+        
+        .project-card:hover::before {
+            opacity: 0.6;
         }
         
         .project-icon {
-            width: 46px;
-            height: 46px;
-            border-radius: 14px;
-            margin: 4px auto 8px;
+            width: 52px;
+            height: 52px;
+            border-radius: 16px;
+            margin: 0 auto 10px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 22px;
+            font-size: 24px;
             color: #fff;
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-            box-shadow: 0 6px 14px rgba(99,102,241,.25);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 0 8px 16px rgba(99,102,241,.3);
+            transition: transform .3s ease;
+        }
+        
+        .project-card:hover .project-icon {
+            transform: scale(1.1) rotate(-5deg);
         }
         
         .project-title {
-            font-size: 14px;
-            font-weight: 900;
-            color: #0f172a;
-            margin-bottom: 6px;
-            letter-spacing: .2px;
+            font-size: 15px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 4px;
+            letter-spacing: 0.3px;
         }
-        .project-sub{ font-size:12px; color:#64748b; }
-        .project-badge{ position:absolute; top:8px; left:8px; font-size:11px; padding:2px 8px; border-radius:999px; background:linear-gradient(135deg,#ff8a00,#ff4d4f); color:#fff; box-shadow:0 2px 8px rgba(255,77,79,.25); }
-        .project-tags{ display:flex; gap:6px; margin-top:10px; justify-content:center; flex-wrap:wrap; }
-        .project-chip{ font-size:11px; padding:3px 8px; border-radius:999px; background:#eef2ff; border:1px solid #c7d2fe; color:#4f46e5; font-weight:700; }
         
         .project-desc {
+            font-size: 12px;
+            color: #64748b;
+            margin-bottom: 10px;
+            line-height: 1.4;
+            display: block !important;
+        }
+        
+        /* 收益信息 */
+        .project-reward {
+            display: flex;
+            align-items: baseline;
+            gap: 4px;
+            margin: 8px 0;
+            justify-content: center;
+        }
+        
+        .reward-amount {
+            font-size: 22px;
+            font-weight: 800;
+            color: #ff4d4f;
+            text-shadow: 0 2px 4px rgba(255,77,79,.15);
+        }
+        
+        .reward-unit {
+            font-size: 11px;
+            color: #ff7875;
+            font-weight: 600;
+        }
+        
+        /* 统计信息 */
+        .project-stats {
             font-size: 11px;
             color: #64748b;
-            background: #f3f4f6;
-            display: inline-block;
-            padding: 3px 8px;
-            border-radius: 999px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-bottom: 10px;
         }
-        /* 隐藏热门项目卡片底部小字 */
-        .project-carousel .project-desc { display: none; }
+        
+        .project-stats i {
+            color: #667eea;
+            font-size: 10px;
+        }
+        
+        .project-sub{ font-size:12px; color:#64748b; display: none; }
+        
+        /* 徽章 - 推荐/热门 */
+        .project-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 11px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            color: #fff;
+            font-weight: 700;
+            box-shadow: 0 2px 8px rgba(0,0,0,.15);
+            z-index: 10;
+        }
+        
+        .project-badge.recommended {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            animation: badgePulse 2s ease-in-out infinite;
+        }
+        
+        .project-badge.hot {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+            animation: badgePulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes badgePulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        /* 标签组 */
+        .project-tags {
+            display: flex;
+            gap: 6px;
+            margin-top: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .project-chip {
+            font-size: 10px;
+            padding: 4px 8px;
+            border-radius: 999px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+        
+        .project-chip.success {
+            background: #d1fae5;
+            border: 1px solid #a7f3d0;
+            color: #059669;
+        }
+        
+        .project-chip.online {
+            background: #dbeafe;
+            border: 1px solid #bfdbfe;
+            color: #2563eb;
+        }
+        
+        .project-chip i {
+            font-size: 8px;
+        }
+        
+        /* 脉动动画（在线图标） */
+        .pulse {
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* 立即参与按钮 */
+        .project-action {
+            width: 100%;
+            margin-top: auto;
+            padding-top: 12px;
+        }
+        
+        .join-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 10px 16px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all .3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            box-shadow: 0 4px 12px rgba(99,102,241,.3);
+        }
+        
+        .join-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(99,102,241,.4);
+        }
+        
+        .join-btn:active {
+            transform: translateY(0);
+        }
+        
+        .join-btn i {
+            font-size: 11px;
+            transition: transform .3s ease;
+        }
+        
+        .join-btn:hover i {
+            transform: translateX(3px);
+        }
         
         /* 任务分类导航 */
         .task-nav {
@@ -1268,27 +1446,118 @@
         // 渲染热门项目轮播（滚动轨）
         function renderProjectCarousel(){
             const data=[
-                { title:'KK搜索',        url:'quark-search-task.html',   iconImg:'tp/微信图片_20250913162419.jpg' },
-                { title:'x雷浏览器搜索', url:'xray-search-task.html',    iconImg:'tp/2749C5F09D24C60CB377B64D4F1FD00F.jpg' },
-                { title:'w空短剧搜索（必须回填）',   url:'wukong-search-task.html',  iconImg:'tp/F3673981D160E851966CAE341C0B8350.jpg' },
-                { title:'KK网盘',        url:'quark-cloud-drive-task.html',                        icon:'fas fa-cloud' }
+                { 
+                    title:'KK搜索',        
+                    url:'quark-search-task.html',   
+                    iconImg:'tp/微信图片_20250913162419.jpg',
+                    reward: '8.5',
+                    unit: '元/单',
+                    hot: true,
+                    participants: '12580',
+                    online: '638',
+                    desc: '搜索关键词，高收益'
+                },
+                { 
+                    title:'x雷浏览器搜索', 
+                    url:'xray-search-task.html',    
+                    iconImg:'tp/2749C5F09D24C60CB377B64D4F1FD00F.jpg',
+                    reward: '7.0',
+                    unit: '元/单',
+                    recommended: true,
+                    participants: '8960',
+                    online: '425',
+                    desc: '浏览器搜索，稳定收益'
+                },
+                { 
+                    title:'w空短剧搜索',
+                    shortTitle: 'w空搜索',   
+                    url:'wukong-search-task.html',  
+                    iconImg:'tp/F3673981D160E851966CAE341C0B8350.jpg',
+                    reward: '8.0',
+                    unit: '元/单',
+                    hot: true,
+                    participants: '9870',
+                    online: '512',
+                    desc: '短剧搜索，回填必做'
+                },
+                { 
+                    title:'KK网盘',        
+                    url:'quark-cloud-drive-task.html',                        
+                    icon:'fas fa-cloud',
+                    reward: '7.0',
+                    unit: '元/单',
+                    recommended: true,
+                    participants: '15200',
+                    online: '756',
+                    desc: '网盘推广，新人友好'
+                }
             ];
             const track=document.getElementById('projectTrack');
             const dots=document.getElementById('projectDots');
             if(!track) return;
+            
             // 无限循环：首尾各克隆一组
             const loopData = [...data, ...data];
             track.innerHTML = loopData.map((item,idx)=>{
-                const iconHtml = item.iconImg ? `<img src="${item.iconImg}" alt="${item.title}" style="width:100%;height:100%;border-radius:12px;object-fit:cover;">` : `<i class='${item.icon}'></i>`;
-                const badge = idx%2===0 ? '<span class="project-badge">推荐</span>' : '';
-                const tags = '<div class="project-tags"><span class="project-chip">高转化</span><span class="project-chip">热门</span></div>';
+                const iconHtml = item.iconImg ? `<img src="${item.iconImg}" alt="${item.title}" style="width:100%;height:100%;border-radius:14px;object-fit:cover;">` : `<i class='${item.icon}'></i>`;
+                
+                // 徽章 - 推荐或热门
+                let badge = '';
+                if (item.recommended) {
+                    badge = '<span class="project-badge recommended">🌟 推荐</span>';
+                } else if (item.hot) {
+                    badge = '<span class="project-badge hot">🔥 热门</span>';
+                }
+                
+                // 标签 - 高转化、实时在线
+                const tags = `
+                    <div class="project-tags">
+                        <span class="project-chip success">
+                            <i class="fas fa-check-circle"></i> 高转化
+                        </span>
+                        <span class="project-chip online">
+                            <i class="fas fa-circle pulse"></i> ${item.online}人在线
+                        </span>
+                    </div>
+                `;
+                
+                // 收益信息
+                const rewardInfo = `
+                    <div class="project-reward">
+                        <div class="reward-amount">¥${item.reward}</div>
+                        <div class="reward-unit">${item.unit}</div>
+                    </div>
+                `;
+                
+                // 参与人数
+                const statsInfo = `
+                    <div class="project-stats">
+                        <i class="fas fa-users"></i>
+                        <span>${item.participants}+人参与</span>
+                    </div>
+                `;
+                
+                // 立即参与按钮
+                const actionBtn = `
+                    <div class="project-action">
+                        <button class="join-btn" onclick="event.stopPropagation(); openTask('${item.url}',0);">
+                            <i class="fas fa-arrow-right"></i> 立即参与
+                        </button>
+                    </div>
+                `;
+                
+                const displayTitle = item.shortTitle || item.title;
+                
                 return `<div class='project-item${idx===0? ' active':''}'>
                     <div class='project-card' onclick="openTask('${item.url}',0)">
                         ${badge}
                         <div class='project-icon'>${iconHtml}</div>
-                        <div class='project-title'>${item.title}</div>
-                        <div class='project-sub'>参与人数 1W+</div>
+                        <div class='project-title'>${displayTitle}</div>
+                        <div class='project-desc'>${item.desc}</div>
+                        ${rewardInfo}
+                        ${statsInfo}
                         ${tags}
+                        ${actionBtn}
                     </div>
                 </div>`;
             }).join('');

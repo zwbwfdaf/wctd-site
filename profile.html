@@ -4,9 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#667eea">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta name="page-version" content="3.1.0">
     <title>个人中心 - KK搜索任务平台</title>
     <!-- 紧急数据库修复器 -->
-    <script src="emergency-database-fix.js"></script>
+    <script src="emergency-database-fix.js?v=3.1.0"></script>
     <!-- 访问控制：未登录直接跳转到登录页 -->
     <script>
         (function () {
@@ -581,13 +585,13 @@
                 <i class="fas fa-chevron-right menu-arrow"></i>
             </a>
             
-            <a href="my-team.html" class="menu-item">
-                <div class="menu-icon team-icon">
-                    <i class="fas fa-users"></i>
+            <a href="leader-dashboard.html" class="menu-item" id="leaderDashboardLink" style="display: none;">
+                <div class="menu-icon" style="background: linear-gradient(135deg, #ffd700, #ffed4e);">
+                    <i class="fas fa-crown" style="color: #854d0e;"></i>
                 </div>
                 <div class="menu-content">
-                    <div class="menu-title">我的团队</div>
-                    <div class="menu-subtitle">邀请好友加入</div>
+                    <div class="menu-title">团长中心</div>
+                    <div class="menu-subtitle">团队管理·数据统计·邀请奖励</div>
                 </div>
                 <i class="fas fa-chevron-right menu-arrow"></i>
             </a>
@@ -797,7 +801,16 @@
         async function reconcileLeaderStatusRemote(uid, uname){
             try{
                 const c = await ensureClient(); if(!c) return 'unknown';
-                // 严格模式：只认 users 表
+                
+                // 🔧 优先检查 leaders_allowlist 表（团长白名单）
+                try{
+                    const { data } = await c.from('leaders_allowlist').select('status').eq('user_id', uid).limit(1);
+                    if(data && data[0]){
+                        return data[0].status || 'disabled';
+                    }
+                }catch(_){ }
+                
+                // 回退：检查 users 表
                 try{
                     const { data } = await c.from('users').select('*').eq('id', uid).limit(1);
                     if(data && data[0]){
@@ -858,45 +871,68 @@
                     document.body.classList.add('fade-in');
                 }, 50);
 
-                // 守卫“我的团队”：普通学员提示并拦截；并把身份徽章改为“团长”
+                // 守卫"团长中心"：普通学员提示并拦截；并把身份徽章改为"团长"
                 try{
-                    const teamLink = document.querySelector('a[href="my-team.html"]');
-                    if(teamLink){
-                        const guard = async function(e){
-                            try{
-                                const uid = currentUser && (currentUser.id || currentUser.用户ID);
-                                const uname = currentUser && (currentUser.username||currentUser['用户名']||'');
-                                // 严格：必须远端确认
-                                let ok = false; let remote = 'unknown';
-                                try{ remote = await reconcileLeaderStatusRemote(uid, uname); }catch(_){ }
-                                ok = (remote==='enabled');
-                                if(!ok){
-                                    e.preventDefault(); e.stopPropagation();
-                                    showToast('普通学员无法进入，如需开通团长权限请联系管理员', 3000);
-                                }
-                            }catch(_){ }
-                        };
-                        teamLink.addEventListener('click', guard, { capture:true });
-                        teamLink.addEventListener('touchstart', guard, { capture:true });
-                        // 更新身份徽章（多轮覆盖，保证显示）
-                        (async function applyLeaderBadge(){
+                    const dashboardLink = document.querySelector('a[href="leader-dashboard.html"]');
+                    
+                    // 权限检查守卫函数
+                    const guard = async function(e){
+                        try{
                             const uid = currentUser && (currentUser.id || currentUser.用户ID);
-                            const uname = String(currentUser.username||currentUser['用户名']||'').toLowerCase();
-                            // 使用现有快照先渲染
-                            let ok = (localStorage.getItem('user_is_leader')==='true');
-                            (function paintOnce(){ const b=(document.querySelector('.user-status')|| document.getElementById('roleBadge') || ensureRoleBadge()); if(b){ b.textContent = ok ? '团长' : '普通用户'; } })();
-                            // 远端
-                            let remote = 'unknown';
+                            const uname = currentUser && (currentUser.username||currentUser['用户名']||'');
+                            // 严格：必须远端确认
+                            let ok = false; let remote = 'unknown';
                             try{ remote = await reconcileLeaderStatusRemote(uid, uname); }catch(_){ }
-                            if(remote==='enabled'){ ok=true; const code=(typeof generateInviteCode==='function')?generateInviteCode(String(uid)):''; setLeaderQuickKeys(uid, uname, code, 'enabled'); }
-                            if(remote==='disabled'){ ok=false; const code=(typeof generateInviteCode==='function')?generateInviteCode(String(uid)):''; setLeaderQuickKeys(uid, uname, code, 'disabled'); }
-                            localStorage.setItem('user_is_leader', ok?'true':'false');
-                            function paint(){ const b=(document.querySelector('.user-status')|| document.getElementById('roleBadge') || ensureRoleBadge()); if(b){ b.textContent = (localStorage.getItem('user_is_leader')==='true')?'团长':'普通用户'; } }
-                            paint();
-                            let n=0; const t=setInterval(()=>{ paint(); if(++n>15) clearInterval(t); }, 200);
-                        })();
-                        
+                            ok = (remote==='enabled');
+                            if(!ok){
+                                e.preventDefault(); e.stopPropagation();
+                                showToast('普通学员无法进入，如需开通团长权限请联系管理员', 3000);
+                            }
+                        }catch(_){ }
+                    };
+                    
+                    // 为团长中心链接添加守卫
+                    if(dashboardLink){
+                        dashboardLink.addEventListener('click', guard, { capture:true });
+                        dashboardLink.addEventListener('touchstart', guard, { capture:true });
                     }
+                    
+                    // 根据团长状态显示/隐藏团长中心
+                    (async function toggleLeaderLinks(){
+                        const uid = currentUser && (currentUser.id || currentUser.用户ID);
+                        const uname = String(currentUser.username||currentUser['用户名']||'').toLowerCase();
+                        
+                        // 快速本地判断先显示
+                        let isLeader = (localStorage.getItem('user_is_leader')==='true');
+                        if(isLeader){
+                            if(dashboardLink) dashboardLink.style.display = '';
+                        }
+                        
+                        // 远端确认
+                        let remote = 'unknown';
+                        try{ remote = await reconcileLeaderStatusRemote(uid, uname); }catch(_){ }
+                        isLeader = (remote==='enabled');
+                        
+                        if(dashboardLink) dashboardLink.style.display = isLeader ? '' : 'none';
+                    })();
+                    
+                    // 更新身份徽章（多轮覆盖，保证显示）
+                    (async function applyLeaderBadge(){
+                        const uid = currentUser && (currentUser.id || currentUser.用户ID);
+                        const uname = String(currentUser.username||currentUser['用户名']||'').toLowerCase();
+                        // 使用现有快照先渲染
+                        let ok = (localStorage.getItem('user_is_leader')==='true');
+                        (function paintOnce(){ const b=(document.querySelector('.user-status')|| document.getElementById('roleBadge') || ensureRoleBadge()); if(b){ b.textContent = ok ? '团长' : '普通用户'; } })();
+                        // 远端
+                        let remote = 'unknown';
+                        try{ remote = await reconcileLeaderStatusRemote(uid, uname); }catch(_){ }
+                        if(remote==='enabled'){ ok=true; const code=(typeof generateInviteCode==='function')?generateInviteCode(String(uid)):''; setLeaderQuickKeys(uid, uname, code, 'enabled'); }
+                        if(remote==='disabled'){ ok=false; const code=(typeof generateInviteCode==='function')?generateInviteCode(String(uid)):''; setLeaderQuickKeys(uid, uname, code, 'disabled'); }
+                        localStorage.setItem('user_is_leader', ok?'true':'false');
+                        function paint(){ const b=(document.querySelector('.user-status')|| document.getElementById('roleBadge') || ensureRoleBadge()); if(b){ b.textContent = (localStorage.getItem('user_is_leader')==='true')?'团长':'普通用户'; } }
+                        paint();
+                        let n=0; const t=setInterval(()=>{ paint(); if(++n>15) clearInterval(t); }, 200);
+                    })();
                 }catch(_){ }
                 
             } catch (error) {
@@ -924,8 +960,8 @@
                 const c = await ensureClient();
                 if (!c) { console.warn('Supabase未就绪'); return 0; }
                 
-                // 1. 获取收益记录
-                const { data: earnings, error: earningsError } = await c
+                // 1. 获取收益记录（数据库）
+                const { data: dbEarnings, error: earningsError } = await c
                     .from('earnings')
                     .select('*')
                     .eq('user_id', userId)
@@ -935,6 +971,28 @@
                     console.error('获取收益记录失败:', earningsError);
                     return 0;
                 }
+
+                // 1.1 合并本地收益记录（localStorage中的临时数据）
+                let earnings = dbEarnings || [];
+                try {
+                    const localEarnings = [];
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key && key.startsWith('earning_')) {
+                            try {
+                                const earning = JSON.parse(localStorage.getItem(key));
+                                const uid = earning.user_id || earning.userId || earning.用户ID;
+                                if (String(uid) === String(userId)) {
+                                    const status = String(earning.status || '').toLowerCase();
+                                    if (status === '已完成' || status === 'completed') {
+                                        localEarnings.push(earning);
+                                    }
+                                }
+                            } catch (_) {}
+                        }
+                    }
+                    if (localEarnings.length > 0) earnings = earnings.concat(localEarnings);
+                } catch (_) {}
 
                 // 2. 计算总收益
                 let totalEarnings = 0;
@@ -954,11 +1012,17 @@
                     return 0;
                 }
 
-                // 4. 计算总提现
+                // 4. 计算总提现（统计：已完成/已批准/已支付/审核中(pending)；忽略：已拒绝）
                 let totalWithdrawn = 0;
                 withdrawals?.forEach(withdrawal => {
-                    const amount = parseFloat(withdrawal.amount || withdrawal.金额 || 0);
-                    totalWithdrawn += amount;
+                    const status = String(withdrawal.status || '').toLowerCase();
+                    if (status === '已完成' || status === 'completed' || 
+                        status === '已批准' || status === 'approved' ||
+                        status === '已支付' || status === 'paid' ||
+                        status === '审核中' || status === 'pending') {
+                        const amount = parseFloat(withdrawal.amount || withdrawal.金额 || 0);
+                        totalWithdrawn += amount;
+                    }
                 });
 
                 // 5. 计算实际余额
@@ -1142,12 +1206,12 @@
                 const c = await ensureClient();
                 if (!c) { return 0; }
                 
-                // 尝试使用英文字段名
+                // 使用统一状态过滤
                 const { data: enEarnings, error: enError } = await c
                     .from('earnings')
                     .select('*')
                     .eq('user_id', userId)
-                    .eq('status', 'completed');
+                    .or('status.eq.已完成,status.eq.completed');
                 
                 if (enError) {
                     console.error('获取收益数据失败(英文字段):', enError);
@@ -1168,20 +1232,32 @@
                     earnings = enEarnings;
                 }
                 
+                // 合并本地收益
+                try {
+                    const localEarnings = [];
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key && key.startsWith('earning_')) {
+                            try {
+                                const e = JSON.parse(localStorage.getItem(key));
+                                const uid = e.user_id || e.userId || e.用户ID;
+                                if (String(uid) === String(userId)) {
+                                    const st = String(e.status || '').toLowerCase();
+                                    if (st === '已完成' || st === 'completed') {
+                                        localEarnings.push(e);
+                                    }
+                                }
+                            } catch (_) {}
+                        }
+                    }
+                    if (localEarnings.length > 0) earnings = earnings.concat(localEarnings);
+                } catch (_) {}
+                
                 // 计算总收益
                 let totalEarnings = 0;
-                if (earnings && earnings.length > 0) {
-                    earnings.forEach(earning => {
-                        const status = earning.status || earning.状态 || '';
-                        // 只计算已完成且未提现的收益
-                        if ((status === 'completed' || status === '已完成') && 
-                            status !== 'withdrawn' && status !== '已提现') {
-                            
-                            const amount = parseFloat(earning.amount || earning.金额 || 0);
-                            totalEarnings += amount;
-                        }
-                    });
-                }
+                (earnings||[]).forEach(e => {
+                    totalEarnings += parseFloat(e.amount || e.金额 || 0);
+                });
                 
                 return totalEarnings;
             } catch (error) {
@@ -1292,6 +1368,16 @@
         window.addEventListener('focus', function() {
             console.log('页面获得焦点，检查余额...');
             updateWalletBalanceDisplay();
+        });
+
+        // 跨页同步余额：响应钱包页广播
+        window.addEventListener('walletBalanceUpdated', async function(event){
+            try{
+                if(event && event.detail){
+                    console.log('收到钱包余额更新事件(个人中心):', event.detail);
+                }
+                await updateWalletBalanceDisplay();
+            }catch(_){ }
         });
         
         // 页面完全加载后再次检查余额

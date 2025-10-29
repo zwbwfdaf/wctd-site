@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的团队 - 团长专属</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #6366f1;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: var(--bg-color);
+            color: var(--text-primary);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 16px 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-title {
+            font-size: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .back-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* 统计卡片 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        /* 层级筛选 */
+        .level-tabs {
+            background: white;
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            display: flex;
+            gap: 8px;
+        }
+
+        .level-tab {
+            flex: 1;
+            padding: 10px 16px;
+            border: 1px solid var(--border-color);
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .level-tab:hover {
+            background: var(--bg-color);
+        }
+
+        .level-tab.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        /* 搜索栏 */
+        .search-bar {
+            background: white;
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            display: flex;
+            gap: 12px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 10px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .search-btn {
+            padding: 10px 20px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        /* 成员列表 */
+        .member-list {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .list-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+        }
+
+        .member-item {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: all 0.2s;
+        }
+
+        .member-item:hover {
+            background: var(--bg-color);
+        }
+
+        .member-item:last-child {
+            border-bottom: none;
+        }
+
+        .member-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-color), #8b5cf6);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .member-info {
+            flex: 1;
+        }
+
+        .member-name {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .member-meta {
+            font-size: 12px;
+            color: var(--text-secondary);
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .level-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .level-1 {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success-color);
+        }
+
+        .level-2 {
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--primary-color);
+        }
+
+        .level-3 {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning-color);
+        }
+
+        .contribution {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--success-color);
+        }
+
+        .sub-members {
+            font-size: 12px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state i {
+            font-size: 64px;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+
+        /* 树状视图切换按钮 */
+        .view-toggle {
+            background: white;
+            border-radius: 12px;
+            padding: 8px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            display: flex;
+            gap: 8px;
+        }
+
+        .view-btn {
+            flex: 1;
+            padding: 8px 16px;
+            border: none;
+            background: transparent;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .view-btn.active {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .level-tabs {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="header-title">
+                <i class="fas fa-users"></i>
+                <span>我的团队</span>
+            </div>
+            <button class="back-btn" onclick="window.history.back()">
+                <i class="fas fa-arrow-left"></i>
+                返回
+            </button>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- 统计卡片 -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">团队总人数</div>
+                <div class="stat-value" id="totalMembers">156</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">一级成员</div>
+                <div class="stat-value" style="color: var(--success-color);" id="level1Members">48</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">二级成员</div>
+                <div class="stat-value" style="color: var(--primary-color);" id="level2Members">84</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">三级成员</div>
+                <div class="stat-value" style="color: var(--warning-color);" id="level3Members">24</div>
+            </div>
+        </div>
+
+        <!-- 视图切换 -->
+        <div class="view-toggle">
+            <button class="view-btn active" onclick="switchView('list')">
+                <i class="fas fa-list"></i>
+                <span>列表视图</span>
+            </button>
+            <button class="view-btn" onclick="switchView('tree')">
+                <i class="fas fa-sitemap"></i>
+                <span>树状视图</span>
+            </button>
+        </div>
+
+        <!-- 层级筛选 -->
+        <div class="level-tabs">
+            <button class="level-tab active" onclick="filterByLevel('all')">
+                全部成员 (156)
+            </button>
+            <button class="level-tab" onclick="filterByLevel('1')">
+                一级 (48)
+            </button>
+            <button class="level-tab" onclick="filterByLevel('2')">
+                二级 (84)
+            </button>
+            <button class="level-tab" onclick="filterByLevel('3')">
+                三级 (24)
+            </button>
+        </div>
+
+        <!-- 搜索栏 -->
+        <div class="search-bar">
+            <input type="text" class="search-input" id="searchInput" placeholder="搜索成员（用户名/姓名）">
+            <button class="search-btn" onclick="searchMembers()">
+                <i class="fas fa-search"></i> 搜索
+            </button>
+        </div>
+
+        <!-- 成员列表 -->
+        <div class="member-list">
+            <div class="list-header">
+                团队成员列表 <span id="memberCount">(共156人)</span>
+            </div>
+            <div id="memberListContent">
+                <!-- 成员列表将动态加载 -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 模拟团队成员数据
+        const mockMembers = [
+            {
+                id: 1,
+                username: 'userA',
+                name: '用户A',
+                level: 1,
+                joinDate: '2024-10-20',
+                contribution: 150,
+                subMembers: 5,
+                status: 'active'
+            },
+            {
+                id: 2,
+                username: 'userB',
+                name: '用户B',
+                level: 1,
+                joinDate: '2024-10-18',
+                contribution: 120,
+                subMembers: 3,
+                status: 'active'
+            },
+            {
+                id: 3,
+                username: 'userC',
+                name: '用户C',
+                level: 2,
+                joinDate: '2024-10-22',
+                contribution: 80,
+                subMembers: 2,
+                status: 'active'
+            },
+            {
+                id: 4,
+                username: 'userD',
+                name: '用户D',
+                level: 2,
+                joinDate: '2024-10-25',
+                contribution: 60,
+                subMembers: 0,
+                status: 'active'
+            },
+            {
+                id: 5,
+                username: 'userE',
+                name: '用户E',
+                level: 3,
+                joinDate: '2024-10-26',
+                contribution: 30,
+                subMembers: 0,
+                status: 'active'
+            }
+        ];
+
+        let currentLevel = 'all';
+        let currentView = 'list';
+
+        // 渲染成员列表
+        function renderMembers(members) {
+            const container = document.getElementById('memberListContent');
+            
+            if (!members || members.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-users-slash"></i>
+                        <p>暂无团队成员</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const html = members.map(member => `
+                <div class="member-item">
+                    <div class="member-avatar">${member.name.charAt(0)}</div>
+                    <div class="member-info">
+                        <div class="member-name">${member.name}</div>
+                        <div class="member-meta">
+                            <span class="level-badge level-${member.level}">
+                                ${member.level === 1 ? '一级' : member.level === 2 ? '二级' : '三级'}成员
+                            </span>
+                            <span>加入于 ${member.joinDate}</span>
+                            ${member.subMembers > 0 ? `
+                                <span class="sub-members">
+                                    <i class="fas fa-users"></i>
+                                    ${member.subMembers} 名下级
+                                </span>
+                            ` : ''}
+                        </div>
+                    </div>
+                    <div class="contribution">
+                        ¥${member.contribution}
+                    </div>
+                </div>
+            `).join('');
+
+            container.innerHTML = html;
+            document.getElementById('memberCount').textContent = `(共${members.length}人)`;
+        }
+
+        // 按层级筛选
+        function filterByLevel(level) {
+            currentLevel = level;
+            
+            // 更新标签状态
+            document.querySelectorAll('.level-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // 筛选数据
+            let filtered = mockMembers;
+            if (level !== 'all') {
+                filtered = mockMembers.filter(m => m.level === parseInt(level));
+            }
+
+            renderMembers(filtered);
+        }
+
+        // 搜索成员
+        function searchMembers() {
+            const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
+            
+            let filtered = mockMembers;
+            if (currentLevel !== 'all') {
+                filtered = mockMembers.filter(m => m.level === parseInt(currentLevel));
+            }
+
+            if (keyword) {
+                filtered = filtered.filter(m => 
+                    m.username.toLowerCase().includes(keyword) ||
+                    m.name.toLowerCase().includes(keyword)
+                );
+            }
+
+            renderMembers(filtered);
+        }
+
+        // 切换视图
+        function switchView(view) {
+            currentView = view;
+            
+            document.querySelectorAll('.view-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.closest('.view-btn').classList.add('active');
+
+            if (view === 'tree') {
+                alert('树状视图功能开发中...\n建议使用D3.js或Echarts实现可视化');
+            }
+        }
+
+        // 加载数据
+        function loadTeamData() {
+            // 实际应从API获取
+            renderMembers(mockMembers);
+        }
+
+        // 页面加载时执行
+        document.addEventListener('DOMContentLoaded', loadTeamData);
+    </script>
+</body>
+</html>
+

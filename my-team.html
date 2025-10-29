@@ -174,6 +174,15 @@
     <!-- 团队统计卡片 -->
     <div class="mx-4 mb-6">
         <div class="team-summary p-6 text-white">
+            <!-- 当前等级 -->
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                    <span id="level-icon" style="font-size: 24px;">🥉</span>
+                    <span id="level-name" class="font-bold text-lg">青铜团长</span>
+                </div>
+                <a href="leader-benefits.html" class="text-xs opacity-90 underline">查看权益 →</a>
+            </div>
+            
             <div class="mb-2 text-sm opacity-80">团队总人数</div>
             <div class="text-3xl font-bold mb-4" id="team-total">0</div>
             
@@ -523,6 +532,25 @@
             }catch(_){ }
         });
 
+        // 等级配置（与leader-benefits.html同步）
+        const LEVEL_CONFIG = [
+            { id: 'bronze', name: '青铜团长', icon: '🥉', minMembers: 0 },
+            { id: 'silver', name: '白银团长', icon: '🥈', minMembers: 10 },
+            { id: 'gold', name: '黄金团长', icon: '👑', minMembers: 50 },
+            { id: 'platinum', name: '铂金团长', icon: '💎', minMembers: 100 },
+            { id: 'diamond', name: '钻石团长', icon: '⭐', minMembers: 200 }
+        ];
+
+        // 根据团队人数获取当前等级
+        function getCurrentLevel(memberCount) {
+            for (let i = LEVEL_CONFIG.length - 1; i >= 0; i--) {
+                if (memberCount >= LEVEL_CONFIG[i].minMembers) {
+                    return LEVEL_CONFIG[i];
+                }
+            }
+            return LEVEL_CONFIG[0];
+        }
+
         async function loadMyTeamStats(){
             try{
                 window.showLoading && window.showLoading();
@@ -579,6 +607,13 @@
                 document.getElementById('team-total').textContent = String(total);
                 document.getElementById('team-l1').textContent = String(level1);
                 // document.getElementById('team-l2').textContent = String(level2); // 已移除
+
+                // 更新等级显示
+                const currentLevel = getCurrentLevel(level1);
+                const levelIcon = document.getElementById('level-icon');
+                const levelName = document.getElementById('level-name');
+                if (levelIcon) levelIcon.textContent = currentLevel.icon;
+                if (levelName) levelName.textContent = currentLevel.name;
 
                 // 渲染成员列表（仅展示一级成员；展示用户总收益）
                 const list = document.getElementById('team-list');

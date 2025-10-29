@@ -406,7 +406,6 @@
                     <div class="section-tabs">
                         <button class="section-tab active" data-section="task" onclick="switchEarningsSection('task')"><i class="fas fa-briefcase"></i> 任务收益管理</button>
                         <button class="section-tab" data-section="other" onclick="switchEarningsSection('other')" id="otherEarningsTab"><i class="fas fa-gift"></i> 其他收益管理</button>
-                        <button class="btn btn-primary" style="margin-left:auto" onclick="switchEarningsSection('other');openOtherEarningModal()"><i class="fas fa-plus"></i> 添加其他收益</button>
                     </div>
                     
                     <!-- 任务分类选项卡（任务收益管理内部） -->
@@ -483,34 +482,105 @@
                     </div>
 
                     <!-- 其他收益管理（移动到任务区域之后，确保可见） -->
-                    <div class="card earnings-section" id="otherEarningsSection" style="display:none;">
+                    <div class="earnings-section" id="otherEarningsSection" style="display:none;">
+                        <!-- 统计卡片 -->
+                        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-bottom:20px;">
+                            <div style="background:linear-gradient(135deg,#10b981,#34d399);border-radius:16px;padding:24px;color:white;box-shadow:0 4px 12px rgba(16,185,129,0.3);">
+                                <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+                                    <i class="fas fa-gift" style="font-size:28px;opacity:0.9;"></i>
+                                    <span style="font-size:14px;opacity:0.9;">活动收益总额</span>
+                                </div>
+                                <div style="font-size:32px;font-weight:700;" id="activityEarningsTotal">¥0.00</div>
+                            </div>
+                            <div style="background:linear-gradient(135deg,#8b5cf6,#a78bfa);border-radius:16px;padding:24px;color:white;box-shadow:0 4px 12px rgba(139,92,246,0.3);">
+                                <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+                                    <i class="fas fa-crown" style="font-size:28px;opacity:0.9;"></i>
+                                    <span style="font-size:14px;opacity:0.9;">团队收益总额</span>
+                                </div>
+                                <div style="font-size:32px;font-weight:700;" id="leaderEarningsTotal">¥0.00</div>
+                            </div>
+                            <div style="background:linear-gradient(135deg,#f59e0b,#fbbf24);border-radius:16px;padding:24px;color:white;box-shadow:0 4px 12px rgba(245,158,11,0.3);">
+                                <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+                                    <i class="fas fa-coins" style="font-size:28px;opacity:0.9;"></i>
+                                    <span style="font-size:14px;opacity:0.9;">其他收益总额</span>
+                                </div>
+                                <div style="font-size:32px;font-weight:700;" id="otherEarningsTotal">¥0.00</div>
+                            </div>
+                        </div>
+                        
+                        <!-- 分类标签页 -->
+                        <div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:2px solid #e5e7eb;">
+                            <button class="other-type-tab active" data-type="activity" onclick="switchOtherTypeTab('activity')" style="flex:1;padding:12px 20px;background:transparent;border:none;border-bottom:3px solid #10b981;color:#10b981;font-weight:600;cursor:pointer;transition:all 0.3s;">
+                                <i class="fas fa-gift"></i> 活动收益
+                            </button>
+                            <button class="other-type-tab" data-type="leader" onclick="switchOtherTypeTab('leader')" style="flex:1;padding:12px 20px;background:transparent;border:none;border-bottom:3px solid transparent;color:#6b7280;font-weight:600;cursor:pointer;transition:all 0.3s;">
+                                <i class="fas fa-crown"></i> 团队收益
+                            </button>
+                            <button class="other-type-tab" data-type="other" onclick="switchOtherTypeTab('other')" style="flex:1;padding:12px 20px;background:transparent;border:none;border-bottom:3px solid transparent;color:#6b7280;font-weight:600;cursor:pointer;transition:all 0.3s;">
+                                <i class="fas fa-coins"></i> 其他收益
+                            </button>
+                        </div>
+                        
+                        <!-- 活动收益列表 -->
+                        <div class="card other-type-content" id="activityEarningsContent">
                         <div class="card-header">
-                            <h3>其他收益管理（活动/团长/其他）</h3>
+                                <h3>活动收益管理</h3>
+                                <button class="btn btn-success" onclick="openOtherEarningModal('活动收益')"><i class="fas fa-plus"></i> 添加活动收益</button>
                         </div>
                         <div class="card-body">
                             <div class="search-filters">
-                                <input type="text" placeholder="搜索ID/用户/类型..." id="otherEarningsSearch" class="search-input" oninput="otherEarningsFiltersChanged()">
-                                <select id="otherEarningsTypeFilter" class="filter-select" onchange="applyOtherEarningsFilters()">
-                                    <option value="">全部类型</option>
-                                    <option value="活动收益">活动收益</option>
-                                    <option value="团长收益">团长收益</option>
-                                    <option value="其他收益">其他收益</option>
+                                    <input type="text" placeholder="搜索用户/ID..." id="activityEarningsSearch" class="search-input" oninput="filterOtherEarnings('activity')">
+                                    <select id="activityEarningsStatusFilter" class="filter-select" onchange="filterOtherEarnings('activity')">
+                                        <option value="">全部状态</option>
+                                        <option value="已完成">已完成</option>
+                                        <option value="进行中">进行中</option>
+                                        <option value="已取消">已取消</option>
                                 </select>
-                                <select id="otherEarningsStatusFilter" class="filter-select" onchange="applyOtherEarningsFilters()">
+                                </div>
+                                <div class="table-container">
+                                    <table class="data-table" id="activityEarningsTable">
+                                        <thead>
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>用户</th>
+                                                <th>活动名称</th>
+                                                <th>金额</th>
+                                                <th>时间</th>
+                                                <th>状态</th>
+                                                <th>操作</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr><td colspan="7" class="loading">加载中...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 团队收益列表 -->
+                        <div class="card other-type-content" id="leaderEarningsContent" style="display:none;">
+                            <div class="card-header">
+                                <h3>团队收益管理</h3>
+                                <button class="btn btn-warning" onclick="openOtherEarningModal('团长收益')"><i class="fas fa-plus"></i> 添加团队收益</button>
+                            </div>
+                            <div class="card-body">
+                                <div class="search-filters">
+                                    <input type="text" placeholder="搜索用户/ID..." id="leaderEarningsSearch" class="search-input" oninput="filterOtherEarnings('leader')">
+                                    <select id="leaderEarningsStatusFilter" class="filter-select" onchange="filterOtherEarnings('leader')">
                                     <option value="">全部状态</option>
                                     <option value="已完成">已完成</option>
                                     <option value="进行中">进行中</option>
                                     <option value="已取消">已取消</option>
                                 </select>
-                                <div style="flex:1"></div>
                             </div>
                             <div class="table-container">
-                                <table class="data-table" id="otherEarningsTable">
+                                    <table class="data-table" id="leaderEarningsTable">
                                     <thead>
                                         <tr>
                                             <th>ID</th>
                                             <th>用户</th>
-                                            <th>收益类型</th>
+                                                <th>来源</th>
                                             <th>金额</th>
                                             <th>时间</th>
                                             <th>状态</th>
@@ -521,7 +591,44 @@
                                         <tr><td colspan="7" class="loading">加载中...</td></tr>
                                     </tbody>
                                 </table>
-                                <div id="otherEmptyHint" class="empty" style="display:none;padding:16px;color:#6b7280">暂无数据，点击"添加其他收益"创建一条记录</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 其他收益列表 -->
+                        <div class="card other-type-content" id="otherEarningsContent" style="display:none;">
+                            <div class="card-header">
+                                <h3>其他收益管理</h3>
+                                <button class="btn btn-primary" onclick="openOtherEarningModal('其他收益')"><i class="fas fa-plus"></i> 添加其他收益</button>
+                            </div>
+                            <div class="card-body">
+                                <div class="search-filters">
+                                    <input type="text" placeholder="搜索用户/ID..." id="otherTypeEarningsSearch" class="search-input" oninput="filterOtherEarnings('other')">
+                                    <select id="otherTypeEarningsStatusFilter" class="filter-select" onchange="filterOtherEarnings('other')">
+                                        <option value="">全部状态</option>
+                                        <option value="已完成">已完成</option>
+                                        <option value="进行中">进行中</option>
+                                        <option value="已取消">已取消</option>
+                                    </select>
+                                </div>
+                                <div class="table-container">
+                                    <table class="data-table" id="otherTypeEarningsTable">
+                                        <thead>
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>用户</th>
+                                                <th>说明</th>
+                                                <th>金额</th>
+                                                <th>时间</th>
+                                                <th>状态</th>
+                                                <th>操作</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr><td colspan="7" class="loading">加载中...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     </div>

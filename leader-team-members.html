@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#6366f1">
+    <title>团队成员列表</title>
+    <script src="emergency-database-fix.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #6366f1;
+            --primary-dark: #4f46e5;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --error-color: #ef4444;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: var(--bg-color);
+            color: var(--text-primary);
+            line-height: 1.6;
+            padding-bottom: 60px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            padding: 16px 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-title {
+            font-size: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .back-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s;
+        }
+
+        .back-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 16px;
+        }
+
+        .stats-summary {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .summary-item {
+            text-align: center;
+        }
+
+        .summary-item h3 {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .summary-item .value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .filters-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .search-filters {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-input, .filter-select {
+            padding: 10px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            min-width: 200px;
+            flex: 1;
+        }
+
+        .filter-select {
+            min-width: 150px;
+            flex: unset;
+        }
+
+        .btn {
+            padding: 10px 16px;
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #64748b;
+        }
+
+        .table-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            overflow-x: auto;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th,
+        .data-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .data-table th {
+            background: var(--bg-color);
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .data-table tbody tr:hover {
+            background: #f9fafb;
+        }
+
+        .pagination {
+            margin-top: 16px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        .empty {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .status-badge.activated {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-badge.pending {
+            background: #fed7aa;
+            color: #92400e;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 8px;
+            }
+
+            /* 统计摘要 - 2列布局 */
+            .stats-summary {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+                padding: 12px;
+                margin-bottom: 12px;
+            }
+
+            .summary-item h3 {
+                font-size: 11px;
+                margin-bottom: 4px;
+            }
+
+            .summary-item .value {
+                font-size: 20px;
+            }
+
+            /* 筛选器优化 */
+            .filters-card {
+                padding: 12px;
+                margin-bottom: 12px;
+            }
+
+            .search-filters {
+                flex-direction: column;
+                gap: 6px;
+            }
+
+            .search-input, .filter-select {
+                width: 100%;
+                padding: 8px 10px;
+                font-size: 13px;
+                min-width: unset;
+            }
+
+            .btn {
+                width: 100%;
+                padding: 8px 12px;
+                font-size: 13px;
+                justify-content: center;
+            }
+
+            /* 表格优化 */
+            .table-card {
+                padding: 12px;
+                margin-bottom: 12px;
+            }
+
+            .data-table th,
+            .data-table td {
+                padding: 8px 6px;
+                font-size: 12px;
+            }
+
+            .data-table th {
+                font-size: 11px;
+            }
+
+            /* 分页 */
+            .pagination {
+                margin-top: 12px;
+                gap: 6px;
+            }
+
+            .pagination .btn {
+                width: auto;
+                padding: 6px 12px;
+                font-size: 12px;
+            }
+
+            #pageInfo {
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="header-title">
+                <i class="fas fa-users"></i>
+                <span>团队成员列表</span>
+            </div>
+            <button class="back-btn" onclick="window.history.back()">
+                <i class="fas fa-arrow-left"></i>
+                <span>返回</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- 统计摘要 -->
+        <div class="stats-summary">
+            <div class="summary-item">
+                <h3>团队总人数</h3>
+                <div class="value" id="totalCount">0</div>
+            </div>
+            <div class="summary-item">
+                <h3>本月新增</h3>
+                <div class="value" id="monthCount">0</div>
+            </div>
+            <div class="summary-item">
+                <h3>今日新增</h3>
+                <div class="value" id="todayCount">0</div>
+            </div>
+        </div>
+
+        <!-- 筛选器 -->
+        <div class="filters-card">
+            <div class="search-filters">
+                <input type="text" id="searchInput" class="search-input" placeholder="搜索 用户ID / 用户名...">
+                <select id="statusFilter" class="filter-select">
+                    <option value="">激活状态: 全部</option>
+                    <option value="activated">✅ 已激活</option>
+                    <option value="pending">⏳ 待激活</option>
+                </select>
+                <select id="dateRange" class="filter-select">
+                    <option value="">加入时间: 全部</option>
+                    <option value="1">近1天</option>
+                    <option value="7">近7天</option>
+                    <option value="30">近30天</option>
+                </select>
+                <select id="sortBy" class="filter-select">
+                    <option value="joined-desc">加入时间↓</option>
+                    <option value="joined-asc">加入时间↑</option>
+                    <option value="name-asc">用户名A→Z</option>
+                    <option value="name-desc">用户名Z→A</option>
+                </select>
+                <select id="pageSize" class="filter-select">
+                    <option value="10">每页 10</option>
+                    <option value="20">每页 20</option>
+                    <option value="50">每页 50</option>
+                </select>
+                <button class="btn" onclick="applyFilters()">
+                    <i class="fas fa-filter"></i> 筛选
+                </button>
+                <button class="btn" onclick="resetFilters()">
+                    <i class="fas fa-redo"></i> 重置
+                </button>
+                <div style="flex:1"></div>
+                <button class="btn btn-secondary" onclick="exportCSV()">
+                    <i class="fas fa-file-csv"></i> 导出CSV
+                </button>
+            </div>
+        </div>
+
+        <!-- 数据表格 -->
+        <div class="table-card">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>用户ID</th>
+                        <th>用户名</th>
+                        <th>激活状态</th>
+                        <th>加入时间</th>
+                        <th>激活时间</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr><td colspan="6" class="loading">加载中...</td></tr>
+                </tbody>
+            </table>
+
+            <div class="pagination">
+                <button class="btn" onclick="prevPage()">上一页</button>
+                <span id="pageInfo">1 / 1</span>
+                <button class="btn" onclick="nextPage()">下一页</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const state = {
+            all: [],
+            filtered: [],
+            page: 1,
+            pageSize: 10,
+            totalPages: 1
+        };
+
+        // 统一获取数据库客户端
+        async function ensureClient() {
+            try {
+                let c = (typeof window.getEmergencyClient === 'function') ? window.getEmergencyClient() : null;
+                if (!c && typeof window.emergencyInitDatabase === 'function') {
+                    await window.emergencyInitDatabase();
+                    c = (typeof window.getEmergencyClient === 'function') ? window.getEmergencyClient() : null;
+                }
+                if (!c && window.supabase && typeof window.supabase.from === 'function') c = window.supabase;
+                return c;
+            } catch (_) { return null; }
+        }
+
+        // 生成邀请码
+        function generateInviteCode(userId) {
+            const id = String(userId || '');
+            const base = id.slice(-6).padStart(6, '0');
+            let sum = 0;
+            for (let i = 0; i < base.length; i++) { sum += base.charCodeAt(i); }
+            const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            const check = chars[sum % 36];
+            return 'R' + base + check;
+        }
+
+        // 加载团队成员
+        async function loadTeamMembers() {
+            try {
+                const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+                if (!currentUser || !currentUser.id) {
+                    alert('请先登录');
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                const userId = currentUser.id || currentUser['用户ID'];
+                const myCode = generateInviteCode(userId);
+                const body = myCode.slice(1, 7);
+                const legacyKey = 'uid_tail_' + body;
+
+                const client = await ensureClient();
+                if (!client) {
+                    document.getElementById('tableBody').innerHTML = '<tr><td colspan="4" class="empty">无法连接数据库</td></tr>';
+                    return;
+                }
+
+                // 查询团队成员（包含激活状态）
+                const { data: referrals1 } = await client.from('referrals')
+                    .select('invitee_id, created_at, is_activated, activated_at')
+                    .eq('inviter_id', myCode);
+                
+                const { data: referrals2 } = await client.from('referrals')
+                    .select('invitee_id, created_at, is_activated, activated_at')
+                    .eq('inviter_id', legacyKey);
+                
+                const allReferrals = [...(referrals1 || []), ...(referrals2 || [])];
+
+                if (allReferrals.length === 0) {
+                    document.getElementById('tableBody').innerHTML = '<tr><td colspan="6" class="empty">暂无团队成员</td></tr>';
+                    updateStats(0, 0, 0);
+                    return;
+                }
+
+                // 获取用户详细信息
+                const userIds = allReferrals.map(r => r.invitee_id);
+                const { data: users } = await client.from('users')
+                    .select('id, username')
+                    .in('id', userIds);
+
+                const userMap = new Map(users?.map(u => [u.id, u]) || []);
+
+                state.all = allReferrals.map(r => ({
+                    user_id: r.invitee_id,
+                    username: userMap.get(r.invitee_id)?.username || '未知用户',
+                    created_at: r.created_at,
+                    is_activated: r.is_activated || false,
+                    activated_at: r.activated_at || null
+                }));
+
+                // 计算统计数据（仅统计已激活）
+                const now = new Date();
+                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+                const activatedMembers = state.all.filter(m => m.is_activated);
+                const todayCount = activatedMembers.filter(m => m.activated_at && new Date(m.activated_at) >= today).length;
+                const monthCount = activatedMembers.filter(m => m.activated_at && new Date(m.activated_at) >= thisMonth).length;
+
+                updateStats(activatedMembers.length, monthCount, todayCount);
+                applyFilters();
+
+            } catch (error) {
+                console.error('加载团队成员失败:', error);
+                document.getElementById('tableBody').innerHTML = '<tr><td colspan="4" class="empty">加载失败</td></tr>';
+            }
+        }
+
+        function updateStats(total, month, today) {
+            document.getElementById('totalCount').textContent = total;
+            document.getElementById('monthCount').textContent = month;
+            document.getElementById('todayCount').textContent = today;
+        }
+
+        function applyFilters() {
+            const keyword = document.getElementById('searchInput').value.toLowerCase().trim();
+            const statusFilter = document.getElementById('statusFilter').value;
+            const dateRange = document.getElementById('dateRange').value;
+            const sortBy = document.getElementById('sortBy').value;
+            state.pageSize = parseInt(document.getElementById('pageSize').value) || 10;
+
+            let filtered = state.all.slice();
+
+            // 关键字筛选
+            if (keyword) {
+                filtered = filtered.filter(m => 
+                    String(m.user_id).toLowerCase().includes(keyword) ||
+                    (m.username || '').toLowerCase().includes(keyword)
+                );
+            }
+
+            // 激活状态筛选
+            if (statusFilter) {
+                if (statusFilter === 'activated') {
+                    filtered = filtered.filter(m => m.is_activated === true);
+                } else if (statusFilter === 'pending') {
+                    filtered = filtered.filter(m => m.is_activated !== true);
+                }
+            }
+
+            // 时间范围筛选
+            if (dateRange) {
+                const days = parseInt(dateRange);
+                const minDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+                filtered = filtered.filter(m => new Date(m.created_at) >= minDate);
+            }
+
+            // 排序
+            const [key, dir] = sortBy.split('-');
+            filtered.sort((a, b) => {
+                let va, vb;
+                if (key === 'joined') {
+                    va = new Date(a.created_at).getTime();
+                    vb = new Date(b.created_at).getTime();
+                } else if (key === 'name') {
+                    va = (a.username || '').toLowerCase();
+                    vb = (b.username || '').toLowerCase();
+                }
+                if (va === vb) return 0;
+                return (va > vb ? 1 : -1) * (dir === 'asc' ? 1 : -1);
+            });
+
+            state.filtered = filtered;
+            state.page = 1;
+            renderTable();
+        }
+
+        function resetFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('dateRange').value = '';
+            document.getElementById('sortBy').value = 'joined-desc';
+            document.getElementById('pageSize').value = '10';
+            applyFilters();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            const start = (state.page - 1) * state.pageSize;
+            const end = start + state.pageSize;
+            const pageData = state.filtered.slice(start, end);
+
+            state.totalPages = Math.max(1, Math.ceil(state.filtered.length / state.pageSize));
+
+            if (pageData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="empty">暂无数据</td></tr>';
+            } else {
+                tbody.innerHTML = pageData.map((m, idx) => {
+                    const statusClass = m.is_activated ? 'activated' : 'pending';
+                    const statusText = m.is_activated ? '✅ 已激活' : '⏳ 待激活';
+                    const activatedTime = m.activated_at ? formatDate(m.activated_at) : '-';
+                    
+                    return `
+                        <tr>
+                            <td>${start + idx + 1}</td>
+                            <td style="font-family:monospace;font-size:12px;">${m.user_id}</td>
+                            <td><strong>${m.username}</strong></td>
+                            <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                            <td>${formatDate(m.created_at)}</td>
+                            <td>${activatedTime}</td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            document.getElementById('pageInfo').textContent = `${state.page} / ${state.totalPages}`;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            return dateStr.replace('T', ' ').slice(0, 19);
+        }
+
+        function prevPage() {
+            if (state.page > 1) {
+                state.page--;
+                renderTable();
+            }
+        }
+
+        function nextPage() {
+            if (state.page < state.totalPages) {
+                state.page++;
+                renderTable();
+            }
+        }
+
+        function exportCSV() {
+            const header = ['用户ID', '用户名', '激活状态', '加入时间', '激活时间'];
+            const rows = state.filtered.map(m => [
+                m.user_id,
+                m.username,
+                m.is_activated ? '已激活' : '待激活',
+                m.created_at,
+                m.activated_at || '-'
+            ]);
+            const csv = [header, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = '团队成员列表.csv';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        document.addEventListener('DOMContentLoaded', loadTeamMembers);
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,1494 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#6366f1">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta name="page-version" content="2.2.0">
+    <title>团长中心</title>
+    <script src="emergency-database-fix.js?v=2.2.0"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #6366f1;
+            --primary-dark: #4f46e5;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --error-color: #ef4444;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: var(--bg-color);
+            color: var(--text-primary);
+            line-height: 1.6;
+            padding-bottom: 60px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* 顶部导航 */
+        .header {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            padding: 16px 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-title {
+            font-size: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .back-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s;
+        }
+
+        .back-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        /* 主容器 */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 16px;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 12px;
+            }
+        }
+
+        /* 用户信息卡片 */
+        .user-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .user-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: 700;
+            border: 3px solid rgba(255,255,255,0.3);
+        }
+
+        .user-details h2 {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .user-level {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 16px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 20px;
+            font-size: 14px;
+            backdrop-filter: blur(10px);
+        }
+        
+        @media (max-width: 768px) {
+            .user-card {
+                padding: 20px 16px;
+                margin-bottom: 16px;
+            }
+            
+            .user-avatar {
+                width: 72px;
+                height: 72px;
+                font-size: 28px;
+            }
+            
+            .user-details h2 {
+                font-size: 20px;
+            }
+            
+            .user-level {
+                font-size: 13px;
+                padding: 5px 12px;
+            }
+        }
+
+        /* 升级进度 */
+        .level-progress {
+            margin-top: 20px;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ffd700, #ffed4e);
+            border-radius: 10px;
+            transition: width 0.5s ease;
+        }
+
+        /* 统计网格 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            border: 1px solid var(--border-color);
+            transition: all 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        }
+        
+        @media (max-width: 768px) {
+            .stat-card {
+                padding: 16px;
+            }
+            
+            .stat-card:active {
+                transform: scale(0.98);
+            }
+        }
+
+        .stat-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: white;
+        }
+
+        .stat-icon.team { background: linear-gradient(135deg, #667eea, #764ba2); }
+        .stat-icon.commission { background: linear-gradient(135deg, #f093fb, #f5576c); }
+        .stat-icon.pending { background: linear-gradient(135deg, #4facfe, #00f2fe); }
+        .stat-icon.members { background: linear-gradient(135deg, #43e97b, #38f9d7); }
+
+        .stat-info h3 {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 8px 0;
+        }
+
+        .stat-change {
+            font-size: 12px;
+            color: var(--success-color);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .stat-btn {
+            margin-top: 12px;
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            text-decoration: none;
+        }
+
+        .stat-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+        }
+
+        .stat-btn:active {
+            transform: translateY(0);
+        }
+        
+        @media (max-width: 768px) {
+            .stat-icon {
+                width: 40px;
+                height: 40px;
+                font-size: 18px;
+            }
+            
+            .stat-value {
+                font-size: 24px;
+            }
+
+            .stat-btn {
+                font-size: 12px;
+                padding: 6px 12px;
+            }
+        }
+
+        /* 快捷操作 */
+        .quick-actions {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .quick-actions h3 {
+            font-size: 18px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        @media (max-width: 768px) {
+            .quick-actions {
+                padding: 16px;
+            }
+            
+            .quick-actions h3 {
+                font-size: 16px;
+            }
+        }
+
+        .actions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+        }
+
+        .action-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            padding: 16px;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            color: var(--text-primary);
+        }
+
+        .action-btn:hover {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        .action-btn i {
+            font-size: 24px;
+        }
+
+        .action-btn span {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        /* 团队动态 */
+        .team-activity {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .team-activity h3 {
+            font-size: 18px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .activity-list {
+            list-style: none;
+        }
+
+        .activity-item {
+            padding: 12px;
+            border-left: 3px solid var(--primary-color);
+            background: var(--bg-color);
+            margin-bottom: 8px;
+            border-radius: 0 8px 8px 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .activity-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .activity-content {
+            flex: 1;
+        }
+
+        .activity-text {
+            font-size: 14px;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .activity-time {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 12px;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .user-info {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .actions-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        /* 激活提示横幅 */
+        .activation-notice {
+            background: linear-gradient(135deg, #fff7ed, #fed7aa);
+            border-left: 4px solid var(--warning-color);
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2);
+        }
+
+        .notice-icon {
+            font-size: 24px;
+            color: var(--warning-color);
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .notice-content {
+            flex: 1;
+        }
+
+        .notice-content h4 {
+            font-size: 15px;
+            color: #92400e;
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+
+        .notice-content p {
+            font-size: 13px;
+            color: #78350f;
+            line-height: 1.6;
+            margin: 0;
+        }
+
+        .notice-content strong {
+            color: #92400e;
+            font-weight: 700;
+        }
+
+        @media (max-width: 768px) {
+            .activation-notice {
+                padding: 12px 16px;
+                gap: 12px;
+            }
+
+            .notice-icon {
+                font-size: 20px;
+            }
+
+            .notice-content h4 {
+                font-size: 14px;
+            }
+
+            .notice-content p {
+                font-size: 12px;
+            }
+        }
+
+        /* 等级权益卡片 */
+        .level-rewards-card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+            border: 1px solid var(--border-color);
+        }
+
+        .rewards-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .rewards-header i {
+            font-size: 24px;
+            color: var(--primary-color);
+        }
+
+        .rewards-header h3 {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .current-rewards {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .reward-item {
+            background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .reward-icon {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .reward-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .reward-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 4px;
+        }
+
+        .reward-desc {
+            font-size: 11px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        .upgrade-preview {
+            background: linear-gradient(135deg, #fefce8, #fef9c3);
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid #fde047;
+        }
+
+        .upgrade-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            color: #92400e;
+            margin-bottom: 12px;
+        }
+
+        .upgrade-title i {
+            font-size: 18px;
+            color: #f59e0b;
+        }
+
+        .next-level {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: white;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+        }
+
+        .next-level-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .next-level-icon {
+            font-size: 24px;
+        }
+
+        .next-level-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+
+        .next-level-requirement {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .next-level-rewards {
+            text-align: right;
+        }
+
+        .next-reward-value {
+            font-size: 14px;
+            font-weight: 700;
+            color: #f59e0b;
+        }
+
+        .view-all-btn {
+            margin-top: 12px;
+            padding: 10px 16px;
+            background: white;
+            color: var(--primary-color);
+            border: 2px solid var(--primary-color);
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            text-decoration: none;
+            width: 100%;
+        }
+
+        .view-all-btn:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .level-rewards-card {
+                padding: 16px;
+                margin-bottom: 16px;
+            }
+
+            .rewards-header h3 {
+                font-size: 16px;
+            }
+
+            .current-rewards {
+                gap: 12px;
+            }
+
+            .reward-item {
+                padding: 12px;
+            }
+
+            .reward-icon {
+                font-size: 24px;
+            }
+
+            .reward-value {
+                font-size: 20px;
+            }
+
+            .reward-label {
+                font-size: 12px;
+            }
+
+            .reward-desc {
+                font-size: 10px;
+            }
+
+            .upgrade-preview {
+                padding: 12px;
+            }
+
+            .next-level {
+                padding: 10px;
+            }
+        }
+
+        /* 全屏加载遮罩 */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+
+        .loading-overlay.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        .loading-content {
+            text-align: center;
+            color: white;
+        }
+
+        .loading-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 24px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            animation: pulse 2s ease-in-out infinite;
+            backdrop-filter: blur(10px);
+            border: 3px solid rgba(255,255,255,0.3);
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(255,255,255,0.7);
+            }
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 0 20px 10px rgba(255,255,255,0);
+            }
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 20px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            letter-spacing: 1px;
+        }
+
+        .loading-progress {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-top: 8px;
+        }
+
+        .loading-bar {
+            width: 200px;
+            height: 4px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 2px;
+            margin: 16px auto 0;
+            overflow: hidden;
+        }
+
+        .loading-bar-fill {
+            height: 100%;
+            background: white;
+            border-radius: 2px;
+            transition: width 0.3s ease;
+            box-shadow: 0 0 10px rgba(255,255,255,0.5);
+        }
+
+        @media (max-width: 768px) {
+            .loading-icon {
+                width: 70px;
+                height: 70px;
+                font-size: 35px;
+            }
+
+            .loading-text {
+                font-size: 16px;
+            }
+
+            .loading-progress {
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 全屏加载遮罩 -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="loading-icon">
+                <i class="fas fa-crown"></i>
+            </div>
+            <div class="loading-spinner"></div>
+            <div class="loading-text">团长中心</div>
+            <div class="loading-progress" id="loadingProgress">正在加载...</div>
+            <div class="loading-bar">
+                <div class="loading-bar-fill" id="loadingBarFill" style="width: 0%"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 顶部导航 -->
+    <header class="header">
+        <div class="header-content">
+            <div class="header-title">
+                <i class="fas fa-crown"></i>
+                <span>团长中心</span>
+            </div>
+            <button class="back-btn" onclick="goBack()">
+                <i class="fas fa-arrow-left"></i>
+                <span>返回</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- 主容器 -->
+    <div class="container">
+        <!-- 用户信息卡片 -->
+        <div class="user-card">
+            <div class="user-info">
+                <div class="user-avatar" id="userAvatar">张</div>
+                <div class="user-details">
+                    <h2 id="userName">张三</h2>
+                    <div class="user-level">
+                        <i class="fas fa-crown"></i>
+                        <span id="userLevel">黄金团长 LV3</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 升级进度 -->
+            <div class="level-progress">
+                <div class="progress-header">
+                    <span>升级进度</span>
+                    <span id="progressText">48/50 人 (96%)</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill" style="width: 96%;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 等级权益卡片 -->
+        <div class="level-rewards-card">
+            <div class="rewards-header">
+                <i class="fas fa-gift"></i>
+                <h3>💎 当前等级权益</h3>
+            </div>
+
+            <!-- 当前等级奖励 -->
+            <div class="current-rewards">
+                <div class="reward-item">
+                    <div class="reward-icon">💰</div>
+                    <div class="reward-label">首次提现奖励</div>
+                    <div class="reward-value" id="currentWithdrawalReward">¥10</div>
+                    <div class="reward-desc">邀请用户完成首次提现时获得</div>
+                </div>
+                <div class="reward-item">
+                    <div class="reward-icon">📊</div>
+                    <div class="reward-label">持续分成比例</div>
+                    <div class="reward-value" id="currentCommissionRate">5%</div>
+                    <div class="reward-desc">用户每次提现您都能获得分成</div>
+                </div>
+            </div>
+
+            <!-- 升级福利预览 -->
+            <div class="upgrade-preview" id="upgradePreview">
+                <div class="upgrade-title">
+                    <i class="fas fa-rocket"></i>
+                    <span>升级福利预览</span>
+                </div>
+                <div id="nextLevelContainer">
+                    <!-- JavaScript动态填充 -->
+                </div>
+                <a href="leader-benefits.html" class="view-all-btn">
+                    <i class="fas fa-trophy"></i>
+                    <span>查看所有等级奖励</span>
+                    <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+
+        <!-- 激活提示横幅 -->
+        <div class="activation-notice">
+            <div class="notice-icon">
+                <i class="fas fa-info-circle"></i>
+            </div>
+            <div class="notice-content">
+                <h4>⚡ 重要提示：成员激活规则</h4>
+                <p>只有被邀请用户<strong>完成首次提现</strong>后，才会计入您的团队人数并影响等级晋升。请引导您邀请的用户尽快完成任务并提现！</p>
+            </div>
+        </div>
+
+        <!-- 数据统计 -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-icon team">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>团队总人数</h3>
+                    </div>
+                </div>
+                <div class="stat-value" id="totalMembers">0</div>
+                <div class="stat-change" style="display:flex;flex-direction:column;gap:4px;align-items:flex-start;">
+                    <div style="display:flex;align-items:center;gap:4px;">
+                        <i class="fas fa-check-circle" style="color:#10b981;"></i>
+                        <span id="activeMembers" style="color:#10b981;">已激活：0 人</span>
+                </div>
+                    <div style="display:flex;align-items:center;gap:4px;">
+                        <i class="fas fa-clock" style="color:#f59e0b;"></i>
+                        <span id="pendingMembers" style="color:#f59e0b;">待激活：0 人</span>
+                    </div>
+                </div>
+                <a href="leader-team-members.html" class="stat-btn">
+                    <span>查看成员</span>
+                    <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-icon commission">
+                        <i class="fas fa-coins"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>累计佣金</h3>
+                    </div>
+                </div>
+                <div class="stat-value">¥<span id="totalCommission">5,200</span></div>
+                <div class="stat-change">
+                    <i class="fas fa-arrow-up"></i>
+                    <span id="commissionGrowth">+¥520 本月</span>
+                </div>
+                <a href="leader-commission-history.html" class="stat-btn">
+                    <span>查看明细</span>
+                    <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-header">
+                    <div class="stat-icon pending">
+                        <i class="fas fa-wallet"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>待发放佣金</h3>
+                    </div>
+                </div>
+                <div class="stat-value">¥<span id="pendingCommission">300</span></div>
+                <div class="stat-change" style="color: var(--warning-color);">
+                    <i class="fas fa-clock"></i>
+                    <span>等待发放</span>
+                </div>
+                <a href="leader-pending-commission.html" class="stat-btn">
+                    <span>查看明细</span>
+                    <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+
+        </div>
+
+        <!-- 邀请工具 -->
+        <div class="quick-actions">
+            <h3>
+                <i class="fas fa-share-alt"></i>
+                邀请工具
+            </h3>
+            <div class="actions-grid">
+                <div class="action-btn" onclick="copyInviteCode()">
+                    <i class="fas fa-qrcode"></i>
+                    <span>复制邀请码</span>
+            </div>
+                <div class="action-btn" onclick="copyInviteLink()">
+                    <i class="fas fa-link"></i>
+                    <span>复制邀请链接</span>
+        </div>
+                    </div>
+                        </div>
+
+                    </div>
+
+    <script>
+        // 等级配置（与leader-benefits.html同步）
+        const LEVEL_CONFIG = [
+            { id: 'bronze', name: '青铜团长', level: 'LV1', icon: '🥉', minMembers: 0 },
+            { id: 'silver', name: '白银团长', level: 'LV2', icon: '🥈', minMembers: 10 },
+            { id: 'gold', name: '黄金团长', level: 'LV3', icon: '👑', minMembers: 50 },
+            { id: 'platinum', name: '铂金团长', level: 'LV4', icon: '💎', minMembers: 100 },
+            { id: 'diamond', name: '钻石团长', level: 'LV5', icon: '⭐', minMembers: 200 }
+        ];
+
+        // 统一获取数据库客户端
+        async function ensureEmergencyClient() {
+            try {
+                let c = (typeof window.getEmergencyClient === 'function') ? window.getEmergencyClient() : null;
+                if (!c && typeof window.emergencyInitDatabase === 'function') {
+                    await window.emergencyInitDatabase();
+                    c = (typeof window.getEmergencyClient === 'function') ? window.getEmergencyClient() : null;
+                }
+                if (!c && window.supabase && typeof window.supabase.from === 'function') c = window.supabase;
+                return c;
+            } catch (_) { return null; }
+        }
+
+        // 严格校验是否允许访问团长中心（与管理后台同一标准）
+        async function isLeaderAllowedStrict(userId){
+            try{
+                const c = await ensureEmergencyClient();
+                if(c){
+                    // 优先 users 表（role/is_leader）
+                    try{
+                        const { data } = await c.from('users').select('*').eq('id', userId).limit(1);
+                        if(data && data[0]){
+                            const r = data[0];
+                            const roleOk = String(r.role||r['角色']||'').toLowerCase()==='leader';
+                            if(r.is_leader===true || r['是否团长']===true || roleOk) return true;
+                        }
+                    }catch(_){ }
+                    // 其次 leaders_allowlist（需启用状态）
+                    try{
+                        const { data } = await c.from('leaders_allowlist').select('user_id,status').eq('user_id', userId).limit(1);
+                        if(data && data[0]) return String(data[0].status||'enabled')==='enabled';
+                    }catch(_){ }
+                }
+            }catch(_){ }
+            return false;
+        }
+
+        function renderBlocked(message){
+            try{
+                // 隐藏主体
+                document.querySelectorAll('.container > *').forEach(el=>{ el.style.display='none'; });
+                const wrap = document.createElement('div');
+                wrap.className='empty-state';
+                wrap.innerHTML = '<i class="fas fa-lock"></i><div style="margin-top:8px;font-weight:700;color:#374151;">无法访问</div><div style="margin-top:6px;">'+ (message||'您当前没有团长权限') +'</div>';
+                document.querySelector('.container').appendChild(wrap);
+            }catch(_){ }
+        }
+
+        async function enforceLeaderGuard(){
+            try{
+                const u = JSON.parse(localStorage.getItem('currentUser')||'{}');
+                const uid = u && (u.id || u['用户ID']);
+                if(!uid){ renderBlocked('请先登录'); return false; }
+                // 本地快速判断（role/is_leader）
+                const fast = !!(u.is_leader===true || u['是否团长']===true || String(u.role||u['角色']||'').toLowerCase()==='leader');
+                if(fast){
+                    // 异步复核远端：若被禁用则拦截
+                    isLeaderAllowedStrict(uid).then(function(ok){ if(!ok){ renderBlocked('已被禁用或无权限，请联系管理员'); } });
+                    return true;
+                }
+                const ok = await isLeaderAllowedStrict(uid);
+                if(!ok){ renderBlocked('已被禁用或无权限，请联系管理员'); return false; }
+                return true;
+            }catch(_){ return true; }
+        }
+
+        // 生成邀请码
+        function generateInviteCode(userId) {
+            const id = String(userId || '');
+            const base = id.slice(-6).padStart(6, '0');
+            let sum = 0;
+            for (let i = 0; i < base.length; i++) { sum += base.charCodeAt(i); }
+            const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            const check = chars[sum % 36];
+            return 'R' + base + check;
+        }
+
+        // 根据团队人数获取当前等级
+        function getCurrentLevel(memberCount) {
+            for (let i = LEVEL_CONFIG.length - 1; i >= 0; i--) {
+                if (memberCount >= LEVEL_CONFIG[i].minMembers) {
+                    return LEVEL_CONFIG[i];
+                }
+            }
+            return LEVEL_CONFIG[0];
+        }
+
+        // 获取下一个等级
+        function getNextLevel(currentLevel) {
+            const currentIndex = LEVEL_CONFIG.findIndex(l => l.id === currentLevel.id);
+            if (currentIndex < LEVEL_CONFIG.length - 1) {
+                return LEVEL_CONFIG[currentIndex + 1];
+            }
+            return null;
+        }
+
+        // 返回上一页
+        function goBack() {
+            window.history.back();
+        }
+
+        // 更新加载进度
+        function updateLoadingProgress(progress, message) {
+            const progressEl = document.getElementById('loadingProgress');
+            const barFill = document.getElementById('loadingBarFill');
+            
+            if (progressEl) progressEl.textContent = message;
+            if (barFill) barFill.style.width = progress + '%';
+        }
+
+        // 隐藏加载遮罩
+        function hideLoadingOverlay() {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) {
+                setTimeout(() => {
+                    overlay.classList.add('hidden');
+                    // 动画完成后移除元素
+                    setTimeout(() => {
+                        overlay.remove();
+                    }, 500);
+                }, 300); // 稍微延迟一下，让用户看到100%
+            }
+        }
+
+        // 加载团长数据
+        // 加载等级奖励配置
+        async function loadLevelRewards(client, currentLevel, nextLevel) {
+            try {
+                // 默认值
+                const defaultRewards = {
+                    bronze: { withdrawal_reward: 10, commission_rate: 5 },
+                    silver: { withdrawal_reward: 20, commission_rate: 7 },
+                    gold: { withdrawal_reward: 30, commission_rate: 9 },
+                    platinum: { withdrawal_reward: 40, commission_rate: 9.5 },
+                    diamond: { withdrawal_reward: 50, commission_rate: 10 }
+                };
+
+                let currentRewards = defaultRewards[currentLevel.id] || defaultRewards.bronze;
+                
+                // 尝试从数据库读取配置
+                try {
+                    const { data: configs, error } = await client
+                        .from('level_rewards_config')
+                        .select('level_id, withdrawal_reward, commission_rate')
+                        .eq('status', 'enabled');
+                    
+                    if (!error && configs && configs.length > 0) {
+                        // 创建配置映射
+                        const configMap = {};
+                        configs.forEach(c => {
+                            configMap[c.level_id] = {
+                                withdrawal_reward: parseFloat(c.withdrawal_reward) || 0,
+                                commission_rate: parseFloat(c.commission_rate) || 0
+                            };
+                        });
+                        
+                        // 使用数据库配置
+                        currentRewards = configMap[currentLevel.id] || currentRewards;
+                        
+                        // 更新当前等级奖励显示
+                        document.getElementById('currentWithdrawalReward').textContent = 
+                            '¥' + currentRewards.withdrawal_reward.toFixed(0);
+                        document.getElementById('currentCommissionRate').textContent = 
+                            currentRewards.commission_rate.toFixed(1) + '%';
+                        
+                        // 生成升级预览
+                        const nextLevelContainer = document.getElementById('nextLevelContainer');
+                        if (nextLevel) {
+                            const nextRewards = configMap[nextLevel.id] || defaultRewards[nextLevel.id];
+                            nextLevelContainer.innerHTML = `
+                                <div class="next-level">
+                                    <div class="next-level-info">
+                                        <div class="next-level-icon">${nextLevel.icon}</div>
+                                        <div>
+                                            <div class="next-level-name">${nextLevel.name}</div>
+                                            <div class="next-level-requirement">${nextLevel.minMembers}人即可升级</div>
+                    </div>
+                        </div>
+                                    <div class="next-level-rewards">
+                                        <div class="next-reward-value">💰 ¥${nextRewards.withdrawal_reward.toFixed(0)}/人</div>
+                                        <div class="next-reward-value">📊 ${nextRewards.commission_rate.toFixed(1)}%</div>
+                    </div>
+                    </div>
+                            `;
+                        } else {
+                            // 已达最高等级
+                            nextLevelContainer.innerHTML = `
+                                <div class="next-level" style="justify-content: center;">
+                                    <div style="text-align: center; color: #f59e0b; font-weight: 600;">
+                                        🎉 恭喜！您已达到最高等级
+                        </div>
+                    </div>
+                            `;
+                        }
+                        
+                        console.log('✅ 等级奖励配置加载成功');
+                        return;
+                    }
+                } catch (dbError) {
+                    console.warn('⚠️ 从数据库加载等级配置失败，使用默认值:', dbError);
+                }
+                
+                // 使用默认值更新显示
+                document.getElementById('currentWithdrawalReward').textContent = 
+                    '¥' + currentRewards.withdrawal_reward.toFixed(0);
+                document.getElementById('currentCommissionRate').textContent = 
+                    currentRewards.commission_rate.toFixed(1) + '%';
+                
+                // 生成升级预览（默认值）
+                const nextLevelContainer = document.getElementById('nextLevelContainer');
+                if (nextLevel) {
+                    const nextRewards = defaultRewards[nextLevel.id];
+                    nextLevelContainer.innerHTML = `
+                        <div class="next-level">
+                            <div class="next-level-info">
+                                <div class="next-level-icon">${nextLevel.icon}</div>
+                                <div>
+                                    <div class="next-level-name">${nextLevel.name}</div>
+                                    <div class="next-level-requirement">${nextLevel.minMembers}人即可升级</div>
+                    </div>
+                        </div>
+                            <div class="next-level-rewards">
+                                <div class="next-reward-value">💰 ¥${nextRewards.withdrawal_reward.toFixed(0)}/人</div>
+                                <div class="next-reward-value">📊 ${nextRewards.commission_rate.toFixed(1)}%</div>
+                    </div>
+        </div>
+                    `;
+                } else {
+                    nextLevelContainer.innerHTML = `
+                        <div class="next-level" style="justify-content: center;">
+                            <div style="text-align: center; color: #f59e0b; font-weight: 600;">
+                                🎉 恭喜！您已达到最高等级
+    </div>
+                        </div>
+                    `;
+                }
+                
+            } catch (error) {
+                console.error('❌ 加载等级奖励配置失败:', error);
+            }
+        }
+
+        async function loadLeaderData() {
+            try {
+                updateLoadingProgress(10, '正在初始化...');
+                
+                // 获取当前用户
+                const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+                if (!currentUser || !currentUser.id) {
+                    alert('请先登录');
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                updateLoadingProgress(20, '正在连接数据库...');
+
+                const userId = currentUser.id || currentUser['用户ID'];
+                const userName = currentUser.username || currentUser['用户名'] || '团长';
+                const myCode = generateInviteCode(userId);
+                const body = myCode.slice(1, 7);
+                const legacyKey = 'uid_tail_' + body;
+
+                // 获取数据库客户端
+                const client = await ensureEmergencyClient();
+                let memberCount = 0;
+                let totalCommission = 0;
+                let pendingCommission = 0;
+
+                if (client) {
+                    try {
+                        updateLoadingProgress(35, '正在加载团队数据...');
+                        
+                        // 1. 查询团队成员数量（包含激活状态）
+                        const { data: referrals1 } = await client.from('referrals')
+                            .select('id, created_at, is_activated')
+                            .eq('inviter_id', myCode);
+                        
+                        const { data: referrals2 } = await client.from('referrals')
+                            .select('id, created_at, is_activated')
+                            .eq('inviter_id', legacyKey);
+                        
+                        const allReferrals = [...(referrals1 || []), ...(referrals2 || [])];
+                        
+                        // 统计激活状态
+                        const activeMembers = allReferrals.filter(r => r.is_activated === true).length;
+                        const pendingMembers = allReferrals.filter(r => r.is_activated !== true).length;
+                        memberCount = activeMembers; // 团队人数只计算已激活的成员
+
+                        // 计算本月新增（已激活）
+                        const thisMonth = new Date().getMonth();
+                        const thisYear = new Date().getFullYear();
+                        const monthMembers = allReferrals.filter(r => {
+                            const d = new Date(r.created_at);
+                            return r.is_activated === true && d.getMonth() === thisMonth && d.getFullYear() === thisYear;
+                        }).length;
+
+                        updateLoadingProgress(55, '正在加载佣金数据...');
+
+                        // 2. 查询佣金数据
+                        const { data: commissions } = await client.from('earnings')
+                            .select('amount, status')
+                            .eq('user_id', userId)
+                            .eq('type', 'referral');
+                        
+                        if (commissions) {
+                            commissions.forEach(c => {
+                                const amount = Number(c.amount || 0);
+                                totalCommission += amount;
+                                if (c.status === 'pending' || c.status === '待结算') {
+                                    pendingCommission += amount;
+                                }
+                            });
+                        }
+
+                        // 计算本月佣金增长
+                        const monthCommissionGrowth = commissions?.filter(c => {
+                            const d = new Date(c.created_at || new Date());
+                            return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
+                        }).reduce((sum, c) => sum + Number(c.amount || 0), 0) || 0;
+
+                        updateLoadingProgress(70, '正在计算等级...');
+
+                        // 3. 计算当前等级
+                        const currentLevel = getCurrentLevel(memberCount);
+                        const nextLevel = getNextLevel(currentLevel);
+
+                        updateLoadingProgress(85, '正在加载等级奖励配置...');
+
+                        // 4. 加载等级奖励配置
+                        await loadLevelRewards(client, currentLevel, nextLevel);
+
+                // 更新页面数据
+                        document.getElementById('userName').textContent = userName;
+                        document.getElementById('userAvatar').textContent = userName.charAt(0);
+                        document.getElementById('userLevel').textContent = `${currentLevel.icon} ${currentLevel.name} ${currentLevel.level}`;
+                        
+                        if (nextLevel) {
+                            const progress = Math.round((memberCount / nextLevel.minMembers) * 100);
+                document.getElementById('progressText').textContent = 
+                                `${memberCount}/${nextLevel.minMembers} 人 (${Math.min(progress, 100)}%)`;
+                            document.getElementById('progressFill').style.width = Math.min(progress, 100) + '%';
+                        } else {
+                            document.getElementById('progressText').textContent = '已达最高等级';
+                            document.getElementById('progressFill').style.width = '100%';
+                        }
+
+                        document.getElementById('totalMembers').textContent = memberCount;
+                        document.getElementById('activeMembers').textContent = `已激活：${activeMembers} 人`;
+                        document.getElementById('pendingMembers').textContent = `待激活：${pendingMembers} 人`;
+                        document.getElementById('totalCommission').textContent = totalCommission.toFixed(0);
+                        document.getElementById('pendingCommission').textContent = pendingCommission.toFixed(0);
+                        document.getElementById('commissionGrowth').textContent = '+¥' + monthCommissionGrowth.toFixed(0) + ' 本月';
+
+                        updateLoadingProgress(100, '加载完成！');
+                        hideLoadingOverlay();
+
+                    } catch (error) {
+                        console.error('获取数据失败:', error);
+                        updateLoadingProgress(100, '加载完成');
+                        hideLoadingOverlay();
+                    }
+                } else {
+                    // 没有数据库连接，也隐藏加载遮罩
+                    updateLoadingProgress(100, '加载完成');
+                    hideLoadingOverlay();
+                }
+
+                // 本地回退
+                if (memberCount === 0) {
+                    try {
+                        const localReferrals = JSON.parse(localStorage.getItem('referrals') || '[]');
+                        memberCount = localReferrals.filter(r => 
+                            r && (r.inviter_id === myCode || r.inviter_id === legacyKey)
+                        ).length;
+                        
+                        // 使用本地数据更新
+                        const currentLevel = getCurrentLevel(memberCount);
+                        document.getElementById('userName').textContent = userName;
+                        document.getElementById('userAvatar').textContent = userName.charAt(0);
+                        document.getElementById('userLevel').textContent = `${currentLevel.icon} ${currentLevel.name} ${currentLevel.level}`;
+                        document.getElementById('totalMembers').textContent = memberCount;
+                    } catch (_) { }
+                }
+
+            } catch (error) {
+                console.error('加载数据失败:', error);
+                updateLoadingProgress(100, '加载完成');
+                hideLoadingOverlay();
+            }
+        }
+
+        function copyInviteCode(){
+            try{
+                const u = JSON.parse(localStorage.getItem('currentUser')||'{}');
+                const code = generateInviteCode(u && (u.id||u['用户ID']||''));
+                if(navigator.clipboard){ navigator.clipboard.writeText(code); alert('邀请码已复制: '+code); }
+                else { prompt('复制邀请码', code); }
+            }catch(_){ alert('复制失败'); }
+        }
+        function copyInviteLink(){
+            try{
+                const u = JSON.parse(localStorage.getItem('currentUser')||'{}');
+                const code = generateInviteCode(u && (u.id||u['用户ID']||''));
+                const link = (location.origin||'') + '/login.html?code='+encodeURIComponent(code);
+                if(navigator.clipboard){ navigator.clipboard.writeText(link); alert('邀请链接已复制'); }
+                else { prompt('复制邀请链接', link); }
+            }catch(_){ alert('复制失败'); }
+        }
+
+        // 页面加载时执行（先权限校验，再加载数据）
+        document.addEventListener('DOMContentLoaded', async function() {
+            // 超时保护：3秒后强制隐藏加载遮罩
+            const timeoutId = setTimeout(() => {
+                console.warn('⚠️ 加载超时，强制显示页面');
+                updateLoadingProgress(100, '加载超时');
+                hideLoadingOverlay();
+            }, 3000);
+
+            try {
+                const ok = await enforceLeaderGuard();
+                if(!ok) {
+                    clearTimeout(timeoutId);
+                    hideLoadingOverlay();
+                    return;
+                }
+                
+                await loadLeaderData();
+                clearTimeout(timeoutId); // 正常加载完成，清除超时
+            } catch (error) {
+                console.error('页面初始化失败:', error);
+                clearTimeout(timeoutId);
+                hideLoadingOverlay();
+            }
+        });
+    </script>
+</body>
+</html>
+
